@@ -10,8 +10,7 @@ const urlsToCache = [
   '/static/js/main.chunk.js',
   '/static/js/0.chunk.js',
   '/manifest.json',
-  '/logo192.png',
-  '/logo512.png'
+  '/brikx512.png'
 ];
 
 // Install event - cache assets
