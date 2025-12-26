@@ -19,7 +19,8 @@
     "eject": "react-scripts eject",
     "security-audit": "node prepare-github.js",
     "prepare-github": "npm audit && node prepare-github.js",
-    "prebuild": "npm run security-audit"
+    "prebuild": "npm run security-audit",
+    "deploy": "npm run build && echo Build complete! Deploy the 'build' folder to your hosting platform."
   },
   "eslintConfig": {
     "extends": [
