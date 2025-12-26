@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BrickX Icon Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #0a0a1e;
+      color: white;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    canvas {
+      border: 2px solid #00f0f0;
+      margin: 10px;
+      background: white;
+    }
+    button {
+      background: linear-gradient(135deg, #00f0f0, #a000f0);
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    .info {
+      background: rgba(0, 240, 240, 0.1);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 BrickX PWA Icon Generator</h1>
+    
+    <div class="info">
+      <h3>Instructions:</h3>
+      <ol>
+        <li>Click the generate buttons below to create icons</li>
+        <li>Right-click each canvas and "Save image as..."</li>
+        <li>Save as logo192.png and logo512.png in the public folder</li>
+        <li>Replace the existing placeholder images</li>
+      </ol>
+    </div>
+
+    <h2>192x192 Icon</h2>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+    <br>
+    <button onclick="generateIcon(192)">Generate 192x192</button>
+    <button onclick="downloadIcon(192)">Download 192x192</button>
+
+    <h2>512x512 Icon</h2>
+    <canvas id="canvas512" width="512" height="512"></canvas>
+    <br>
+    <button onclick="generateIcon(512)">Generate 512x512</button>
+    <button onclick="downloadIcon(512)">Download 512x512</button>
+  </div>
+
+  <script>
+    function drawIcon(ctx, size) {
+      // Background gradient
+      const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+      bgGrad.addColorStop(0, '#1a0a2e');
+      bgGrad.addColorStop(1, '#0a0a1e');
+      
+      // Draw rounded rectangle background
+      const radius = size * 0.175;
+      ctx.fillStyle = bgGrad;
+      roundRect(ctx, 0, 0, size, size, radius);
+      ctx.fill();
+      
+      // Block gradient
+      const blockGrad = ctx.createLinearGradient(0, 0, size, size);
+      blockGrad.addColorStop(0, '#00f0f0');
+      blockGrad.addColorStop(0.5, '#a000f0');
+      blockGrad.addColorStop(1, '#f0a000');
+      
+      // Calculate block size (about 1/6 of canvas)
+      const blockSize = size / 6.4;
+      const cornerRadius = blockSize * 0.1;
+      const strokeWidth = size * 0.008;
+      
+      // Draw X pattern with blocks
+      const positions = [
+        // Left top
+        [size * 0.156, size * 0.156],
+        [size * 0.312, size * 0.312],
+        // Right top
+        [size * 0.688, size * 0.156],
+        [size * 0.532, size * 0.312],
+        // Center
+        [size * 0.422, size * 0.422],
+        // Left bottom
+        [size * 0.312, size * 0.532],
+        [size * 0.156, size * 0.688],
+        // Right bottom
+        [size * 0.532, size * 0.532],
+        [size * 0.688, size * 0.688]
+      ];
+      
+      positions.forEach(([x, y]) => {
+        ctx.fillStyle = blockGrad;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = strokeWidth;
+        roundRect(ctx, x, y, blockSize, blockSize, cornerRadius);
+        ctx.fill();
+        ctx.stroke();
+      });
+    }
+    
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+    
+    function generateIcon(size) {
+      const canvas = document.getElementById(`canvas${size}`);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+      drawIcon(ctx, size);
+    }
+    
+    function downloadIcon(size) {
+      const canvas = document.getElementById(`canvas${size}`);
+      const link = document.createElement('a');
+      link.download = `logo${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    
+    // Auto-generate on load
+    window.onload = () => {
+      generateIcon(192);
+      generateIcon(512);
+    };
+  </script>
+</body>
+</html>

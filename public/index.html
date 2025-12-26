@@ -3,13 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a0a2e" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+    <meta name="description" content="BrickX - A modern, colorful Tetris game with amazing visual effects, combos, and smooth gameplay. Play the ultimate block puzzle game!" />
+    <meta name="keywords" content="tetris, puzzle game, block game, brickx, arcade" />
+    
+    <!-- PWA Meta Tags -->
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BrickX" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="BrickX - Modern Tetris Game" />
+    <meta property="og:description" content="Play the ultimate block puzzle game with amazing effects!" />
+    <meta property="og:image" content="%PUBLIC_URL%/logo512.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -24,7 +41,7 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>React App</title>
+    <title>BrickX </title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
