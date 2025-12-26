@@ -646,22 +646,22 @@ If you enjoy BRIKX, consider supporting continued development!
 
 <div align="center">
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?style=for-the-badge&logo=paypal)](https://paypal.me/yourusername)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?style=for-the-badge&logo=paypal)](https://paypal.me/ColinNebula
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b.svg?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/yourusername)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b.svg?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/ColinNebula)
 
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-ea4aaa.svg?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/yourusername)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-ea4aaa.svg?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/ColinNebula)
 
 </div>
 
 ### Ways to Support
 
 💰 **One-Time Donation**
-- PayPal: [paypal.me/yourusername](https://paypal.me/yourusername)
-- Ko-fi: [ko-fi.com/yourusername](https://ko-fi.com/yourusername)
+- PayPal: [paypal.me/ColinNebula](https://paypal.me/ColinNebula)
+- Ko-fi: [ko-fi.com/ColinNebula](https://ko-fi.com/ColinNebula)
 
 🌟 **Monthly Support**
-- GitHub Sponsors: [github.com/sponsors/yourusername](https://github.com/sponsors/yourusername)
+- GitHub Sponsors: [github.com/sponsors/ColinNebula](https://github.com/sponsors/Colinnebula)
 
 ⭐ **Free Ways to Support**
 - Star this repository
