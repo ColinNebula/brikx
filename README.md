@@ -732,7 +732,7 @@ See full license text in repository.
 
 ## 📞 Contact
 
-- 🌐 **Website:** [Your Website](https://www.nebula3ddev.com)
+- 🌐 **Website:** [Nebula 3D Dev](https://www.nebula3ddev.com)
 - 📧 **Email:** info@www.nebula3ddev.com
 
 
@@ -744,7 +744,7 @@ See full license text in repository.
 
 **The perfect blend of classic gameplay and modern technology!**
 
-[🎮 Play Now](https://your-deployment-url.com) • [⬇️ Install](#-installation) • [💖 Support](#-support-the-development)
+[🎮 Play Now](https://colinnebula.github.io/brikx/) • [⬇️ Install](#-installation) • [💖 Support](#-support-the-development)
 
 ---
 

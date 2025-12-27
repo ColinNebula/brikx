@@ -2,6 +2,7 @@
   "name": "nebula-r",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -20,7 +21,10 @@
     "security-audit": "node prepare-github.js",
     "prepare-github": "npm audit && node prepare-github.js",
     "prebuild": "npm run security-audit",
-    "deploy": "npm run build && echo Build complete! Deploy the 'build' folder to your hosting platform."
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
+    "deploy-netlify": "npm run build && netlify deploy --prod --dir=build",
+    "deploy-vercel": "npm run build && vercel --prod"
   },
   "eslintConfig": {
     "extends": [
@@ -39,5 +43,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }

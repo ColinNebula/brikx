@@ -1765,7 +1765,7 @@ const Brikx = () => {
                 {/* Glass Morphism Center Overlay */}
                 <div className="menu-glass-overlay">
                   <div className="menu-center-content">
-                    <img src="/Brikx-Title.png" alt="BRICKX" className="immersive-title" />
+                    <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="immersive-title" />
                     
                     <div className="immersive-player-info">
                       <span className="player-avatar-small">{playerAvatar}</span>
@@ -1825,7 +1825,7 @@ const Brikx = () => {
 
         {isPaused && gameStarted && (
           <div className="start-overlay">
-            <img src="/Brikx-Title.png" alt="BRICKX" className="pause-title" />
+            <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="pause-title" />
             <h2>⏸️ Paused</h2>
             <div className="menu-buttons">
               <button className="menu-btn resume-btn" onClick={() => setIsPaused(false)}>
