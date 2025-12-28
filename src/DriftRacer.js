@@ -26,6 +26,7 @@ const Brikx = () => {
   };
 
   const canvasRef = useRef(null);
+  const touchButtonsRef = useRef([]);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const stored = safeGetItem('brikxHighScore', '0');
@@ -1646,6 +1647,43 @@ const Brikx = () => {
     }
   }, [isPaused, draw]);
 
+  // Setup touch event listeners with passive: false to allow preventDefault
+  useEffect(() => {
+    const buttons = touchButtonsRef.current;
+    if (!buttons.length || !isMobile) return;
+
+    const handleTouchStart = (e, callback) => {
+      e.preventDefault();
+      callback();
+    };
+
+    const listeners = buttons.map((button, index) => {
+      if (!button) return null;
+      
+      let callback;
+      switch(index) {
+        case 0: callback = () => setIsPaused(true); break;
+        case 1: callback = rotate; break;
+        case 2: callback = () => moveHorizontal(-1); break;
+        case 3: callback = moveDown; break;
+        case 4: callback = () => moveHorizontal(1); break;
+        case 5: callback = holdCurrentPiece; break;
+        case 6: callback = hardDrop; break;
+        default: return null;
+      }
+
+      const listener = (e) => handleTouchStart(e, callback);
+      button.addEventListener('touchstart', listener, { passive: false });
+      return { button, listener };
+    }).filter(Boolean);
+
+    return () => {
+      listeners.forEach(({ button, listener }) => {
+        button.removeEventListener('touchstart', listener);
+      });
+    };
+  }, [isMobile, gameStarted, gameOver, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop]);
+
   return (
     <div className="drift-racer">
       {gameStarted && (
@@ -2049,63 +2087,51 @@ const Brikx = () => {
       {isMobile && gameStarted && !gameOver && (
         <div className="mobile-controls">
           <div className="mobile-controls-left">
-            <button 
-              className="touch-btn touch-rotate"
-              onTouchStart={(e) => {
-                e.preventDefault();
-                rotate();
-              }}
-            >
-              ↻
-            </button>
             <div className="touch-dpad">
               <button 
+                ref={el => touchButtonsRef.current[2] = el}
                 className="touch-btn touch-left"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  moveHorizontal(-1);
-                }}
               >
                 ◀
               </button>
               <button 
+                ref={el => touchButtonsRef.current[3] = el}
                 className="touch-btn touch-down"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  moveDown();
-                }}
               >
                 ▼
               </button>
               <button 
+                ref={el => touchButtonsRef.current[4] = el}
                 className="touch-btn touch-right"
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  moveHorizontal(1);
-                }}
               >
                 ▶
               </button>
             </div>
+            <button 
+              ref={el => touchButtonsRef.current[1] = el}
+              className="touch-btn touch-rotate"
+            >
+              ↻
+            </button>
           </div>
           <div className="mobile-controls-right">
             <button 
+              ref={el => touchButtonsRef.current[5] = el}
               className="touch-btn touch-hold"
-              onTouchStart={(e) => {
-                e.preventDefault();
-                holdCurrentPiece();
-              }}
             >
               HOLD
             </button>
             <button 
+              ref={el => touchButtonsRef.current[6] = el}
               className="touch-btn touch-drop"
-              onTouchStart={(e) => {
-                e.preventDefault();
-                hardDrop();
-              }}
             >
               DROP
+            </button>
+            <button 
+              ref={el => touchButtonsRef.current[0] = el}
+              className="touch-btn touch-pause"
+            >
+              ⏸
             </button>
           </div>
         </div>

@@ -2243,6 +2243,7 @@
   right: 0;
   display: flex;
   justify-content: space-between;
+  align-items: flex-end;
   padding: 0 20px;
   z-index: 1000;
   pointer-events: none;
@@ -2252,15 +2253,16 @@
 .mobile-controls-right {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
   pointer-events: auto;
 }
 
 .touch-dpad {
   display: grid;
-  grid-template-columns: repeat(3, 70px);
-  grid-template-rows: repeat(2, 70px);
-  gap: 5px;
+  grid-template-columns: repeat(3, 75px);
+  grid-template-rows: repeat(2, 75px);
+  gap: 8px;
+  margin-bottom: 5px;
 }
 
 .touch-dpad .touch-left {
@@ -2283,10 +2285,10 @@
   border: 2px solid rgba(0, 240, 240, 0.5);
   border-radius: 15px;
   color: white;
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: bold;
-  width: 70px;
-  height: 70px;
+  width: 75px;
+  height: 75px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2306,15 +2308,30 @@
 }
 
 .touch-rotate {
-  font-size: 2.5rem;
-  width: 100%;
+  font-size: 2.8rem;
+  width: 237px;
+  height: 65px;
+}
+
+.touch-pause {
+  font-size: 2rem;
+  width: 110px;
+  height: 65px;
+  background: linear-gradient(135deg, rgba(255, 200, 0, 0.3), rgba(255, 136, 0, 0.3));
+  border-color: rgba(255, 200, 0, 0.5);
+  box-shadow: 0 4px 15px rgba(255, 200, 0, 0.3);
+}
+
+.touch-pause:active {
+  background: linear-gradient(135deg, rgba(255, 200, 0, 0.5), rgba(255, 136, 0, 0.5));
+  box-shadow: 0 2px 8px rgba(255, 200, 0, 0.5);
 }
 
 .touch-hold,
 .touch-drop {
-  width: 100px;
-  height: 70px;
-  font-size: 1.2rem;
+  width: 110px;
+  height: 75px;
+  font-size: 1.3rem;
   letter-spacing: 1px;
 }
 
@@ -2384,7 +2401,7 @@
   }
 
   .game-container {
-    transform: scale(0.7);
+    transform: scale(0.85);
     margin-bottom: 100px;
   }
 
@@ -2510,7 +2527,7 @@
 
 @media (max-width: 480px) {
   .game-container {
-    transform: scale(0.5);
+    transform: scale(0.7);
   }
 
   .stats-container {
