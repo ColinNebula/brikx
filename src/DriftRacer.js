@@ -1771,7 +1771,7 @@ const Brikx = () => {
               <div className="main-menu immersive">
                 {/* Animated Falling Tetris Blocks Background */}
                 <div className="falling-blocks-container">
-                  {Array.from({ length: 15 }).map((_, i) => {
+                  {Array.from({ length: 8 }).map((_, i) => {
                     const shapes = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
                     const colors = ['#00f0f0', '#f0f000', '#a000f0', '#00f000', '#f00000', '#0000f0', '#f0a000'];
                     const shapeIndex = i % shapes.length;
