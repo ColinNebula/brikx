@@ -211,10 +211,13 @@ const Brikx = () => {
     });
   }, [playSound]);
 
-  // Detect mobile device
+  // Detect mobile device and touch capability
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth < 1024;
+      setIsMobile(hasTouch || isMobileUA || isSmallScreen);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -2083,14 +2086,25 @@ const Brikx = () => {
         )}
       </div>
 
-      {/* Mobile Touch Controls */}
-      {isMobile && gameStarted && !gameOver && (
+      <div className="controls-info">
+        <p>
+          {gamepadConnected ? '🎮 Gamepad Ready • ' : ''}
+          {isMobile ? '📱 Touch controls enabled' : 'Use Arrow Keys to control • SPACE for hard drop • P or ESC to pause'}
+        </p>
+        <p style={{color: '#f0a000', fontWeight: 'bold', marginTop: '5px'}}>
+          ⭐ Color Matching: 3+ blocks = 50pts each • Full line = +500pts bonus!
+        </p>
+      </div>
+
+      {/* Mobile Touch Controls - Outside canvas container for iPad visibility */}
+      {isMobile && gameStarted && !gameOver && !isPaused && (
         <div className="mobile-controls">
           <div className="mobile-controls-left">
             <div className="touch-dpad">
               <button 
                 ref={el => touchButtonsRef.current[2] = el}
                 className="touch-btn touch-left"
+                aria-label="Move left"
               >
                 ◀
               </button>
@@ -2136,16 +2150,6 @@ const Brikx = () => {
           </div>
         </div>
       )}
-
-      <div className="controls-info">
-        <p>
-          {gamepadConnected ? '🎮 Gamepad Ready • ' : ''}
-          {isMobile ? '📱 Touch controls enabled' : 'Use Arrow Keys to control • SPACE for hard drop • P or ESC to pause'}
-        </p>
-        <p style={{color: '#f0a000', fontWeight: 'bold', marginTop: '5px'}}>
-          ⭐ Color Matching: 3+ blocks = 50pts each • Full line = +500pts bonus!
-        </p>
-      </div>
     </div>
   );
 };
