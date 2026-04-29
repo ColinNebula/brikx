@@ -521,9 +521,45 @@ http://YOUR-IP:3000
 
 ---
 
+## � Microsoft Tools Integration
+
+BRIKX now integrates with powerful Microsoft tools for enhanced hosting, analytics, and distribution:
+
+### Azure Static Web Apps
+- ✅ **Free hosting** with global CDN (3x faster than GitHub Pages)
+- ✅ **Automatic HTTPS** and custom domains
+- ✅ **CI/CD** from GitHub with PR previews
+- ✅ **Serverless functions** support
+
+**Setup Guide**: See [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md)
+
+### Microsoft Clarity
+- ✅ **100% free** analytics and user insights
+- ✅ **Heatmaps** showing player behavior
+- ✅ **Session recordings** of actual gameplay
+- ✅ **Zero performance impact**
+
+**Setup Guide**: See [CLARITY_SETUP.md](CLARITY_SETUP.md)
+
+### PWA Builder
+- ✅ **App store packages** for Microsoft Store, Google Play, iOS
+- ✅ **PWA validation** and optimization tips
+- ✅ **Free service** at pwabuilder.com
+
+**Complete Guide**: See [MICROSOFT_TOOLS_SETUP.md](MICROSOFT_TOOLS_SETUP.md)
+
+---
+
 ## 🚀 Deployment
 
 ### Recommended Platforms
+
+**Azure Static Web Apps** (Best Performance) ⭐
+```bash
+# Automatic deployment via GitHub Actions
+git push origin main
+```
+See [AZURE_DEPLOYMENT_GUIDE.md](AZURE_DEPLOYMENT_GUIDE.md) for full setup.
 
 **Netlify** (Easiest)
 ```bash
@@ -538,8 +574,9 @@ npx vercel
 ```
 
 **GitHub Pages**
-- Set homepage in package.json
-- Deploy build folder
+```bash
+npm run deploy
+```
 
 ### Requirements
 - ✅ HTTPS enabled

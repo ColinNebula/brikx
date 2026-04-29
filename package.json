@@ -24,7 +24,9 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "deploy-netlify": "npm run build && netlify deploy --prod --dir=build",
-    "deploy-vercel": "npm run build && vercel --prod"
+    "deploy-vercel": "npm run build && vercel --prod",
+    "deploy-azure": "npm run build",
+    "validate-pwa": "echo Visit https://www.pwabuilder.com and enter your deployed URL"
   },
   "eslintConfig": {
     "extends": [

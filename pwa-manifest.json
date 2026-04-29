@@ -1,7 +1,26 @@
 {
-  "short_name": "BrickX",
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
   "name": "BrickX - Modern Tetris Game",
-  "description": "A modern, colorful Tetris game with amazing effects and smooth gameplay",
+  "short_name": "BrickX",
+  "description": "A modern, colorful Tetris game with amazing visual effects, combos, and smooth gameplay. Play the ultimate block puzzle game!",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1a0a2e",
+  "background_color": "#0a0a1e",
+  "categories": ["games", "entertainment"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "brikx512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "description": "BrickX game in action"
+    }
+  ],
   "icons": [
     {
       "src": "favicon.ico",
@@ -33,14 +52,6 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#1a0a2e",
-  "background_color": "#0a0a1e",
-  "scope": ".",
-  "categories": ["games", "entertainment"],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "Start New Game",
@@ -55,6 +66,11 @@
       ]
     }
   ],
-  "prefer_related_applications": false,
-  "iarc_rating_id": ""
+  "related_applications": [],
+  "pwa_builder": {
+    "packageId": "com.brikx.game",
+    "certificateInfo": {
+      "generateNew": true
+    }
+  }
 }

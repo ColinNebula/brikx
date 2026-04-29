@@ -1,0 +1,34 @@
+{
+  "routes": [
+    {
+      "route": "/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif,webp}", "/css/*", "/js/*"]
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "no-referrer-when-downgrade",
+    "Permissions-Policy": "accelerometer=(self), camera=(), microphone=(), geolocation=()",
+    "Content-Security-Policy": "default-src 'self' https://www.clarity.ms; script-src 'self' 'unsafe-inline' https://www.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.clarity.ms; font-src 'self' data:; connect-src 'self' https://www.clarity.ms; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';"
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".wasm": "application/wasm",
+    ".webmanifest": "application/manifest+json"
+  },
+  "platform": {
+    "apiRuntime": "node:18"
+  }
+}
