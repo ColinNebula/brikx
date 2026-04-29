@@ -1266,6 +1266,8 @@
   z-index: 20;
   padding: 20px;
   animation: fadeIn 0.3s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
@@ -1275,11 +1277,12 @@
   padding: 40px;
   max-width: 700px;
   width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease;
+  margin: auto 0;
 }
 
 .tutorial-modal {
@@ -1459,15 +1462,15 @@
 }
 
 .modal-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: sticky;
+  top: 10px;
+  float: right;
+  background: rgba(255, 0, 0, 0.4);
+  border: 2px solid rgba(255, 0, 0, 0.6);
   color: #fff;
-  font-size: 2rem;
-  width: 40px;
-  height: 40px;
+  font-size: 1.8rem;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1475,12 +1478,15 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+  z-index: 100;
+  margin: -10px -10px 10px 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .modal-close:hover {
-  background: rgba(255, 0, 0, 0.3);
-  border-color: rgba(255, 0, 0, 0.5);
-  transform: rotate(90deg);
+  background: rgba(255, 0, 0, 0.7);
+  border-color: rgba(255, 0, 0, 0.9);
+  transform: rotate(90deg) scale(1.1);
 }
 
 .modal-title {
@@ -2853,9 +2859,25 @@
   }
   
   /* Mode selector for very small screens */
+  .modal-overlay {
+    padding: max(env(safe-area-inset-top), 5px) max(env(safe-area-inset-right), 5px) max(env(safe-area-inset-bottom), 5px) max(env(safe-area-inset-left), 5px);
+  }
+  
   .modal-content {
-    max-height: 80vh;
-    padding: 20px 10px;
+    padding: 15px 10px;
+    border-radius: 12px;
+  }
+  
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    font-size: 1.3rem;
+    margin: -3px -3px 8px 8px;
+  }
+  
+  .modal-title {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
   }
   
   .mode-card {
@@ -2880,11 +2902,6 @@
     padding: 10px;
     font-size: 1rem;
     margin-top: 10px;
-  }
-  
-  .modal-title {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
   }
 }
 
@@ -3186,18 +3203,35 @@
 
 /* Responsive for new components */
 @media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding: max(env(safe-area-inset-top), 10px) max(env(safe-area-inset-right), 10px) max(env(safe-area-inset-bottom), 10px) max(env(safe-area-inset-left), 10px);
+  }
+  
+  .modal-content {
+    padding: 20px 15px;
+    margin: 0 auto;
+    min-height: auto;
+  }
+  
+  .modal-close {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    margin: -5px -5px 10px 10px;
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+    margin: 0 0 20px 0;
+    clear: both;
+  }
+  
   .modes-grid,
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 15px;
     margin: 20px 0;
-  }
-  
-  .modal-content {
-    max-height: 85vh;
-    padding: 25px 15px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
   }
   
   .mode-card {
@@ -3215,13 +3249,10 @@
   }
   
   .start-mode-btn {
-    padding: 12px;
+    padding: 14px;
     font-size: 1.1rem;
     margin-top: 15px;
-    position: sticky;
-    bottom: -15px;
-    background: linear-gradient(135deg, #00f0f0, #0078f0);
-    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+    width: 100%;
   }
   
   .achievements-grid {
