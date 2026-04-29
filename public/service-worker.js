@@ -2,8 +2,8 @@
 
 // Security: Version cache name to prevent tampering
 // Update this version to force cache refresh on mobile
-const CACHE_NAME = 'brickx-v2-' + '2026-04-29';
-const SECURITY_VERSION = '2.0.0';
+const CACHE_NAME = 'brickx-v3-' + '2026-04-29b';
+const SECURITY_VERSION = '3.0.0';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -11,7 +11,9 @@ const urlsToCache = [
   '/static/js/main.chunk.js',
   '/static/js/0.chunk.js',
   '/manifest.json',
-  '/brikx512.png'
+  '/brikx512.png',
+  '/nebulamedia.png',
+  '/Brikx-Title.png'
 ];
 
 // Queue for offline high score sync
