@@ -509,9 +509,11 @@ const Brikx = () => {
   }, []);
 
   // Add particles for visual effects
-  const addLineParticles = useCallback((y, isCombo = false, isPerfect = false) => {
+  const addLineParticles = useCallback((y, isCombo = false, isPerfect = false, comboCount = 0) => {
     const boardOffsetX = 130;
-    const baseParticleCount = isPerfect ? 12 : isCombo ? 8 : 6;
+    const isHighCombo = comboCount >= 5;
+    const isMegaCombo = comboCount >= 10;
+    const baseParticleCount = isMegaCombo ? 20 : isHighCombo ? 16 : isPerfect ? 12 : isCombo ? 8 : 6;
     const particleTypes = ['circle', 'star', 'square', 'spark', 'diamond', 'ring'];
     
     for (let x = 0; x < COLS; x++) {
@@ -523,8 +525,8 @@ const Brikx = () => {
       const rings = isPerfect ? 3 : isCombo ? 2 : 1;
       
       for (let ring = 0; ring < rings; ring++) {
-        const particlesInRing = baseParticleCount + ring * 4;
-        const ringSpeed = (isPerfect ? 5 : isCombo ? 3.5 : 2.5) * (1 + ring * 0.5);
+        const particlesInRing = baseParticleCount + ring * (isMegaCombo ? 8 : isHighCombo ? 6 : 4);
+        const ringSpeed = (isMegaCombo ? 8 : isHighCombo ? 6.5 : isPerfect ? 5 : isCombo ? 3.5 : 2.5) * (1 + ring * 0.5);
         const ringDelay = ring * 5;
         
         for (let i = 0; i < particlesInRing; i++) {
@@ -576,8 +578,9 @@ const Brikx = () => {
       }
       
       // Add burst of small particles in random directions
-      if (isPerfect) {
-        for (let i = 0; i < 15; i++) {
+      if (isPerfect || isMegaCombo || isHighCombo) {
+        const burstCount = isMegaCombo ? 30 : isHighCombo ? 22 : 15;
+        for (let i = 0; i < burstCount; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = 2 + Math.random() * 6;
           gameState.current.particles.push({
@@ -669,7 +672,7 @@ const Brikx = () => {
       }
       
       // Add particles for line clear effect
-      linesToClear.forEach(y => addLineParticles(y, isCombo, isPerfectClear));
+      linesToClear.forEach(y => addLineParticles(y, isCombo, isPerfectClear, combo));
       
       // Store lines for animation
       gameState.current.clearingLines = linesToClear;
@@ -740,8 +743,14 @@ const Brikx = () => {
       
       // Add screen shake based on clear type
       if (isPerfectClear) {
-        gameState.current.screenShake = 20;
-      } else if (isCombo || linesCleared >= 4) {
+        gameState.current.screenShake = 25;
+      } else if (combo >= 10) {
+        gameState.current.screenShake = 22;
+      } else if (combo >= 5) {
+        gameState.current.screenShake = 18;
+      } else if (linesCleared >= 4) {
+        gameState.current.screenShake = 16; // TETRIS gets intense shake!
+      } else if (isCombo || linesCleared >= 3) {
         gameState.current.screenShake = 12;
       } else if (linesCleared >= 2) {
         gameState.current.screenShake = 6;
@@ -1163,27 +1172,38 @@ const Brikx = () => {
     const theme = themeColors[themeIndex];
     const animOffset = gridAnimation * 0.01;
     
-    // Animated gradient background
+    // Add combo-based pulsing effect to background
+    const comboPulse = combo > 0 ? Math.sin(gridAnimation * 0.15) * (combo * 0.03) : 0;
+    const comboIntensity = Math.min(combo * 0.1, 1);
+    
+    // Animated gradient background with combo effects
     const gradient = ctx.createLinearGradient(
       0, 
-      Math.sin(animOffset) * CANVAS_HEIGHT * 0.3,
+      Math.sin(animOffset + comboPulse) * CANVAS_HEIGHT * 0.3,
       CANVAS_WIDTH,
-      CANVAS_HEIGHT + Math.cos(animOffset) * CANVAS_HEIGHT * 0.3
+      CANVAS_HEIGHT + Math.cos(animOffset + comboPulse) * CANVAS_HEIGHT * 0.3
     );
-    gradient.addColorStop(0, `rgb(${theme.start[0]}, ${theme.start[1]}, ${theme.start[2]})`);
-    gradient.addColorStop(1, `rgb(${theme.end[0]}, ${theme.end[1]}, ${theme.end[2]})`);
+    // Brighten colors during combos
+    const r1 = Math.min(255, theme.start[0] + theme.accent[0] * comboIntensity * 0.3);
+    const g1 = Math.min(255, theme.start[1] + theme.accent[1] * comboIntensity * 0.3);
+    const b1 = Math.min(255, theme.start[2] + theme.accent[2] * comboIntensity * 0.3);
+    const r2 = Math.min(255, theme.end[0] + theme.accent[0] * comboIntensity * 0.2);
+    const g2 = Math.min(255, theme.end[1] + theme.accent[1] * comboIntensity * 0.2);
+    const b2 = Math.min(255, theme.end[2] + theme.accent[2] * comboIntensity * 0.2);
+    gradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
+    gradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
     // Draw floating geometric shapes in background
     ctx.save();
-    ctx.globalAlpha = 0.1;
-    const shapeCount = 8;
+    ctx.globalAlpha = 0.1 + comboIntensity * 0.15; // Brighter during combos
+    const shapeCount = 8 + Math.floor(combo * 0.5); // More shapes during combos
     for (let i = 0; i < shapeCount; i++) {
-      const shapeAnim = (gridAnimation + i * 60) * 0.02;
-      const x = (i * CANVAS_WIDTH / shapeCount + Math.sin(shapeAnim) * 50) % CANVAS_WIDTH;
-      const y = ((shapeAnim * 30) % CANVAS_HEIGHT);
-      const size = 40 + Math.sin(shapeAnim * 2) * 20;
+      const shapeAnim = (gridAnimation + i * 60) * (0.02 + comboIntensity * 0.03); // Faster during combos
+      const x = (i * CANVAS_WIDTH / shapeCount + Math.sin(shapeAnim) * (50 + combo * 5)) % CANVAS_WIDTH;
+      const y = ((shapeAnim * (30 + combo * 2)) % CANVAS_HEIGHT);
+      const size = (40 + Math.sin(shapeAnim * 2) * 20) * (1 + comboIntensity * 0.3); // Larger during combos
       const rotation = shapeAnim;
       
       ctx.save();
@@ -1550,6 +1570,41 @@ const Brikx = () => {
               ctx.strokeStyle = currentPiece.color + '80';
               ctx.lineWidth = 2;
               ctx.setLineDash([4, 4]);
+              ctx.strokeRect(blockX + 1, blockY + 1, size, size);
+              ctx.setLineDash([]);
+            }
+          });
+        });
+      }
+      
+      // Draw subtle preview ghost for next piece
+      if (nextPieces.length > 0) {
+        const nextPiece = nextPieces[0];
+        const nextSpawnX = Math.floor((COLS - nextPiece.shape[0].length) / 2);
+        const nextSpawnY = 0;
+        
+        // Calculate where next piece would land
+        let nextGhostY = nextSpawnY;
+        while (!checkCollision(board, nextPiece, nextSpawnX, nextGhostY + 1)) {
+          nextGhostY++;
+        }
+        
+        // Draw very faint ghost of next piece
+        nextPiece.shape.forEach((row, y) => {
+          row.forEach((value, x) => {
+            if (value) {
+              const blockX = (nextSpawnX + x) * BLOCK_SIZE;
+              const blockY = (nextGhostY + y) * BLOCK_SIZE;
+              const size = BLOCK_SIZE - 2;
+              
+              // Ultra-faint fill
+              ctx.fillStyle = nextPiece.color + '08';
+              ctx.fillRect(blockX + 1, blockY + 1, size, size);
+              
+              // Faint dotted border
+              ctx.strokeStyle = nextPiece.color + '30';
+              ctx.lineWidth = 1;
+              ctx.setLineDash([2, 6]);
               ctx.strokeRect(blockX + 1, blockY + 1, size, size);
               ctx.setLineDash([]);
             }
