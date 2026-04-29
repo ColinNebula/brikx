@@ -26,6 +26,137 @@ import {
   getThemeProgress
 } from './themes';
 
+// Score History Chart Component
+const ScoreHistoryChart = ({ history }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !history || history.length < 2) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Set canvas size for retina displays
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const width = rect.width;
+    const height = rect.height;
+    const padding = { top: 30, right: 20, bottom: 40, left: 60 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+    
+    // Get data
+    const scores = history.map(h => h.score);
+    const maxScore = Math.max(...scores, 1000);
+    const minScore = Math.min(...scores, 0);
+    const scoreRange = maxScore - minScore || 1;
+    
+    // Helper to get coordinate
+    const getX = (index) => padding.left + (index / (scores.length - 1)) * chartWidth;
+    const getY = (score) => padding.top + chartHeight - ((score - minScore) / scoreRange) * chartHeight;
+    
+    // Get CSS variable colors
+    const accentColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-accent').trim() || '#00f0f0';
+    const textColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-text-secondary').trim() || 'rgba(255, 255, 255, 0.8)';
+    const gridColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-grid-line').trim() || 'rgba(0, 240, 240, 0.2)';
+    
+    // Draw grid lines
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    const gridLines = 5;
+    for (let i = 0; i <= gridLines; i++) {
+      const y = padding.top + (chartHeight / gridLines) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(padding.left + chartWidth, y);
+      ctx.stroke();
+      
+      // Y-axis labels
+      const scoreValue = maxScore - (scoreRange / gridLines) * i;
+      ctx.fillStyle = textColor;
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(scoreValue).toLocaleString(), padding.left - 10, y + 4);
+    }
+    
+    // Draw line chart
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    scores.forEach((score, index) => {
+      const x = getX(index);
+      const y = getY(score);
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.stroke();
+    
+    // Draw points with glow
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = accentColor;
+    scores.forEach((score, index) => {
+      const x = getX(index);
+      const y = getY(score);
+      
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    
+    // Draw gradient fill under line
+    const gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
+    gradient.addColorStop(0, accentColor.replace(')', ', 0.3)').replace('rgb', 'rgba'));
+    gradient.addColorStop(1, accentColor.replace(')', ', 0)').replace('rgb', 'rgba'));
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(getX(0), padding.top + chartHeight);
+    scores.forEach((score, index) => {
+      ctx.lineTo(getX(index), getY(score));
+    });
+    ctx.lineTo(getX(scores.length - 1), padding.top + chartHeight);
+    ctx.closePath();
+    ctx.fill();
+    
+    // X-axis label
+    ctx.fillStyle = textColor;
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Last ' + history.length + ' Games', width / 2, height - 10);
+    
+    // Y-axis label
+    ctx.save();
+    ctx.translate(15, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Score', 0, 0);
+    ctx.restore();
+    
+  }, [history]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="score-history-canvas"
+      style={{ width: '100%', height: '300px' }}
+    />
+  );
+};
+
 const Brikx = () => {
   // Safe localStorage operations with validation
   const safeGetItem = (key, defaultValue = '') => {
@@ -100,7 +231,8 @@ const Brikx = () => {
       bestCombo: 0,
       totalPieces: 0,
       bestSprintTime: null,
-      longestMarathon: 0
+      longestMarathon: 0,
+      scoreHistory: [] // Array of {score, date, gameMode, level, lines}
     };
   });
 
@@ -836,8 +968,19 @@ const Brikx = () => {
         updateStatistics({ longestMarathon: score });
       }
       
-      // Update total score
-      updateStatistics({ totalScore: statistics.totalScore + score });
+      // Update total score and add to score history
+      const newHistory = [...(statistics.scoreHistory || []), {
+        score: score,
+        date: new Date().toISOString(),
+        gameMode: gameMode,
+        level: level,
+        lines: lines
+      }].slice(-50); // Keep last 50 games
+      
+      updateStatistics({ 
+        totalScore: statistics.totalScore + score,
+        scoreHistory: newHistory
+      });
     }
   }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, gameMode, score]);
 
@@ -3119,6 +3262,14 @@ const Brikx = () => {
                   <div className="stat-label-large">Avg Score</div>
                 </div>
               </div>
+              
+              {/* Score History Chart */}
+              {statistics.scoreHistory && statistics.scoreHistory.length > 1 && (
+                <div className="score-chart-section">
+                  <h3 className="chart-title">📈 Score Improvement</h3>
+                  <ScoreHistoryChart history={statistics.scoreHistory} />
+                </div>
+              )}
             </div>
           </div>
         )}
