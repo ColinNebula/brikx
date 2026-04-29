@@ -246,6 +246,19 @@ const Brikx = () => {
 
   // Touch swipe detection
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
+  const holdIntervalRef = useRef(null);
+  const holdTimeoutRef = useRef(null);
+
+  // Vibration feedback for mobile
+  const vibrate = useCallback((pattern = 10) => {
+    if (isMobile && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch (error) {
+        // Vibration not supported, silently fail
+      }
+    }
+  }, [isMobile]);
 
   // PWA Features
   const [showInstallBanner, setShowInstallBanner] = useState(false);
@@ -799,6 +812,17 @@ const Brikx = () => {
       const isPerfectClear = board.every(row => row.every(cell => cell === 0));
       const isCombo = combo > 0;
       
+      // Vibration feedback based on lines cleared
+      if (isPerfectClear) {
+        vibrate([30, 30, 30, 30, 50]); // Triple pulse + strong
+      } else if (linesToClear.length === 4) {
+        vibrate([20, 20, 20, 20, 30]); // Tetris - strong pattern
+      } else if (isCombo && combo > 1) {
+        vibrate([15, 10, 15]); // Combo - double pulse
+      } else {
+        vibrate(15 * linesToClear.length); // Single pulse, duration based on lines
+      }
+      
       // Play appropriate sound effects
       if (isPerfectClear) {
         playPerfectClearSound();
@@ -936,7 +960,7 @@ const Brikx = () => {
         setLastClearWasCombo(false);
       }
     }
-  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound]);
+  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, vibrate]);
 
   // Spawn new piece
   const spawnPiece = useCallback(() => {
@@ -962,6 +986,7 @@ const Brikx = () => {
       setGameOver(true);
       setGameStarted(false);
       playSound('gameOver', 150, 0.5, 0.25);
+      vibrate([50, 50, 100]); // Game over - strong double pulse
       
       // Update Marathon high score
       if (gameMode === 'marathon' && score > statistics.longestMarathon) {
@@ -982,7 +1007,7 @@ const Brikx = () => {
         scoreHistory: newHistory
       });
     }
-  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, gameMode, score]);
+  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate]);
 
   // Move piece down
   const moveDown = useCallback(() => {
@@ -2042,37 +2067,99 @@ const Brikx = () => {
     const buttons = touchButtonsRef.current;
     if (!buttons.length || !isMobile) return;
 
-    const handleTouchStart = (e, callback) => {
+    const handleTouchStart = (e, callback, vibratePattern, enableHold = false, holdCallback = null) => {
       e.preventDefault();
+      vibrate(vibratePattern);
       callback();
+
+      // Hold-to-move functionality for left/right buttons
+      if (enableHold && holdCallback) {
+        // Start auto-repeat after 300ms
+        holdTimeoutRef.current = setTimeout(() => {
+          holdIntervalRef.current = setInterval(() => {
+            vibrate(5); // Light vibration for auto-repeat
+            holdCallback();
+          }, 100); // Repeat every 100ms
+        }, 300);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      // Clear hold-to-move timers
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+        holdTimeoutRef.current = null;
+      }
+      if (holdIntervalRef.current) {
+        clearInterval(holdIntervalRef.current);
+        holdIntervalRef.current = null;
+      }
     };
 
     const listeners = buttons.map((button, index) => {
       if (!button) return null;
       
-      let callback;
+      let callback, vibratePattern, enableHold, holdCallback;
       switch(index) {
-        case 0: callback = () => setIsPaused(true); break;
-        case 1: callback = rotate; break;
-        case 2: callback = () => moveHorizontal(-1); break;
-        case 3: callback = moveDown; break;
-        case 4: callback = () => moveHorizontal(1); break;
-        case 5: callback = holdCurrentPiece; break;
-        case 6: callback = hardDrop; break;
+        case 0: // Pause
+          callback = () => setIsPaused(true);
+          vibratePattern = 20;
+          break;
+        case 1: // Rotate
+          callback = rotate;
+          vibratePattern = 15;
+          break;
+        case 2: // Left
+          callback = () => moveHorizontal(-1);
+          vibratePattern = 10;
+          enableHold = true;
+          holdCallback = () => moveHorizontal(-1);
+          break;
+        case 3: // Down
+          callback = moveDown;
+          vibratePattern = 8;
+          enableHold = true;
+          holdCallback = moveDown;
+          break;
+        case 4: // Right
+          callback = () => moveHorizontal(1);
+          vibratePattern = 10;
+          enableHold = true;
+          holdCallback = () => moveHorizontal(1);
+          break;
+        case 5: // Hold piece
+          callback = holdCurrentPiece;
+          vibratePattern = 25;
+          break;
+        case 6: // Hard drop
+          callback = hardDrop;
+          vibratePattern = [10, 50, 30]; // Double pulse
+          break;
         default: return null;
       }
 
-      const listener = (e) => handleTouchStart(e, callback);
-      button.addEventListener('touchstart', listener, { passive: false });
-      return { button, listener };
+      const startListener = (e) => handleTouchStart(e, callback, vibratePattern, enableHold, holdCallback);
+      const endListener = handleTouchEnd;
+      
+      button.addEventListener('touchstart', startListener, { passive: false });
+      button.addEventListener('touchend', endListener, { passive: false });
+      button.addEventListener('touchcancel', endListener, { passive: false });
+      
+      return { button, startListener, endListener };
     }).filter(Boolean);
 
     return () => {
-      listeners.forEach(({ button, listener }) => {
-        button.removeEventListener('touchstart', listener);
+      // Clear any active hold timers
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+      
+      listeners.forEach(({ button, startListener, endListener }) => {
+        button.removeEventListener('touchstart', startListener);
+        button.removeEventListener('touchend', endListener);
+        button.removeEventListener('touchcancel', endListener);
       });
     };
-  }, [isMobile, gameStarted, gameOver, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop]);
+  }, [isMobile, gameStarted, gameOver, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate]);
 
   // Swipe gesture detection on canvas
   useEffect(() => {
@@ -2108,18 +2195,22 @@ const Brikx = () => {
         // Vertical swipe
         if (deltaY < 0) {
           // Swipe up - rotate
+          vibrate(15);
           rotate();
         } else {
           // Swipe down - hard drop
+          vibrate([10, 50, 30]); // Double pulse for hard drop
           hardDrop();
         }
       } else {
         // Horizontal swipe  
         if (deltaX < 0) {
           // Swipe left
+          vibrate(10);
           moveHorizontal(-1);
         } else {
           // Swipe right
+          vibrate(10);
           moveHorizontal(1);
         }
       }
@@ -2132,7 +2223,7 @@ const Brikx = () => {
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal]);
+  }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal, vibrate]);
 
   // Update elapsed time for Sprint and Marathon modes
   useEffect(() => {
