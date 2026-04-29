@@ -116,7 +116,7 @@ const Brikx = () => {
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
 
   // PWA Features
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -2144,7 +2144,7 @@ const Brikx = () => {
     const result = await showInstallPrompt();
     if (result.outcome === 'accepted') {
       setCanInstall(false);
-      setShowInstallPrompt(false);
+      setShowInstallBanner(false);
     }
   };
 
