@@ -234,7 +234,7 @@ const Brikx = () => {
     setPlayerAvatar(sanitizedAvatar);
     safeSetItem('brickxPlayerName', sanitizedName);
     safeSetItem('brickxPlayerAvatar', sanitizedAvatar);
-  }, []);
+  }, [avatars]);
 
   // Game constants
   const COLS = 10;
@@ -304,7 +304,7 @@ const Brikx = () => {
       [bag[i], bag[j]] = [bag[j], bag[i]];
     }
     return bag;
-  }, []);
+  }, [SHAPES]);
 
   // Get next piece from bag
   const getNextPiece = useCallback(() => {
@@ -317,7 +317,7 @@ const Brikx = () => {
       color: COLORS[pieceType],
       type: pieceType
     };
-  }, [fillBag]);
+  }, [fillBag, SHAPES, COLORS]);
 
   // Check collision
   const checkCollision = useCallback((board, piece, offsetX, offsetY) => {
@@ -341,6 +341,7 @@ const Brikx = () => {
   }, [COLS, ROWS]);
 
   // Calculate ghost piece position
+  // eslint-disable-next-line no-unused-vars
   const calculateGhostPosition = useCallback((board, piece, startX, startY) => {
     let ghostY = startY;
     while (!checkCollision(board, piece, startX, ghostY + 1)) {
@@ -521,6 +522,7 @@ const Brikx = () => {
           colorGroups[color] = (colorGroups[color] || 0) + 1;
         });
         
+        // eslint-disable-next-line no-loop-func
         Object.values(colorGroups).forEach(count => {
           if (count >= 3) {
             colorBonusPoints += count * 50;
@@ -1275,6 +1277,13 @@ const Brikx = () => {
           ctx.lineTo(0, p.size * 1.2);
           ctx.stroke();
           break;
+        default:
+          // Default particle rendering
+          ctx.translate(p.x, p.y);
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          break;
       }
       
       ctx.restore();
@@ -1609,7 +1618,7 @@ const Brikx = () => {
         gameState.current.colorBonusDisplay = null;
       }
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, level, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS]);
 
   // Game loop
   useEffect(() => {
