@@ -2859,16 +2859,19 @@
   /* Mode selector for very small screens */
   .modal-overlay {
     padding: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-content {
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: 50px 15px 70px 15px;
+    min-height: auto;
+    padding: 50px 15px 90px 15px;
     padding-top: max(calc(env(safe-area-inset-top) + 50px), 50px);
-    padding-bottom: max(calc(env(safe-area-inset-bottom) + 70px), 90px);
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 90px), 110px);
+    margin-bottom: 20px;
     border-radius: 0;
     max-height: none;
+    overflow-y: visible;
   }
   
   .modal-close {
@@ -2877,6 +2880,7 @@
     font-size: 1.4rem;
     top: max(calc(env(safe-area-inset-top) + 8px), 8px);
     right: 12px;
+    z-index: 1001;
   }
   
   .modal-title {
@@ -2906,7 +2910,7 @@
     padding: 12px;
     font-size: 1rem;
     margin-top: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 25px;
   }
 }
 
@@ -3211,19 +3215,22 @@
   .modal-overlay {
     align-items: flex-start;
     padding: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-content {
-    min-height: 100vh;
-    min-height: 100dvh;
-    padding: 60px 20px 80px 20px;
+    min-height: auto;
+    padding: 60px 20px 100px 20px;
     padding-top: max(calc(env(safe-area-inset-top) + 60px), 60px);
-    padding-bottom: max(calc(env(safe-area-inset-bottom) + 80px), 100px);
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 100px), 120px);
     margin: 0;
+    margin-bottom: 20px;
     border-radius: 0;
     width: 100%;
     max-height: none;
-    overflow-y: auto;
+    overflow-y: visible;
   }
   
   .modal-close {
@@ -3233,6 +3240,7 @@
     top: max(calc(env(safe-area-inset-top) + 10px), 10px);
     right: 15px;
     position: fixed;
+    z-index: 1001;
   }
   
   .modal-title {
@@ -3265,7 +3273,7 @@
     padding: 14px;
     font-size: 1.1rem;
     margin-top: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     width: 100%;
   }
   
