@@ -2860,12 +2860,15 @@
   .modal-overlay {
     padding: 0;
     padding-top: max(env(safe-area-inset-top), 5px);
+    padding-bottom: max(env(safe-area-inset-bottom), 5px);
   }
   
   .modal-content {
-    max-height: calc(100vh - max(env(safe-area-inset-top), 5px));
-    max-height: calc(100dvh - max(env(safe-area-inset-top), 5px));
+    max-height: calc(100vh - max(env(safe-area-inset-top), 5px) - max(env(safe-area-inset-bottom), 5px));
+    max-height: calc(100dvh - max(env(safe-area-inset-top), 5px) - max(env(safe-area-inset-bottom), 5px));
     padding: 45px 15px 15px 15px;
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 15px), 20px);
+    margin-bottom: max(env(safe-area-inset-bottom), 5px);
     border-radius: 0 0 15px 15px;
   }
   
@@ -2904,6 +2907,7 @@
     padding: 10px;
     font-size: 1rem;
     margin-top: 10px;
+    margin-bottom: 8px;
   }
 }
 
@@ -3209,13 +3213,16 @@
     align-items: flex-start;
     padding: 0;
     padding-top: max(env(safe-area-inset-top), 10px);
+    padding-bottom: max(env(safe-area-inset-bottom), 10px);
   }
   
   .modal-content {
-    max-height: calc(100vh - max(env(safe-area-inset-top), 10px));
-    max-height: calc(100dvh - max(env(safe-area-inset-top), 10px));
-    padding: 50px 20px 20px 20px;
+    max-height: calc(100vh - max(env(safe-area-inset-top), 10px) - max(env(safe-area-inset-bottom), 10px));
+    max-height: calc(100dvh - max(env(safe-area-inset-top), 10px) - max(env(safe-area-inset-bottom), 10px));
+    padding: 50px 20px 30px 20px;
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 20px), 30px);
     margin: 0;
+    margin-bottom: max(env(safe-area-inset-bottom), 10px);
     border-radius: 0 0 20px 20px;
     width: 100%;
   }
@@ -3259,6 +3266,7 @@
     padding: 14px;
     font-size: 1.1rem;
     margin-top: 15px;
+    margin-bottom: 10px;
     width: 100%;
   }
   
