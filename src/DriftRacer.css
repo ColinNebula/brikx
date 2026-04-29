@@ -2859,24 +2859,23 @@
   /* Mode selector for very small screens */
   .modal-overlay {
     padding: 0;
-    padding-top: max(env(safe-area-inset-top), 5px);
-    padding-bottom: max(env(safe-area-inset-bottom), 5px);
   }
   
   .modal-content {
-    max-height: calc(100vh - max(env(safe-area-inset-top), 5px) - max(env(safe-area-inset-bottom), 5px));
-    max-height: calc(100dvh - max(env(safe-area-inset-top), 5px) - max(env(safe-area-inset-bottom), 5px));
-    padding: 45px 15px 15px 15px;
-    padding-bottom: max(calc(env(safe-area-inset-bottom) + 15px), 20px);
-    margin-bottom: max(env(safe-area-inset-bottom), 5px);
-    border-radius: 0 0 15px 15px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 50px 15px 70px 15px;
+    padding-top: max(calc(env(safe-area-inset-top) + 50px), 50px);
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 70px), 90px);
+    border-radius: 0;
+    max-height: none;
   }
   
   .modal-close {
     width: 38px;
     height: 38px;
     font-size: 1.4rem;
-    top: max(env(safe-area-inset-top, 8px), 8px);
+    top: max(calc(env(safe-area-inset-top) + 8px), 8px);
     right: 12px;
   }
   
@@ -2904,10 +2903,10 @@
   }
   
   .start-mode-btn {
-    padding: 10px;
+    padding: 12px;
     font-size: 1rem;
-    margin-top: 10px;
-    margin-bottom: 8px;
+    margin-top: 15px;
+    margin-bottom: 15px;
   }
 }
 
@@ -3212,26 +3211,26 @@
   .modal-overlay {
     align-items: flex-start;
     padding: 0;
-    padding-top: max(env(safe-area-inset-top), 10px);
-    padding-bottom: max(env(safe-area-inset-bottom), 10px);
   }
   
   .modal-content {
-    max-height: calc(100vh - max(env(safe-area-inset-top), 10px) - max(env(safe-area-inset-bottom), 10px));
-    max-height: calc(100dvh - max(env(safe-area-inset-top), 10px) - max(env(safe-area-inset-bottom), 10px));
-    padding: 50px 20px 30px 20px;
-    padding-bottom: max(calc(env(safe-area-inset-bottom) + 20px), 30px);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 60px 20px 80px 20px;
+    padding-top: max(calc(env(safe-area-inset-top) + 60px), 60px);
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 80px), 100px);
     margin: 0;
-    margin-bottom: max(env(safe-area-inset-bottom), 10px);
-    border-radius: 0 0 20px 20px;
+    border-radius: 0;
     width: 100%;
+    max-height: none;
+    overflow-y: auto;
   }
   
   .modal-close {
     width: 42px;
     height: 42px;
     font-size: 1.6rem;
-    top: max(env(safe-area-inset-top, 10px), 10px);
+    top: max(calc(env(safe-area-inset-top) + 10px), 10px);
     right: 15px;
     position: fixed;
   }
@@ -3265,8 +3264,8 @@
   .start-mode-btn {
     padding: 14px;
     font-size: 1.1rem;
-    margin-top: 15px;
-    margin-bottom: 10px;
+    margin-top: 20px;
+    margin-bottom: 20px;
     width: 100%;
   }
   
