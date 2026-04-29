@@ -1,8 +1,9 @@
 /* eslint-disable no-restricted-globals */
 
 // Security: Version cache name to prevent tampering
-const CACHE_NAME = 'brickx-v1-' + '2025-12-25';
-const SECURITY_VERSION = '1.0.0';
+// Update this version to force cache refresh on mobile
+const CACHE_NAME = 'brickx-v2-' + '2026-04-29';
+const SECURITY_VERSION = '2.0.0';
 const urlsToCache = [
   '/',
   '/index.html',

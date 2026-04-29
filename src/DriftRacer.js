@@ -124,6 +124,8 @@ const Brikx = () => {
   const [showDailyChallenge, setShowDailyChallenge] = useState(true);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState(null);
 
   // Theme System
   const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme());
@@ -2103,6 +2105,28 @@ const Brikx = () => {
     applyTheme(currentTheme);
   }, [currentTheme]);
 
+  // Listen for service worker updates
+  useEffect(() => {
+    const handleUpdate = (event) => {
+      console.log('Update available!', event.detail);
+      setShowUpdateBanner(true);
+      setWaitingWorker(event.detail.registration?.waiting);
+    };
+    
+    window.addEventListener('swUpdateAvailable', handleUpdate);
+    
+    return () => {
+      window.removeEventListener('swUpdateAvailable', handleUpdate);
+    };
+  }, []);
+
+  // Activate service worker update
+  const activateUpdate = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    }
+  };
+
   // Handle install prompt
   const handleInstall = async () => {
     const result = await showInstallPrompt();
@@ -2173,6 +2197,26 @@ const Brikx = () => {
             aria-label="Dismiss offline notification"
           >
             ✕
+          </button>
+        </div>
+      )}
+
+      {/* Update Available Banner */}
+      {showUpdateBanner && (
+        <div className="update-banner" role="alert" aria-live="polite">
+          <span>🎉 New version available!</span>
+          <button 
+            className="update-btn"
+            onClick={activateUpdate}
+            aria-label="Update app now"
+          >
+            Update Now
+          </button>
+          <button 
+            onClick={() => setShowUpdateBanner(false)}
+            aria-label="Dismiss update notification"
+          >
+            Later
           </button>
         </div>
       )}
