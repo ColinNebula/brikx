@@ -57,6 +57,39 @@ const Brikx = () => {
     return safeGetItem('brickxSoundEnabled', 'true') !== 'false';
   });
 
+  // Game modes: 'classic', 'sprint', 'marathon'
+  const [gameMode, setGameMode] = useState('classic');
+  const [showModeSelect, setShowModeSelect] = useState(false);
+  const [sprintLinesRemaining, setSprintLinesRemaining] = useState(40);
+  const [startTime, setStartTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Statistics
+  const [showStatistics, setShowStatistics] = useState(false);
+  const [statistics, setStatistics] = useState(() => {
+    const stored = safeGetItem('brikxStatistics', '');
+    return stored ? JSON.parse(stored) : {
+      totalGames: 0,
+      totalLines: 0,
+      totalScore: 0,
+      bestCombo: 0,
+      totalPieces: 0,
+      bestSprintTime: null,
+      longestMarathon: 0
+    };
+  });
+
+  // Achievements
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [achievements, setAchievements] = useState(() => {
+    const stored = safeGetItem('brikxAchievements', '');
+    return stored ? JSON.parse(stored) : {};
+  });
+  const [newAchievement, setNewAchievement] = useState(null);
+
+  // Touch swipe detection
+  const touchStart = useRef({ x: 0, y: 0, time: 0 });
+
   // Avatar options
   const avatars = [
     '🎮', '👾', '🕹️', '🎯', '⭐', '🔥', '💎', '👑', 
@@ -210,6 +243,51 @@ const Brikx = () => {
       return newValue;
     });
   }, [playSound]);
+
+  // Achievement definitions
+  const achievementsList = {
+    firstGame: { name: 'First Steps', description: 'Play your first game', icon: '🎮', requirement: () => statistics.totalGames >= 1 },
+    scorer100: { name: 'Century', description: 'Score 100 points', icon: '💯', requirement: () => statistics.totalScore >= 100 },
+    scorer1000: { name: 'Millennium', description: 'Score 1,000 points', icon: '⭐', requirement: () => statistics.totalScore >= 1000 },
+    scorer10000: { name: 'Legend', description: 'Score 10,000 points', icon: '👑', requirement: () => statistics.totalScore >= 10000 },
+    lines10: { name: 'Line Clearer', description: 'Clear 10 lines', icon: '📏', requirement: () => statistics.totalLines >= 10 },
+    lines100: { name: 'Line Master', description: 'Clear 100 lines', icon: '🎯', requirement: () => statistics.totalLines >= 100 },
+    lines1000: { name: 'Line Legend', description: 'Clear 1,000 lines', icon: '🚀', requirement: () => statistics.totalLines >= 1000 },
+    combo5: { name: 'Combo Starter', description: 'Get a 5x combo', icon: '🔥', requirement: () => statistics.bestCombo >= 5 },
+    combo10: { name: 'Combo Master', description: 'Get a 10x combo', icon: '💥', requirement: () => statistics.bestCombo >= 10 },
+    speedster: { name: 'Speedster', description: 'Complete Sprint mode under 2 minutes', icon: '⚡', requirement: () => statistics.bestSprintTime && statistics.bestSprintTime < 120000 },
+    marathoner: { name: 'Marathoner', description: 'Score 50,000 in Marathon mode', icon: '🏃', requirement: () => statistics.longestMarathon >= 50000 },
+    piecesPlacer: { name: 'Block Builder', description: 'Place 1,000 pieces', icon: '🧱', requirement: () => statistics.totalPieces >= 1000 }
+  };
+
+  // Check and unlock achievements
+  const checkAchievements = useCallback(() => {
+    const newAchievements = { ...achievements };
+    let hasNew = false;
+
+    Object.keys(achievementsList).forEach(key => {
+      if (!newAchievements[key] && achievementsList[key].requirement()) {
+        newAchievements[key] = { unlocked: true, date: new Date().toISOString() };
+        hasNew = true;
+        setNewAchievement(achievementsList[key]);
+        setTimeout(() => setNewAchievement(null), 4000);
+        playSound('achievement', 800, 0.3);
+      }
+    });
+
+    if (hasNew) {
+      setAchievements(newAchievements);
+      safeSetItem('brikxAchievements', JSON.stringify(newAchievements));
+    }
+  }, [achievements, statistics, playSound]);
+
+  // Update statistics
+  const updateStatistics = useCallback((updates) => {
+    const newStats = { ...statistics, ...updates };
+    setStatistics(newStats);
+    safeSetItem('brikxStatistics', JSON.stringify(newStats));
+    checkAchievements();
+  }, [statistics, checkAchievements]);
 
   // Detect mobile device and touch capability
   useEffect(() => {
@@ -567,6 +645,33 @@ const Brikx = () => {
       const linesCleared = linesToClear.length;
       setLines(prev => prev + linesCleared);
       
+      // Update statistics
+      updateStatistics({
+        totalLines: statistics.totalLines + linesCleared,
+        bestCombo: Math.max(statistics.bestCombo, combo + 1)
+      });
+      
+      // Sprint mode: track remaining lines
+      if (gameMode === 'sprint') {
+        const newRemaining = Math.max(0, sprintLinesRemaining - linesCleared);
+        setSprintLinesRemaining(newRemaining);
+        
+        if (newRemaining === 0) {
+          // Sprint completed!
+          const completionTime = Date.now() - startTime;
+          setGameOver(true);
+          setGameStarted(false);
+          
+          // Update best sprint time
+          if (!statistics.bestSprintTime || completionTime < statistics.bestSprintTime) {
+            updateStatistics({ bestSprintTime: completionTime });
+          }
+          
+          playSound('achievement', 1200, 0.5);
+          return;
+        }
+      }
+      
       // Combo system
       if (lastClearWasCombo) {
         setCombo(prev => prev + 1);
@@ -662,12 +767,23 @@ const Brikx = () => {
     gameState.current.currentY = 0;
     gameState.current.canHold = true;
     
+    // Update statistics
+    updateStatistics({ totalPieces: statistics.totalPieces + 1 });
+    
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
       setGameOver(true);
       setGameStarted(false);
       playSound('gameOver', 150, 0.5, 0.25);
+      
+      // Update Marathon high score
+      if (gameMode === 'marathon' && score > statistics.longestMarathon) {
+        updateStatistics({ longestMarathon: score });
+      }
+      
+      // Update total score
+      updateStatistics({ totalScore: statistics.totalScore + score });
     }
-  }, [getNextPiece, checkCollision, COLS, playSound]);
+  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, gameMode, score]);
 
   // Move piece down
   const moveDown = useCallback(() => {
@@ -760,7 +876,7 @@ const Brikx = () => {
     gameState.current.holdPiece = null;
     gameState.current.canHold = true;
     gameState.current.dropCounter = 0;
-    gameState.current.dropInterval = 1000;
+    gameState.current.dropInterval = gameMode === 'marathon' ? 800 : 1000;
     gameState.current.colorBonusDisplay = null;
     gameState.current.bag = [];
     gameState.current.particles = [];
@@ -775,8 +891,19 @@ const Brikx = () => {
     setGameOver(false);
     setIsPaused(false);
     
+    // Game mode specific initialization
+    if (gameMode === 'sprint') {
+      setSprintLinesRemaining(40);
+      setStartTime(Date.now());
+    } else if (gameMode === 'marathon') {
+      setStartTime(Date.now());
+    }
+    
+    // Update statistics
+    updateStatistics({ totalGames: statistics.totalGames + 1 });
+    
     spawnPiece();
-  }, [spawnPiece, ROWS, COLS]);
+  }, [spawnPiece, ROWS, COLS, gameMode, updateStatistics, statistics.totalGames]);
 
   const startCountdown = useCallback(() => {
     setCountdown(3);
@@ -1503,24 +1630,30 @@ const Brikx = () => {
       });
     }
 
-    // Draw next pieces preview (right panel)
+    // Draw next pieces preview (right panel) - Show 3 pieces
     const nextPanelX = boardOffsetX + BOARD_WIDTH + 10;
     
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(nextPanelX, 10, 110, 420);
+    ctx.fillRect(nextPanelX, 10, 110, 300);
     ctx.strokeStyle = '#00f0f0';
     ctx.lineWidth = 2;
-    ctx.strokeRect(nextPanelX, 10, 110, 420);
+    ctx.strokeRect(nextPanelX, 10, 110, 300);
     
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 14px Arial';
     ctx.fillText('NEXT', nextPanelX + 5, 28);
     
-    nextPieces.slice(0, 5).forEach((piece, index) => {
-      const pieceSize = 18;
-      const yOffset = 50 + index * 80;
+    // Draw top 3 pieces with larger size
+    nextPieces.slice(0, 3).forEach((piece, index) => {
+      const pieceSize = 20;
+      const yOffset = 60 + index * 95;
       const offsetX = nextPanelX + 55 - (piece.shape[0].length * pieceSize) / 2;
       const offsetY = yOffset - (piece.shape.length * pieceSize) / 2;
+      
+      // Draw piece number
+      ctx.fillStyle = '#888';
+      ctx.font = 'bold 10px Arial';
+      ctx.fillText(`#${index + 1}`, nextPanelX + 5, yOffset - 30);
       
       piece.shape.forEach((row, y) => {
         row.forEach((value, x) => {
@@ -1528,13 +1661,13 @@ const Brikx = () => {
             const bx = offsetX + x * pieceSize;
             const by = offsetY + y * pieceSize;
             const bs = pieceSize - 2;
-            const baseAlpha = 1 - (index * 0.12);
+            const baseAlpha = 1 - (index * 0.15);
             
             ctx.globalAlpha = baseAlpha;
             
             // Base color with subtle glow
             ctx.shadowColor = piece.color;
-            ctx.shadowBlur = 4;
+            ctx.shadowBlur = 5;
             ctx.fillStyle = piece.color;
             ctx.fillRect(bx, by, bs, bs);
             ctx.shadowBlur = 0;
@@ -1696,6 +1829,77 @@ const Brikx = () => {
     };
   }, [isMobile, gameStarted, gameOver, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop]);
 
+  // Swipe gesture detection on canvas
+  useEffect(() => {
+    if (!isMobile || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+
+    const handleTouchStart = (e) => {
+      const touch = e.touches[0];
+      touchStart.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      };
+    };
+
+    const handleTouchEnd = (e) => {
+      if (!gameStarted || gameOver || isPaused) return;
+
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStart.current.x;
+      const deltaY = touch.clientY - touchStart.current.y;
+      const deltaTime = Date.now() - touchStart.current.time;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // Ignore if too slow or too short
+      if (deltaTime > 300 || distance < 30) return;
+
+      e.preventDefault();
+
+      // Determine swipe direction
+      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Vertical swipe
+        if (deltaY < 0) {
+          // Swipe up - rotate
+          rotate();
+        } else {
+          // Swipe down - hard drop
+          hardDrop();
+        }
+      } else {
+        // Horizontal swipe  
+        if (deltaX < 0) {
+          // Swipe left
+          moveHorizontal(-1);
+        } else {
+          // Swipe right
+          moveHorizontal(1);
+        }
+      }
+    };
+
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal]);
+
+  // Update elapsed time for Sprint and Marathon modes
+  useEffect(() => {
+    if (!gameStarted || !startTime || gameOver) return;
+
+    const interval = setInterval(() => {
+      setElapsedTime(Date.now() - startTime);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [gameStarted, startTime, gameOver]);
+
   return (
     <div className="drift-racer">
       {gameStarted && (
@@ -1723,10 +1927,34 @@ const Brikx = () => {
           <div className="stat-card">
             <div className="stat-icon">📏</div>
             <div className="stat-info">
-              <div className="stat-label">LINES</div>
-              <div className="stat-value">{lines}</div>
+              <div className="stat-label">{gameMode === 'sprint' ? 'REMAINING' : 'LINES'}</div>
+              <div className="stat-value">{gameMode === 'sprint' ? sprintLinesRemaining : lines}</div>
             </div>
           </div>
+          
+          {gameMode === 'sprint' && startTime && (
+            <div className="stat-card">
+              <div className="stat-icon">⏱️</div>
+              <div className="stat-info">
+                <div className="stat-label">TIME</div>
+                <div className="stat-value">
+                  {Math.floor((Date.now() - startTime) / 60000)}:{String(Math.floor(((Date.now() - startTime) % 60000) / 1000)).padStart(2, '0')}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {gameMode === 'marathon' && startTime && (
+            <div className="stat-card">
+              <div className="stat-icon">⏱️</div>
+              <div className="stat-info">
+                <div className="stat-label">TIME</div>
+                <div className="stat-value">
+                  {Math.floor((Date.now() - startTime) / 60000)}:{String(Math.floor(((Date.now() - startTime) % 60000) / 1000)).padStart(2, '0')}
+                </div>
+              </div>
+            </div>
+          )}
           
           {combo > 0 && (
             <div className="stat-card combo-card">
@@ -1822,7 +2050,7 @@ const Brikx = () => {
                       <span className="player-name-small">{playerName}</span>
                     </div>
                     
-                    <button className="immersive-play-btn" onClick={() => { playSound('menuClick', 600, 0.1); startCountdown(); }}>
+                    <button className="immersive-play-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowModeSelect(true); }}>
                       <span className="play-icon-large">▶</span>
                       <span className="play-text-large">START GAME</span>
                     </button>
@@ -1843,6 +2071,12 @@ const Brikx = () => {
                     <div className="immersive-menu-actions">
                       <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowProfile(true); }}>
                         👤 Profile
+                      </button>
+                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowStatistics(true); }}>
+                        📊 Statistics
+                      </button>
+                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowAchievements(true); }}>
+                        🏆 Achievements
                       </button>
                       <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowTutorial(true); }}>
                         📖 Tutorial
@@ -2044,7 +2278,235 @@ const Brikx = () => {
           </div>
         )}
         
+        {/* Profile Modal */}
         {showProfile && (
+          <div className="modal-overlay" onClick={() => setShowProfile(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowProfile(false)}>×</button>
+              <h2 className="modal-title">👤 Player Profile</h2>
+              
+              <div className="profile-section">
+                <h3 className="settings-heading">Display Name</h3>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value.slice(0, 15))}
+                  onBlur={() => saveProfile(playerName, playerAvatar)}
+                  className="profile-input"
+                  maxLength={15}
+                  placeholder="Enter your name"
+                />
+              </div>
+              
+              <div className="profile-section">
+                <h3 className="settings-heading">Choose Avatar</h3>
+                <div className="avatar-grid">
+                  {avatars.map((avatar) => (
+                    <button
+                      key={avatar}
+                      className={`avatar-option ${playerAvatar === avatar ? 'selected' : ''}`}
+                      onClick={() => {
+                        setPlayerAvatar(avatar);
+                        saveProfile(playerName, avatar);
+                      }}
+                    >
+                      {avatar}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <button 
+                className="save-profile-btn"
+                onClick={() => {
+                  saveProfile(playerName, playerAvatar);
+                  setShowProfile(false);
+                  playSound('menuClick', 600, 0.1);
+                }}
+              >
+                💾 Save Profile
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Game Mode Select */}
+        {showModeSelect && !gameStarted && (
+          <div className="modal-overlay" onClick={() => setShowModeSelect(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowModeSelect(false)}>×</button>
+              <h2 className="modal-title">🎮 Game Mode</h2>
+              
+              <div className="modes-grid">
+                <div 
+                  className={`mode-card ${gameMode === 'classic' ? 'selected' : ''}`}
+                  onClick={() => { setGameMode('classic'); playSound('menuClick', 600, 0.1); }}
+                >
+                  <div className="mode-icon">🎮</div>
+                  <h3>Classic</h3>
+                  <p>Traditional Tetris gameplay. Clear lines and survive as level increases.</p>
+                </div>
+                
+                <div 
+                  className={`mode-card ${gameMode === 'sprint' ? 'selected' : ''}`}
+                  onClick={() => { setGameMode('sprint'); playSound('menuClick', 600, 0.1); }}
+                >
+                  <div className="mode-icon">⚡</div>
+                  <h3>Sprint</h3>
+                  <p>Clear 40 lines as fast as possible. Race against the clock!</p>
+                </div>
+                
+                <div 
+                  className={`mode-card ${gameMode === 'marathon' ? 'selected' : ''}`}
+                  onClick={() => { setGameMode('marathon'); playSound('menuClick', 600, 0.1); }}
+                >
+                  <div className="mode-icon">🏃</div>
+                  <h3>Marathon</h3>
+                  <p>Endurance mode. How high can you score with faster speeds?</p>
+                </div>
+              </div>
+              
+              <button 
+                className="start-mode-btn"
+                onClick={() => {
+                  setShowModeSelect(false);
+                  startCountdown();
+                  playSound('menuClick', 600, 0.1);
+                }}
+              >
+                ▶ Start {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)} Mode
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Statistics Modal */}
+        {showStatistics && (
+          <div className="modal-overlay" onClick={() => setShowStatistics(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowStatistics(false)}>×</button>
+              <h2 className="modal-title">📊 Statistics</h2>
+              
+              <div className="stats-grid">
+                <div className="stat-box">
+                  <div className="stat-icon-large">🎮</div>
+                  <div className="stat-value-large">{statistics.totalGames}</div>
+                  <div className="stat-label-large">Games Played</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">📏</div>
+                  <div className="stat-value-large">{statistics.totalLines}</div>
+                  <div className="stat-label-large">Total Lines</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">🏆</div>
+                  <div className="stat-value-large">{statistics.totalScore.toLocaleString()}</div>
+                  <div className="stat-label-large">Total Score</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">🔥</div>
+                  <div className="stat-value-large">{statistics.bestCombo}x</div>
+                  <div className="stat-label-large">Best Combo</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">🧱</div>
+                  <div className="stat-value-large">{statistics.totalPieces.toLocaleString()}</div>
+                  <div className="stat-label-large">Pieces Placed</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">⚡</div>
+                  <div className="stat-value-large">
+                    {statistics.bestSprintTime 
+                      ? `${Math.floor(statistics.bestSprintTime / 60000)}:${String(Math.floor((statistics.bestSprintTime % 60000) / 1000)).padStart(2, '0')}`
+                      : '--:--'}
+                  </div>
+                  <div className="stat-label-large">Best Sprint</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">🏃</div>
+                  <div className="stat-value-large">{statistics.longestMarathon.toLocaleString()}</div>
+                  <div className="stat-label-large">Best Marathon</div>
+                </div>
+                
+                <div className="stat-box">
+                  <div className="stat-icon-large">📈</div>
+                  <div className="stat-value-large">
+                    {statistics.totalGames > 0 ? Math.floor(statistics.totalScore / statistics.totalGames).toLocaleString() : 0}
+                  </div>
+                  <div className="stat-label-large">Avg Score</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Achievements Modal */}
+        {showAchievements && (
+          <div className="modal-overlay" onClick={() => setShowAchievements(false)}>
+            <div className="modal-content achievements-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowAchievements(false)}>×</button>
+              <h2 className="modal-title">🏆 Achievements</h2>
+              
+              <div className="achievements-grid">
+                {Object.keys(achievementsList).map(key => {
+                  const achievement = achievementsList[key];
+                  const unlocked = achievements[key]?.unlocked;
+                  
+                  return (
+                    <div 
+                      key={key}
+                      className={`achievement-card ${unlocked ? 'unlocked' : 'locked'}`}
+                    >
+                      <div className="achievement-icon">{achievement.icon}</div>
+                      <div className="achievement-details">
+                        <div className="achievement-name">{achievement.name}</div>
+                        <div className="achievement-description">{achievement.description}</div>
+                        {unlocked && achievements[key]?.date && (
+                          <div className="achievement-date">
+                            Unlocked: {new Date(achievements[key].date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                      {unlocked && <div className="achievement-checkmark">✓</div>}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="achievements-progress">
+                <div className="progress-text">
+                  {Object.values(achievements).filter(a => a.unlocked).length} / {Object.keys(achievementsList).length} Unlocked
+                </div>
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill"
+                    style={{width: `${(Object.values(achievements).filter(a => a.unlocked).length / Object.keys(achievementsList).length) * 100}%`}}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Achievement Notification */}
+        {newAchievement && (
+          <div className="achievement-notification">
+            <div className="achievement-notif-icon">{newAchievement.icon}</div>
+            <div className="achievement-notif-text">
+              <div className="achievement-notif-title">Achievement Unlocked!</div>
+              <div className="achievement-notif-name">{newAchievement.name}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Modal - existing code */}
+        {showProfile && false && (
           <div className="modal-overlay" onClick={() => setShowProfile(false)}>
             <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setShowProfile(false)}>×</button>
