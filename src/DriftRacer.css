@@ -3060,3 +3060,371 @@
     font-size: 1.5rem;
   }
 }
+
+/* ============================================
+   PWA FEATURES
+   ============================================ */
+
+/* Offline Banner */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.95), rgba(255, 64, 64, 0.95));
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.offline-banner button {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: opacity 0.2s;
+}
+
+.offline-banner button:hover {
+  opacity: 0.7;
+}
+
+/* Daily Challenge Banner */
+.daily-challenge-banner {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 600px;
+  width: 90%;
+  background: linear-gradient(135deg, rgba(0, 240, 240, 0.95), rgba(0, 120, 240, 0.95));
+  border: 2px solid #00f0f0;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 240, 240, 0.4);
+  z-index: 9999;
+  animation: slideDown 0.5s ease;
+}
+
+.challenge-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.challenge-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.challenge-info {
+  flex: 1;
+}
+
+.challenge-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.challenge-description {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 5px;
+}
+
+.challenge-reward {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: bold;
+}
+
+.challenge-close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.challenge-close:hover {
+  opacity: 0.7;
+}
+
+/* Install Prompt */
+.install-prompt {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 500px;
+  width: 90%;
+  background: linear-gradient(135deg, rgba(10, 10, 46, 0.98), rgba(22, 33, 62, 0.98));
+  border: 2px solid rgba(0, 240, 240, 0.5);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.install-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.install-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.install-text {
+  flex: 1;
+  color: white;
+}
+
+.install-text strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+  color: #00f0f0;
+}
+
+.install-text p {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.install-button {
+  background: linear-gradient(135deg, #00f0f0, #0078f0);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.install-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 240, 240, 0.5);
+}
+
+.install-dismiss {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.install-dismiss:hover {
+  opacity: 1;
+  color: white;
+}
+
+/* Settings Modal Enhancements */
+.settings-section {
+  margin: 25px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 240, 240, 0.2);
+}
+
+.settings-heading {
+  font-size: 1.1rem;
+  color: #00f0f0;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(0, 240, 240, 0.1);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-label {
+  flex: 1;
+  color: white;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.setting-description {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.toggle-button {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(0, 240, 240, 0.3);
+  border-radius: 25px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  min-width: 80px;
+}
+
+.toggle-button:hover {
+  border-color: rgba(0, 240, 240, 0.5);
+}
+
+.toggle-button.active {
+  background: linear-gradient(135deg, rgba(0, 240, 240, 0.3), rgba(0, 120, 240, 0.3));
+  border-color: #00f0f0;
+  color: white;
+}
+
+.toggle-icon {
+  font-size: 1.2rem;
+}
+
+.toggle-text {
+  font-weight: bold;
+}
+
+.install-settings-btn {
+  background: linear-gradient(135deg, #00f0f0, #0078f0);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: bold;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.install-settings-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 240, 240, 0.5);
+}
+
+.setting-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.setting-info p {
+  margin: 8px 0;
+}
+
+/* Responsive PWA Components */
+@media (max-width: 768px) {
+  .daily-challenge-banner {
+    top: 10px;
+    width: 95%;
+    padding: 15px;
+  }
+
+  .challenge-icon {
+    font-size: 2rem;
+  }
+
+  .challenge-title {
+    font-size: 1rem;
+  }
+
+  .challenge-description {
+    font-size: 0.9rem;
+  }
+
+  .install-prompt {
+    bottom: 10px;
+    width: 95%;
+    padding: 15px;
+  }
+
+  .install-content {
+    gap: 10px;
+  }
+
+  .install-icon {
+    font-size: 2rem;
+  }
+
+  .install-text strong {
+    font-size: 1rem;
+  }
+
+  .install-text p {
+    font-size: 0.85rem;
+  }
+
+  .install-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .settings-section {
+    padding: 15px;
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .toggle-button {
+    align-self: flex-end;
+  }
+}

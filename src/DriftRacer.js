@@ -1,5 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './DriftRacer.css';
+import {
+  initPWA,
+  showInstallPrompt,
+  isInstalled,
+  isInstallAvailable,
+  requestNotificationPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+  getDailyChallenge,
+  checkDailyChallenge,
+  queueHighScore,
+  initSyncListener,
+  isOffline,
+  initNetworkListener,
+  showNotification
+} from './pwaUtils';
 
 const Brikx = () => {
   // Safe localStorage operations with validation
@@ -89,6 +105,16 @@ const Brikx = () => {
 
   // Touch swipe detection
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
+
+  // PWA Features
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [dailyChallenge, setDailyChallenge] = useState(null);
+  const [showDailyChallenge, setShowDailyChallenge] = useState(true);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
 
   // Avatar options
   const avatars = [
@@ -1900,10 +1926,176 @@ const Brikx = () => {
     return () => clearInterval(interval);
   }, [gameStarted, startTime, gameOver]);
 
+  // Initialize PWA features
+  useEffect(() => {
+    initPWA();
+    
+    // Check if app is installed
+    setIsAppInstalled(isInstalled());
+    
+    // Check if install prompt is available
+    const handleInstallAvailable = () => {
+      setCanInstall(true);
+    };
+    
+    window.addEventListener('installAvailable', handleInstallAvailable);
+    
+    // Check notification permission
+    if ('Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted');
+    }
+    
+    // Get daily challenge
+    const challenge = getDailyChallenge();
+    setDailyChallenge(challenge);
+    
+    // Initialize network listeners
+    initNetworkListener(
+      () => {
+        setIsOfflineMode(false);
+        setShowOfflineBanner(false);
+      },
+      () => {
+        setIsOfflineMode(true);
+        setShowOfflineBanner(true);
+      }
+    );
+    
+    // Initialize sync listener
+    initSyncListener((scores) => {
+      console.log('High scores synced from offline queue:', scores);
+      // Process synced scores if needed
+    });
+    
+    return () => {
+      window.removeEventListener('installAvailable', handleInstallAvailable);
+    };
+  }, []);
+
+  // Handle install prompt
+  const handleInstall = async () => {
+    const result = await showInstallPrompt();
+    if (result.outcome === 'accepted') {
+      setCanInstall(false);
+      setShowInstallPrompt(false);
+    }
+  };
+
+  // Handle notification toggle
+  const handleNotificationToggle = async () => {
+    if (notificationsEnabled) {
+      await unsubscribeFromPush();
+      setNotificationsEnabled(false);
+    } else {
+      const permission = await requestNotificationPermission();
+      if (permission === 'granted') {
+        await subscribeToPush();
+        setNotificationsEnabled(true);
+      }
+    }
+  };
+
+  // Check daily challenge on game over
+  useEffect(() => {
+    if (gameOver && dailyChallenge && !dailyChallenge.completed) {
+      const gameData = {
+        mode: gameMode,
+        score: score,
+        lines: lines,
+        maxCombo: combo,
+        time: startTime ? Date.now() - startTime : 0,
+        piecesPlaced: statistics.totalPieces
+      };
+      
+      const result = checkDailyChallenge(gameData);
+      if (result.success) {
+        // Refresh daily challenge state
+        setDailyChallenge(getDailyChallenge());
+      }
+    }
+  }, [gameOver, dailyChallenge, gameMode, score, lines, combo, startTime, statistics.totalPieces]);
+
+  // Queue high score for offline sync
+  useEffect(() => {
+    if (gameOver && score > 0) {
+      if (isOffline()) {
+        queueHighScore({
+          score: score,
+          lines: lines,
+          level: level,
+          mode: gameMode,
+          playerName: playerName,
+          date: Date.now()
+        });
+      }
+    }
+  }, [gameOver, score, lines, level, gameMode, playerName]);
+
   return (
-    <div className="drift-racer">
+    <div className="drift-racer" role="main" aria-label="BRIKX Game">
+      {/* Offline Banner */}
+      {showOfflineBanner && (
+        <div className="offline-banner" role="alert" aria-live="polite">
+          <span>📡 Offline Mode - Scores will sync when online</span>
+          <button 
+            onClick={() => setShowOfflineBanner(false)}
+            aria-label="Dismiss offline notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Daily Challenge Banner */}
+      {dailyChallenge && showDailyChallenge && !dailyChallenge.completed && !gameStarted && (
+        <div className="daily-challenge-banner" role="complementary" aria-label="Daily challenge">
+          <div className="challenge-content">
+            <span className="challenge-icon">{dailyChallenge.icon}</span>
+            <div className="challenge-info">
+              <div className="challenge-title">Daily Challenge</div>
+              <div className="challenge-description">{dailyChallenge.description}</div>
+              <div className="challenge-reward">Reward: {dailyChallenge.reward} points</div>
+            </div>
+            <button 
+              className="challenge-close" 
+              onClick={() => setShowDailyChallenge(false)}
+              aria-label="Dismiss daily challenge"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Install Prompt */}
+      {canInstall && !isAppInstalled && !gameStarted && (
+        <div className="install-prompt" role="complementary" aria-label="Install app prompt">
+          <div className="install-content">
+            <span className="install-icon">📱</span>
+            <div className="install-text">
+              <strong>Install BRIKX</strong>
+              <p>Play offline & get daily challenges!</p>
+            </div>
+            <button 
+              className="install-button" 
+              onClick={handleInstall}
+              aria-label="Install BRIKX app"
+            >
+              Install
+            </button>
+            <button 
+              className="install-dismiss" 
+              onClick={() => setCanInstall(false)}
+              aria-label="Dismiss install prompt"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {gameStarted && (
-        <div className="game-header">
+        <div className="game-header" role="region" aria-label="Game statistics">
           <div className="stats-container">
           <div className="stat-card">
             <div className="stat-icon">🏆</div>
@@ -2069,19 +2261,39 @@ const Brikx = () => {
                     </div>
                     
                     <div className="immersive-menu-actions">
-                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowProfile(true); }}>
+                      <button 
+                        className="immersive-btn" 
+                        onClick={() => { playSound('menuClick', 600, 0.1); setShowProfile(true); }}
+                        aria-label="Open player profile"
+                      >
                         👤 Profile
                       </button>
-                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowStatistics(true); }}>
+                      <button 
+                        className="immersive-btn" 
+                        onClick={() => { playSound('menuClick', 600, 0.1); setShowStatistics(true); }}
+                        aria-label="View game statistics"
+                      >
                         📊 Statistics
                       </button>
-                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowAchievements(true); }}>
+                      <button 
+                        className="immersive-btn" 
+                        onClick={() => { playSound('menuClick', 600, 0.1); setShowAchievements(true); }}
+                        aria-label="View achievements"
+                      >
                         🏆 Achievements
                       </button>
-                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowTutorial(true); }}>
+                      <button 
+                        className="immersive-btn" 
+                        onClick={() => { playSound('menuClick', 600, 0.1); setShowTutorial(true); }}
+                        aria-label="How to play tutorial"
+                      >
                         📖 Tutorial
                       </button>
-                      <button className="immersive-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowSettings(true); }}>
+                      <button 
+                        className="immersive-btn" 
+                        onClick={() => { playSound('menuClick', 600, 0.1); setShowSettings(true); }}
+                        aria-label="Open settings"
+                      >
                         ⚙️ Settings
                       </button>
                     </div>
@@ -2326,6 +2538,85 @@ const Brikx = () => {
               >
                 💾 Save Profile
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Modal */}
+        {showSettings && (
+          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowSettings(false)} aria-label="Close settings">×</button>
+              <h2 className="modal-title">⚙️ Settings</h2>
+              
+              <div className="settings-section">
+                <h3 className="settings-heading">Audio</h3>
+                <div className="setting-item">
+                  <label htmlFor="sound-toggle" className="setting-label">Sound Effects</label>
+                  <button 
+                    id="sound-toggle"
+                    className={`toggle-button ${soundEnabled ? 'active' : ''}`}
+                    onClick={() => {
+                      setSoundEnabled(!soundEnabled);
+                      safeSetItem('brickxSoundEnabled', (!soundEnabled).toString());
+                    }}
+                    aria-pressed={soundEnabled}
+                    aria-label="Toggle sound effects"
+                  >
+                    <span className="toggle-icon">{soundEnabled ? '🔊' : '🔇'}</span>
+                    <span className="toggle-text">{soundEnabled ? 'On' : 'Off'}</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="settings-section">
+                <h3 className="settings-heading">Notifications</h3>
+                <div className="setting-item">
+                  <label htmlFor="notification-toggle" className="setting-label">
+                    Push Notifications
+                    <span className="setting-description">Get daily challenges & reminders</span>
+                  </label>
+                  <button 
+                    id="notification-toggle"
+                    className={`toggle-button ${notificationsEnabled ? 'active' : ''}`}
+                    onClick={handleNotificationToggle}
+                    aria-pressed={notificationsEnabled}
+                    aria-label="Toggle push notifications"
+                  >
+                    <span className="toggle-icon">{notificationsEnabled ? '🔔' : '🔕'}</span>
+                    <span className="toggle-text">{notificationsEnabled ? 'On' : 'Off'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {!isAppInstalled && canInstall && (
+                <div className="settings-section">
+                  <h3 className="settings-heading">Progressive Web App</h3>
+                  <div className="setting-item">
+                    <div className="setting-label">
+                      Install BRIKX
+                      <span className="setting-description">Play offline & get a better experience</span>
+                    </div>
+                    <button 
+                      className="install-settings-btn"
+                      onClick={handleInstall}
+                      aria-label="Install BRIKX as app"
+                    >
+                      📱 Install App
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="settings-section">
+                <h3 className="settings-heading">Accessibility</h3>
+                <div className="setting-info">
+                  <p>✓ Full keyboard navigation support</p>
+                  <p>✓ Screen reader compatible</p>
+                  <p>✓ High contrast visual design</p>
+                  <p>✓ Gamepad support</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
