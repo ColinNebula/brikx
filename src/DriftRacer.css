@@ -2851,6 +2851,41 @@
     height: 60px;
     font-size: 1rem;
   }
+  
+  /* Mode selector for very small screens */
+  .modal-content {
+    max-height: 80vh;
+    padding: 20px 10px;
+  }
+  
+  .mode-card {
+    padding: 15px 10px;
+  }
+  
+  .mode-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+  
+  .mode-card h3 {
+    font-size: 1.1rem;
+    margin: 5px 0;
+  }
+  
+  .mode-card p {
+    font-size: 0.8rem;
+  }
+  
+  .start-mode-btn {
+    padding: 10px;
+    font-size: 1rem;
+    margin-top: 10px;
+  }
+  
+  .modal-title {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+  }
 }
 
 /* Game Mode Selector */
@@ -3155,6 +3190,38 @@
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 15px;
+    margin: 20px 0;
+  }
+  
+  .modal-content {
+    max-height: 85vh;
+    padding: 25px 15px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mode-card {
+    padding: 20px 15px;
+  }
+  
+  .mode-card h3 {
+    font-size: 1.3rem;
+    margin: 8px 0;
+  }
+  
+  .mode-card p {
+    font-size: 0.85rem;
+    line-height: 1.3;
+  }
+  
+  .start-mode-btn {
+    padding: 12px;
+    font-size: 1.1rem;
+    margin-top: 15px;
+    position: sticky;
+    bottom: -15px;
+    background: linear-gradient(135deg, #00f0f0, #0078f0);
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
   }
   
   .achievements-grid {
@@ -3171,6 +3238,7 @@
   
   .mode-icon {
     font-size: 2.5rem;
+    margin-bottom: 10px;
   }
   
   .stat-icon-large {
