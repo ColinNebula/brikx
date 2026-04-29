@@ -16,6 +16,15 @@ import {
   initNetworkListener,
   showNotification
 } from './pwaUtils';
+import {
+  THEME_DEFINITIONS,
+  checkThemeUnlock,
+  getUnlockedThemes,
+  getActiveSeasonalThemes,
+  applyTheme,
+  getSavedTheme,
+  getThemeProgress
+} from './themes';
 
 const Brikx = () => {
   // Safe localStorage operations with validation
@@ -115,6 +124,13 @@ const Brikx = () => {
   const [showDailyChallenge, setShowDailyChallenge] = useState(true);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+
+  // Theme System
+  const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme());
+  const [unlockedThemes, setUnlockedThemes] = useState({});
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [newThemeUnlocked, setNewThemeUnlocked] = useState(null);
+  const [seasonalThemes, setSeasonalThemes] = useState([]);
 
   // Avatar options
   const avatars = [
@@ -1967,10 +1983,70 @@ const Brikx = () => {
       // Process synced scores if needed
     });
     
+    // Initialize theme system
+    applyTheme(currentTheme);
+    
+    // Check seasonal themes
+    const seasonal = getActiveSeasonalThemes();
+    setSeasonalThemes(seasonal);
+    
+    // Check theme unlocks on mount
+    updateThemeUnlocks();
+    
     return () => {
       window.removeEventListener('installAvailable', handleInstallAvailable);
     };
   }, []);
+
+  // Update theme unlocks based on player stats
+  const updateThemeUnlocks = useCallback(() => {
+    const playerStats = {
+      highScore: highScore,
+      totalLines: statistics.totalLines,
+      bestCombo: statistics.bestCombo,
+      highestLevel: level,
+      totalGames: statistics.totalGames,
+      bestSprintTime: statistics.bestSprintTime
+    };
+    
+    const unlocked = getUnlockedThemes(playerStats);
+    setUnlockedThemes(unlocked);
+    
+    // Check for newly unlocked themes
+    Object.keys(unlocked).forEach(themeId => {
+      if (unlocked[themeId] && !unlockedThemes[themeId]) {
+        const theme = THEME_DEFINITIONS[themeId];
+        if (theme && theme.category !== 'base' && !theme.season) {
+          // Show unlock notification
+          setNewThemeUnlocked(theme);
+          
+          // Show notification if enabled
+          if (Notification.permission === 'granted') {
+            showNotification(
+              '🎨 New Theme Unlocked!',
+              `${theme.name} - ${theme.description}`,
+              { tag: 'theme-unlock' }
+            );
+          }
+          
+          // Clear notification after 5 seconds
+          setTimeout(() => setNewThemeUnlocked(null), 5000);
+        }
+      }
+    });
+  }, [highScore, statistics, level, unlockedThemes]);
+
+  // Check theme unlocks after game over
+  useEffect(() => {
+    if (gameOver) {
+      setTimeout(() => updateThemeUnlocks(), 1000);
+    }
+  }, [gameOver, updateThemeUnlocks]);
+
+  // Apply theme when changed
+  useEffect(() => {
+    applyTheme(currentTheme);
+  }, [currentTheme]);
 
   // Handle install prompt
   const handleInstall = async () => {
@@ -2609,6 +2685,29 @@ const Brikx = () => {
               )}
 
               <div className="settings-section">
+                <h3 className="settings-heading">Themes</h3>
+                <div className="setting-item">
+                  <div className="setting-label">
+                    Color Scheme
+                    <span className="setting-description">
+                      {THEME_DEFINITIONS[currentTheme]?.name || 'Dark Mode'} • 
+                      {Object.values(unlockedThemes).filter(u => u).length}/{Object.keys(THEME_DEFINITIONS).length} unlocked
+                    </span>
+                  </div>
+                  <button 
+                    className="install-settings-btn"
+                    onClick={() => {
+                      setShowSettings(false);
+                      setShowThemeSelector(true);
+                    }}
+                    aria-label="Open theme selector"
+                  >
+                    🎨 Change Theme
+                  </button>
+                </div>
+              </div>
+
+              <div className="settings-section">
                 <h3 className="settings-heading">Accessibility</h3>
                 <div className="setting-info">
                   <p>✓ Full keyboard navigation support</p>
@@ -2618,6 +2717,161 @@ const Brikx = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Theme Selector */}
+        {showThemeSelector && (
+          <div className="modal-overlay" onClick={() => setShowThemeSelector(false)}>
+            <div className="modal-content themes-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowThemeSelector(false)} aria-label="Close theme selector">×</button>
+              <h2 className="modal-title">🎨 Themes</h2>
+              
+              {seasonalThemes.length > 0 && (
+                <>
+                  <h3 className="theme-category-title">🎉 Seasonal (Limited Time)</h3>
+                  <div className="themes-grid">
+                    {seasonalThemes.map(theme => {
+                      const isUnlocked = unlockedThemes[theme.id];
+                      return (
+                        <div
+                          key={theme.id}
+                          className={`theme-card ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                          onClick={() => {
+                            if (isUnlocked) {
+                              setCurrentTheme(theme.id);
+                              playSound('menuClick', 600, 0.1);
+                            }
+                          }}
+                          style={{
+                            background: isUnlocked ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})` : 'rgba(0, 0, 0, 0.3)',
+                            borderColor: isUnlocked ? theme.colors.accent : 'rgba(100, 100, 100, 0.3)'
+                          }}
+                        >
+                          <div className="theme-icon" style={{ color: isUnlocked ? theme.colors.accent : '#666' }}>
+                            {theme.icon}
+                          </div>
+                          <div className="theme-name" style={{ color: isUnlocked ? theme.colors.textPrimary : '#888' }}>
+                            {theme.name}
+                          </div>
+                          <div className="theme-description" style={{ color: isUnlocked ? theme.colors.textSecondary : '#666' }}>
+                            {theme.description}
+                          </div>
+                          {currentTheme === theme.id && <div className="theme-active-badge">✓ Active</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              <h3 className="theme-category-title">🎭 Base Themes</h3>
+              <div className="themes-grid">
+                {Object.values(THEME_DEFINITIONS).filter(t => t.category === 'base').map(theme => {
+                  const isUnlocked = unlockedThemes[theme.id];
+                  return (
+                    <div
+                      key={theme.id}
+                      className={`theme-card ${currentTheme === theme.id ? 'selected' : ''} unlocked`}
+                      onClick={() => {
+                        setCurrentTheme(theme.id);
+                        playSound('menuClick', 600, 0.1);
+                      }}
+                      style={{
+                        background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})`,
+                        borderColor: theme.colors.accent
+                      }}
+                    >
+                      <div className="theme-icon" style={{ color: theme.colors.accent }}>
+                        {theme.icon}
+                      </div>
+                      <div className="theme-name" style={{ color: theme.colors.textPrimary }}>
+                        {theme.name}
+                      </div>
+                      <div className="theme-description" style={{ color: theme.colors.textSecondary }}>
+                        {theme.description}
+                      </div>
+                      {currentTheme === theme.id && <div className="theme-active-badge">✓ Active</div>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <h3 className="theme-category-title">🔓 Unlockable Themes</h3>
+              <div className="themes-grid">
+                {Object.values(THEME_DEFINITIONS).filter(t => t.category === 'unlockable').map(theme => {
+                  const isUnlocked = unlockedThemes[theme.id];
+                  const progress = getThemeProgress(theme.id, {
+                    highScore: highScore,
+                    totalLines: statistics.totalLines,
+                    bestCombo: statistics.bestCombo,
+                    highestLevel: level,
+                    totalGames: statistics.totalGames,
+                    bestSprintTime: statistics.bestSprintTime
+                  });
+                  
+                  return (
+                    <div
+                      key={theme.id}
+                      className={`theme-card ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                      onClick={() => {
+                        if (isUnlocked) {
+                          setCurrentTheme(theme.id);
+                          playSound('menuClick', 600, 0.1);
+                        }
+                      }}
+                      style={{
+                        background: isUnlocked ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})` : 'rgba(0, 0, 0, 0.3)',
+                        borderColor: isUnlocked ? theme.colors.accent : 'rgba(100, 100, 100, 0.3)'
+                      }}
+                    >
+                      <div className="theme-icon" style={{ color: isUnlocked ? theme.colors.accent : '#666' }}>
+                        {isUnlocked ? theme.icon : '🔒'}
+                      </div>
+                      <div className="theme-name" style={{ color: isUnlocked ? theme.colors.textPrimary : '#888' }}>
+                        {theme.name}
+                      </div>
+                      <div className="theme-description" style={{ color: isUnlocked ? theme.colors.textSecondary : '#666' }}>
+                        {isUnlocked ? theme.description : theme.unlockCondition?.description || 'Locked'}
+                      </div>
+                      {!isUnlocked && (
+                        <div className="theme-progress-bar">
+                          <div className="theme-progress-fill" style={{ width: `${progress.progress}%` }} />
+                        </div>
+                      )}
+                      {!isUnlocked && progress.current !== undefined && (
+                        <div className="theme-progress-text">
+                          {progress.current} / {progress.target}
+                        </div>
+                      )}
+                      {currentTheme === theme.id && <div className="theme-active-badge">✓ Active</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Theme Unlocked Notification */}
+        {newThemeUnlocked && (
+          <div className="theme-unlock-notification">
+            <div className="theme-unlock-icon">{newThemeUnlocked.icon}</div>
+            <div className="theme-unlock-text">
+              <div className="theme-unlock-title">🎨 New Theme Unlocked!</div>
+              <div className="theme-unlock-name">{newThemeUnlocked.name}</div>
+              <div className="theme-unlock-description">{newThemeUnlocked.description}</div>
+            </div>
+            <button 
+              className="theme-unlock-try"
+              onClick={() => {
+                setCurrentTheme(newThemeUnlocked.id);
+                setNewThemeUnlocked(null);
+                playSound('menuClick', 600, 0.1);
+              }}
+            >
+              Try Now
+            </button>
           </div>
         )}
 
