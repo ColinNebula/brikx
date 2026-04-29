@@ -1266,23 +1266,22 @@
   z-index: 20;
   padding: 20px;
   animation: fadeIn 0.3s ease;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
   background: linear-gradient(135deg, rgba(10, 10, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   border: 2px solid rgba(0, 240, 240, 0.3);
   border-radius: 20px;
-  padding: 40px;
+  padding: 60px 40px 40px 40px;
   max-width: 700px;
   width: 100%;
-  max-height: none;
-  overflow-y: visible;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s ease;
-  margin: auto 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tutorial-modal {
@@ -1462,11 +1461,11 @@
 }
 
 .modal-close {
-  position: sticky;
-  top: 10px;
-  float: right;
-  background: rgba(255, 0, 0, 0.4);
-  border: 2px solid rgba(255, 0, 0, 0.6);
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 0, 0, 0.5);
+  border: 2px solid rgba(255, 0, 0, 0.7);
   color: #fff;
   font-size: 1.8rem;
   width: 45px;
@@ -1478,14 +1477,13 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  z-index: 100;
-  margin: -10px -10px 10px 10px;
+  z-index: 1000;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .modal-close:hover {
-  background: rgba(255, 0, 0, 0.7);
-  border-color: rgba(255, 0, 0, 0.9);
+  background: rgba(255, 0, 0, 0.8);
+  border-color: #ff0000;
   transform: rotate(90deg) scale(1.1);
 }
 
@@ -2815,7 +2813,7 @@
   }
 
   .mobile-controls {
-    padding: 15px 25px 25px 25px
+    padding: 15px 25px 25px 25px;
   }
 
   .pause-menu h2 {
@@ -2860,19 +2858,23 @@
   
   /* Mode selector for very small screens */
   .modal-overlay {
-    padding: max(env(safe-area-inset-top), 5px) max(env(safe-area-inset-right), 5px) max(env(safe-area-inset-bottom), 5px) max(env(safe-area-inset-left), 5px);
+    padding: 0;
+    padding-top: max(env(safe-area-inset-top), 5px);
   }
   
   .modal-content {
-    padding: 15px 10px;
-    border-radius: 12px;
+    max-height: calc(100vh - max(env(safe-area-inset-top), 5px));
+    max-height: calc(100dvh - max(env(safe-area-inset-top), 5px));
+    padding: 45px 15px 15px 15px;
+    border-radius: 0 0 15px 15px;
   }
   
   .modal-close {
-    width: 36px;
-    height: 36px;
-    font-size: 1.3rem;
-    margin: -3px -3px 8px 8px;
+    width: 38px;
+    height: 38px;
+    font-size: 1.4rem;
+    top: max(env(safe-area-inset-top, 8px), 8px);
+    right: 12px;
   }
   
   .modal-title {
@@ -3205,26 +3207,31 @@
 @media (max-width: 768px) {
   .modal-overlay {
     align-items: flex-start;
-    padding: max(env(safe-area-inset-top), 10px) max(env(safe-area-inset-right), 10px) max(env(safe-area-inset-bottom), 10px) max(env(safe-area-inset-left), 10px);
+    padding: 0;
+    padding-top: max(env(safe-area-inset-top), 10px);
   }
   
   .modal-content {
-    padding: 20px 15px;
-    margin: 0 auto;
-    min-height: auto;
+    max-height: calc(100vh - max(env(safe-area-inset-top), 10px));
+    max-height: calc(100dvh - max(env(safe-area-inset-top), 10px));
+    padding: 50px 20px 20px 20px;
+    margin: 0;
+    border-radius: 0 0 20px 20px;
+    width: 100%;
   }
   
   .modal-close {
-    width: 40px;
-    height: 40px;
-    font-size: 1.5rem;
-    margin: -5px -5px 10px 10px;
+    width: 42px;
+    height: 42px;
+    font-size: 1.6rem;
+    top: max(env(safe-area-inset-top, 10px), 10px);
+    right: 15px;
+    position: fixed;
   }
   
   .modal-title {
     font-size: 1.5rem;
     margin: 0 0 20px 0;
-    clear: both;
   }
   
   .modes-grid,
