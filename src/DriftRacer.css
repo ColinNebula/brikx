@@ -385,6 +385,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px;
+  animation: fadeIn 0.4s ease;
 }
 
 .countdown-overlay {
@@ -564,12 +565,41 @@
   margin-bottom: 20px;
   font-size: 1.2rem;
   text-align: center;
+  animation: fadeInScale 0.6s ease backwards;
 }
 
 .game-over-stats p {
   margin: 10px 0;
   color: #f0a000;
   font-weight: bold;
+  animation: slideInUp 0.5s ease backwards;
+}
+
+.game-over-stats p:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.game-over-stats p:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.game-over-stats p:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.game-over-stats p:nth-child(4) {
+  animation-delay: 0.5s;
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .new-record {
@@ -1291,6 +1321,105 @@
 .profile-modal {
   max-width: 550px;
   padding: 30px 25px;
+}
+
+/* Confirmation Dialog */
+.confirmation-overlay {
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.95);
+}
+
+.confirmation-dialog {
+  max-width: 500px;
+  padding: 40px 35px;
+  text-align: center;
+  border-color: rgba(255, 100, 100, 0.5);
+  animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.confirmation-title {
+  color: #ff6b6b;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+}
+
+.confirmation-message {
+  color: #ccc;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.confirmation-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 15px;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.confirmation-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #00f0f0;
+}
+
+.confirmation-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.confirmation-btn-cancel {
+  flex: 1;
+  background: rgba(0, 240, 240, 0.15);
+  border-color: rgba(0, 240, 240, 0.5);
+}
+
+.confirmation-btn-cancel:hover {
+  background: rgba(0, 240, 240, 0.25);
+  border-color: rgba(0, 240, 240, 0.7);
+  transform: translateY(-3px);
+}
+
+.confirmation-btn-confirm {
+  flex: 1;
+  background: rgba(255, 100, 100, 0.15);
+  border-color: rgba(255, 100, 100, 0.5);
+  color: #ff6b6b;
+}
+
+.confirmation-btn-confirm:hover {
+  background: rgba(255, 100, 100, 0.25);
+  border-color: rgba(255, 100, 100, 0.7);
+  transform: translateY(-3px);
 }
 
 .player-profile-card {
@@ -2249,6 +2378,30 @@
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   font-family: Arial, sans-serif;
+  animation: slideInUp 0.5s ease backwards;
+}
+
+.menu-btn:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.menu-btn:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.menu-btn:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes slideInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .menu-btn:hover {

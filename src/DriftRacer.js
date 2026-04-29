@@ -291,6 +291,9 @@ const Brikx = () => {
   // Splash Screen
   const [showSplash, setShowSplash] = useState(true);
 
+  // Confirmation Dialog
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+
   // Avatar options
   const avatars = [
     '🎮', '👾', '🕹️', '🎯', '⭐', '🔥', '💎', '👑', 
@@ -1428,6 +1431,17 @@ const Brikx = () => {
     }, 1000);
   }, [resetGame, startMusic, updateMusicIntensity, playSound]);
 
+  // Main menu handler with confirmation
+  const handleQuitToMenu = useCallback(() => {
+    // If game is in progress and not over, show confirmation
+    if (gameStarted && !gameOver) {
+      setShowQuitConfirm(true);
+      return;
+    }
+    // Otherwise, quit immediately
+    handleMainMenu();
+  }, [gameStarted, gameOver]);
+
   // Main menu handler
   const handleMainMenu = useCallback(() => {
     stopMusic();
@@ -1439,6 +1453,7 @@ const Brikx = () => {
     setLines(0);
     setCombo(0);
     setLastClearWasCombo(false);
+    setShowQuitConfirm(false);
     
     gameState.current.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
     gameState.current.currentPiece = null;
@@ -2354,6 +2369,29 @@ const Brikx = () => {
     }
   }, [isPaused, gameStarted, gameOver, musicEnabled, startMusic, stopMusic]);
 
+  // Auto-pause when tab loses focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && gameStarted && !gameOver && !isPaused) {
+        setIsPaused(true);
+      }
+    };
+
+    const handleBlur = () => {
+      if (gameStarted && !gameOver && !isPaused) {
+        setIsPaused(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [gameStarted, gameOver, isPaused]);
+
   // Setup touch event listeners with passive: false to allow preventDefault
   useEffect(() => {
     const buttons = touchButtonsRef.current;
@@ -2649,14 +2687,24 @@ const Brikx = () => {
     };
   }, []);
 
-  // Handle splash screen timeout
+  // Handle splash screen timeout and audio
   useEffect(() => {
+    // Play splash audio when screen appears
+    if (soundEnabled) {
+      const splashAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-technology-alert-transition-3121.mp3`);
+      splashAudio.volume = sfxVolume * 0.8; // Slightly reduced volume for splash
+      splashAudio.play().catch(err => {
+        // Autoplay might be blocked by browser, fail silently
+        console.log('Splash audio autoplay blocked:', err);
+      });
+    }
+
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 3000); // Show splash for 3 seconds
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [soundEnabled, sfxVolume]);
 
   // Activate service worker update
   const activateUpdate = () => {
@@ -3061,7 +3109,7 @@ const Brikx = () => {
               <button className="menu-btn resume-btn" onClick={() => setIsPaused(false)}>
                 ▶️ Resume
               </button>
-              <button className="menu-btn main-menu-btn" onClick={handleMainMenu}>
+              <button className="menu-btn main-menu-btn" onClick={handleQuitToMenu}>
                 🏠 Main Menu
               </button>
             </div>
@@ -3618,7 +3666,12 @@ const Brikx = () => {
                 onClick={() => {
                   setShowModeSelect(false);
                   startCountdown();
-                  playSound('menuClick', 600, 0.1);
+                  // Play fairy sparkle sound for starting game
+                  if (soundEnabled) {
+                    const startAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-fairy-magic-sparkle-871.mp3`);
+                    startAudio.volume = sfxVolume * 0.7;
+                    startAudio.play().catch(err => console.log('Start sound blocked:', err));
+                  }
                 }}
               >
                 ▶ Start {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)} Mode
@@ -3811,6 +3864,52 @@ const Brikx = () => {
           </div>
         )}
       </div>
+
+      {/* Quit Confirmation Dialog */}
+      {showQuitConfirm && (
+        <div className="modal-overlay confirmation-overlay" onClick={() => setShowQuitConfirm(false)}>
+          <div className="modal-content confirmation-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title confirmation-title">⚠️ Quit Game?</h2>
+            <p className="confirmation-message">
+              Your current game progress will be lost. Are you sure you want to return to the main menu?
+            </p>
+            <div className="confirmation-stats">
+              <div className="confirmation-stat">
+                <span className="stat-label">Score:</span>
+                <span className="stat-value">{score.toLocaleString()}</span>
+              </div>
+              <div className="confirmation-stat">
+                <span className="stat-label">Level:</span>
+                <span className="stat-value">{level}</span>
+              </div>
+              <div className="confirmation-stat">
+                <span className="stat-label">Lines:</span>
+                <span className="stat-value">{lines}</span>
+              </div>
+            </div>
+            <div className="confirmation-buttons">
+              <button 
+                className="menu-btn resume-btn confirmation-btn-cancel" 
+                onClick={() => {
+                  setShowQuitConfirm(false);
+                  playSound('menuClick', 600, 0.1);
+                }}
+              >
+                ↩️ Keep Playing
+              </button>
+              <button 
+                className="menu-btn main-menu-btn confirmation-btn-confirm" 
+                onClick={() => {
+                  playSound('menuClick', 600, 0.1);
+                  handleMainMenu();
+                }}
+              >
+                🏠 Quit to Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="controls-info">
         <p>
