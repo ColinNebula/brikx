@@ -134,6 +134,9 @@ const Brikx = () => {
   const [newThemeUnlocked, setNewThemeUnlocked] = useState(null);
   const [seasonalThemes, setSeasonalThemes] = useState([]);
 
+  // Splash Screen
+  const [showSplash, setShowSplash] = useState(true);
+
   // Avatar options
   const avatars = [
     '🎮', '👾', '🕹️', '🎯', '⭐', '🔥', '💎', '👑', 
@@ -2120,6 +2123,15 @@ const Brikx = () => {
     };
   }, []);
 
+  // Handle splash screen timeout
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000); // Show splash for 3 seconds
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Activate service worker update
   const activateUpdate = () => {
     if (waitingWorker) {
@@ -2188,6 +2200,27 @@ const Brikx = () => {
 
   return (
     <div className="drift-racer" role="main" aria-label="BRIKX Game">
+      {/* Splash Screen */}
+      {showSplash && (
+        <div 
+          className="splash-screen" 
+          onClick={() => setShowSplash(false)}
+          role="button"
+          tabIndex={0}
+          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowSplash(false); }}
+          aria-label="Click to skip splash screen"
+        >
+          <div className="splash-content">
+            <img 
+              src={`${process.env.PUBLIC_URL}/nebulamedia.png`} 
+              alt="Nebula Media" 
+              className="splash-logo"
+            />
+            <div className="splash-text">Click to continue</div>
+          </div>
+        </div>
+      )}
+
       {/* Offline Banner */}
       {showOfflineBanner && (
         <div className="offline-banner" role="alert" aria-live="polite">
