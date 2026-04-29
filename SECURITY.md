@@ -64,10 +64,10 @@ If you discover a security vulnerability:
 
 ## Security Audit Results
 
-Last audit: 2025-12-30
+Last audit: 2026-04-29
 
 ```
-Files Scanned: 35
+Files Scanned: 41
 Critical Issues: 0
 Warnings: 0
 Status: ✅ PASSED
@@ -149,4 +149,4 @@ This security policy is part of the BRIKX project and follows the same MIT licen
 
 ---
 
-**Last Updated**: 2025-12-30
+**Last Updated**: 2026-04-29
