@@ -4,6 +4,27 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Global error handler to catch and log errors without breaking the app
+window.addEventListener('error', (event) => {
+  // Suppress Clarity-related errors to prevent app crashes
+  if (event.filename && (event.filename.includes('clarity.ms') || event.filename.includes('core.js'))) {
+    console.warn('Analytics error suppressed:', event.message);
+    event.preventDefault();
+    return false;
+  }
+});
+
+// Handle unhandled promise rejections (like the Clarity error)
+window.addEventListener('unhandledrejection', (event) => {
+  // Check if error is from Clarity or analytics
+  const errorMessage = event.reason?.message || event.reason?.toString() || '';
+  if (errorMessage.includes('payload') || event.reason?.stack?.includes('clarity.ms') || event.reason?.stack?.includes('core.js')) {
+    console.warn('Analytics promise rejection suppressed:', event.reason);
+    event.preventDefault();
+    return false;
+  }
+});
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

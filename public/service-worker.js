@@ -2,8 +2,8 @@
 
 // Security: Version cache name to prevent tampering
 // Update this version to force cache refresh on mobile
-const CACHE_NAME = 'brickx-v4-' + '2026-04-29c';
-const SECURITY_VERSION = '4.0.0';
+const CACHE_NAME = 'brickx-v5-' + '2026-04-29d';
+const SECURITY_VERSION = '5.0.0';
 const urlsToCache = [
   '/',
   '/index.html',
