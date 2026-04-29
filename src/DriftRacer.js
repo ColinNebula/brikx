@@ -212,6 +212,15 @@ const Brikx = () => {
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return safeGetItem('brickxSoundEnabled', 'true') !== 'false';
   });
+  const [musicEnabled, setMusicEnabled] = useState(() => {
+    return safeGetItem('brickxMusicEnabled', 'true') !== 'false';
+  });
+  const [sfxVolume, setSfxVolume] = useState(() => {
+    return parseFloat(safeGetItem('brickxSfxVolume', '0.7')) || 0.7;
+  });
+  const [musicVolume, setMusicVolume] = useState(() => {
+    return parseFloat(safeGetItem('brickxMusicVolume', '0.5')) || 0.5;
+  });
 
   // Game modes: 'classic', 'sprint', 'marathon'
   const [gameMode, setGameMode] = useState('classic');
@@ -293,11 +302,29 @@ const Brikx = () => {
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
+  const musicNodes = useRef({ 
+    oscillators: [], 
+    gains: [], 
+    playing: false,
+    currentChord: 0,
+    bassOsc: null,
+    bassGain: null,
+    melodyOscs: [],
+    melodyGains: [],
+    drumTimeout: null
+  });
+  const musicIntervalRef = useRef(null);
+  const musicIntensity = useRef(1);
   
   useEffect(() => {
     if (!audioContext.current) {
       audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
     }
+    
+    // Cleanup on unmount
+    return () => {
+      stopMusic();
+    };
   }, []);
 
   const playSound = useCallback((type, frequency = 440, duration = 0.1, volume = 0.3) => {
@@ -310,50 +337,62 @@ const Brikx = () => {
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
     
+    // Apply SFX volume multiplier
+    const finalVolume = volume * sfxVolume;
+    
     switch(type) {
       case 'move':
         oscillator.frequency.value = 200;
-        gainNode.gain.value = 0.05;
+        gainNode.gain.value = 0.05 * finalVolume;
         oscillator.type = 'square';
         break;
       case 'rotate':
         oscillator.frequency.value = 300;
-        gainNode.gain.value = 0.08;
+        gainNode.gain.value = 0.08 * finalVolume;
         oscillator.type = 'sine';
+        // Add frequency sweep for more interesting rotate sound
+        oscillator.frequency.linearRampToValueAtTime(450, ctx.currentTime + 0.05);
         break;
       case 'drop':
         oscillator.frequency.value = 100;
-        gainNode.gain.value = 0.2;
+        gainNode.gain.value = 0.2 * finalVolume;
         oscillator.type = 'triangle';
+        // Falling pitch for drop
+        oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
         break;
       case 'lineClear1':
         oscillator.frequency.value = 400;
-        gainNode.gain.value = 0.15;
+        gainNode.gain.value = 0.15 * finalVolume;
         oscillator.type = 'sine';
+        oscillator.frequency.linearRampToValueAtTime(550, ctx.currentTime + 0.1);
         break;
       case 'lineClear2':
         oscillator.frequency.value = 500;
-        gainNode.gain.value = 0.18;
+        gainNode.gain.value = 0.18 * finalVolume;
         oscillator.type = 'sine';
+        oscillator.frequency.linearRampToValueAtTime(700, ctx.currentTime + 0.12);
         break;
       case 'lineClear3':
         oscillator.frequency.value = 600;
-        gainNode.gain.value = 0.2;
+        gainNode.gain.value = 0.2 * finalVolume;
         oscillator.type = 'sine';
+        oscillator.frequency.linearRampToValueAtTime(850, ctx.currentTime + 0.15);
         break;
       case 'tetris':
         oscillator.frequency.value = 800;
-        gainNode.gain.value = 0.25;
+        gainNode.gain.value = 0.25 * finalVolume;
         oscillator.type = 'square';
+        oscillator.frequency.linearRampToValueAtTime(1000, ctx.currentTime + 0.2);
         break;
       case 'levelUp':
         oscillator.frequency.value = 880;
-        gainNode.gain.value = 0.2;
+        gainNode.gain.value = 0.2 * finalVolume;
         oscillator.type = 'sine';
+        oscillator.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.15);
         break;
       case 'combo':
         oscillator.frequency.value = frequency;
-        gainNode.gain.value = volume;
+        gainNode.gain.value = volume * finalVolume;
         oscillator.type = 'sine';
         break;
       case 'perfectClear':
@@ -435,6 +474,233 @@ const Brikx = () => {
       return newValue;
     });
   }, [playSound]);
+
+  const toggleMusic = useCallback(() => {
+    setMusicEnabled(prev => {
+      const newValue = !prev;
+      safeSetItem('brickxMusicEnabled', newValue.toString());
+      if (!newValue) {
+        stopMusic();
+      } else if (gameStarted && !gameOver && !isPaused) {
+        startMusic();
+      }
+      return newValue;
+    });
+  }, []);
+
+  // Background Music System
+  const startMusic = useCallback(() => {
+    if (!musicEnabled || !audioContext.current || musicNodes.current.playing) return;
+    
+    const ctx = audioContext.current;
+    musicNodes.current.playing = true;
+    
+    // Musical scales and chords for dynamic music
+    // Using C minor pentatonic for a dramatic game feel
+    const bassNotes = [130.81, 146.83, 164.81, 196.00, 220.00]; // C3, D3, E3, G3, A3
+    const chordProgressions = [
+      [261.63, 311.13, 392.00], // C minor chord
+      [293.66, 349.23, 440.00], // D minor chord  
+      [196.00, 246.94, 293.66], // G minor chord
+      [220.00, 261.63, 329.63]  // A minor chord
+    ];
+    
+    let chordIndex = 0;
+    let beatCount = 0;
+    
+    const playChord = () => {
+      if (!musicNodes.current.playing || !musicEnabled) return;
+      
+      // Clean up previous oscillators
+      musicNodes.current.oscillators.forEach(osc => {
+        try { osc.stop(); } catch (e) {}
+      });
+      musicNodes.current.gains.forEach(gain => {
+        try { gain.disconnect(); } catch (e) {}
+      });
+      
+      musicNodes.current.oscillators = [];
+      musicNodes.current.gains = [];
+      
+      const currentTime = ctx.currentTime;
+      const intensity = musicIntensity.current;
+      const baseVolume = musicVolume * 0.15;
+      
+      // Bass line
+      const bassOsc = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+      bassOsc.type = 'triangle';
+      bassOsc.frequency.value = bassNotes[chordIndex % bassNotes.length];
+      bassGain.gain.value = baseVolume * 0.8 * intensity;
+      bassOsc.connect(bassGain);
+      bassGain.connect(ctx.destination);
+      bassOsc.start(currentTime);
+      bassOsc.stop(currentTime + 0.5);
+      
+      musicNodes.current.oscillators.push(bassOsc);
+      musicNodes.current.gains.push(bassGain);
+      
+      // Chord tones (play only when intensity > 1.2)
+      if (intensity > 1.2) {
+        chordProgressions[chordIndex % chordProgressions.length].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.value = baseVolume * 0.3 * (intensity - 1);
+          gain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.8);
+          
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(currentTime + i * 0.05);
+          osc.stop(currentTime + 0.8);
+          
+          musicNodes.current.oscillators.push(osc);
+          musicNodes.current.gains.push(gain);
+        });
+      }
+      
+      // High melody notes (play at high intensity > 1.5)
+      if (intensity > 1.5 && beatCount % 4 === 0) {
+        const melodyNotes = [523.25, 587.33, 659.25, 783.99]; // C5, D5, E5, G5
+        const melodyNote = melodyNotes[Math.floor(beatCount / 4) % melodyNotes.length];
+        
+        const melOsc = ctx.createOscillator();
+        const melGain = ctx.createGain();
+        melOsc.type = 'square';
+        melOsc.frequency.value = melodyNote;
+        melGain.gain.value = baseVolume * 0.2 * (intensity - 1.5);
+        melGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.4);
+        
+        melOsc.connect(melGain);
+        melGain.connect(ctx.destination);
+        melOsc.start(currentTime);
+        melOsc.stop(currentTime + 0.4);
+        
+        musicNodes.current.oscillators.push(melOsc);
+        musicNodes.current.gains.push(melGain);
+      }
+      
+      // Rhythmic pulse (high-intensity only)
+      if (intensity > 2.0 && beatCount % 2 === 0) {
+        const pulseOsc = ctx.createOscillator();
+        const pulseGain = ctx.createGain();
+        pulseOsc.type = 'sine';
+        pulseOsc.frequency.value = 80;
+        pulseGain.gain.value = baseVolume * 0.4 * (intensity - 2);
+        pulseGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.1);
+        
+        pulseOsc.connect(pulseGain);
+        pulseGain.connect(ctx.destination);
+        pulseOsc.start(currentTime);
+        pulseOsc.stop(currentTime + 0.1);
+        
+        musicNodes.current.oscillators.push(pulseOsc);
+        musicNodes.current.gains.push(pulseGain);
+      }
+      
+      beatCount++;
+      if (beatCount % 8 === 0) {
+        chordIndex = (chordIndex + 1) % 4;
+      }
+    };
+    
+    // Start the music loop - tempo increases with intensity
+    const getInterval = () => Math.max(200, 500 - (musicIntensity.current * 50));
+    
+    playChord();
+    musicIntervalRef.current = setInterval(() => {
+      playChord();
+      // Adjust interval dynamically
+      if (musicIntervalRef.current) {
+        clearInterval(musicIntervalRef.current);
+        musicIntervalRef.current = setInterval(playChord, getInterval());
+      }
+    }, getInterval());
+    
+  }, [musicEnabled, musicVolume]);
+
+  const stopMusic = useCallback(() => {
+    if (!musicNodes.current.playing) return;
+    
+    musicNodes.current.playing = false;
+    
+    // Stop all oscillators
+    musicNodes.current.oscillators.forEach(osc => {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch (e) {
+        // Already stopped
+      }
+    });
+    
+    // Disconnect all gains
+    musicNodes.current.gains.forEach(gain => {
+      try {
+        gain.disconnect();
+      } catch (e) {
+        // Already disconnected
+      }
+    });
+    
+    // Clear arrays
+    musicNodes.current.oscillators = [];
+    musicNodes.current.gains = [];
+    
+    // Clear interval
+    if (musicIntervalRef.current) {
+      clearInterval(musicIntervalRef.current);
+      musicIntervalRef.current = null;
+    }
+  }, []);
+
+  // Update music intensity based on level and speed
+  const updateMusicIntensity = useCallback((currentLevel) => {
+    // Intensity ranges from 1.0 (slow/easy) to 3.0 (fast/hard)
+    const newIntensity = Math.min(3.0, 1.0 + (currentLevel - 1) * 0.15);
+    musicIntensity.current = newIntensity;
+  }, []);
+
+  // Enhanced sound effects with more variations
+  const playPieceSound = useCallback((pieceType) => {
+    if (!soundEnabled) return;
+    
+    const pieceFrequencies = {
+      'I': 400,
+      'O': 450,
+      'T': 500,
+      'S': 550,
+      'Z': 600,
+      'J': 650,
+      'L': 700
+    };
+    
+    const freq = pieceFrequencies[pieceType] || 500;
+    playSound('move', freq, 0.08, 0.08);
+  }, [soundEnabled, playSound]);
+
+  const playCollisionSound = useCallback(() => {
+    if (!soundEnabled) return;
+    playSound('drop', 100, 0.2, 0.15);
+  }, [soundEnabled, playSound]);
+
+  const playRotateSuccessSound = useCallback(() => {
+    if (!soundEnabled) return;
+    playSound('rotate', 350, 0.08, 0.1);
+  }, [soundEnabled, playSound]);
+
+  const playHoldSound = useCallback(() => {
+    if (!soundEnabled) return;
+    playSound('menuClick', 700, 0.1, 0.12);
+  }, [soundEnabled, playSound]);
+
+  const playGameOverSound = useCallback(() => {
+    if (!soundEnabled) return;
+    playSound('gameOver', 150, 0.5, 0.25);
+    setTimeout(() => playSound('gameOver', 130, 0.3, 0.2), 200);
+    setTimeout(() => playSound('gameOver', 100, 0.6, 0.15), 400);
+  }, [soundEnabled, playSound]);
 
   // Achievement definitions
   const achievementsList = {
@@ -867,6 +1133,7 @@ const Brikx = () => {
           const completionTime = Date.now() - startTime;
           setGameOver(true);
           setGameStarted(false);
+          stopMusic();
           
           // Update best sprint time
           if (!statistics.bestSprintTime || completionTime < statistics.bestSprintTime) {
@@ -947,6 +1214,9 @@ const Brikx = () => {
         setLevelFlash(newLevel);
         gameState.current.dropInterval = Math.max(100, 1000 - (newLevel - 1) * 100);
         
+        // Update music intensity for new level
+        updateMusicIntensity(newLevel);
+        
         // Play level up sound
         playLevelUpSound();
         
@@ -985,7 +1255,8 @@ const Brikx = () => {
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
       setGameOver(true);
       setGameStarted(false);
-      playSound('gameOver', 150, 0.5, 0.25);
+      stopMusic();
+      playGameOverSound();
       vibrate([50, 50, 100]); // Game over - strong double pulse
       
       // Update Marathon high score
@@ -1017,10 +1288,11 @@ const Brikx = () => {
       gameState.current.currentY++;
     } else {
       mergePiece();
+      playCollisionSound();
       clearLines();
       spawnPiece();
     }
-  }, [checkCollision, mergePiece, clearLines, spawnPiece]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, playCollisionSound]);
 
   // Move piece horizontally
   const moveHorizontal = useCallback((dir) => {
@@ -1029,9 +1301,9 @@ const Brikx = () => {
     
     if (!checkCollision(board, currentPiece, newX, currentY)) {
       gameState.current.currentX = newX;
-      playSound('move', 200, 0.05);
+      playPieceSound(currentPiece.type);
     }
-  }, [checkCollision, playSound]);
+  }, [checkCollision, playPieceSound]);
 
   // Rotate current piece
   const rotate = useCallback(() => {
@@ -1040,9 +1312,9 @@ const Brikx = () => {
     
     if (!checkCollision(board, rotated, currentX, currentY)) {
       gameState.current.currentPiece = rotated;
-      playSound('rotate', 300, 0.08);
+      playRotateSuccessSound();
     }
-  }, [checkCollision, rotatePiece, playSound]);
+  }, [checkCollision, rotatePiece, playRotateSuccessSound]);
 
   // Hold piece
   const holdCurrentPiece = useCallback(() => {
@@ -1050,7 +1322,7 @@ const Brikx = () => {
     
     const { currentPiece, holdPiece, board } = gameState.current;
     
-    playSound('rotate', 350, 0.1);
+    playHoldSound();
     
     if (holdPiece) {
       // Swap current with held
@@ -1072,8 +1344,9 @@ const Brikx = () => {
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
       setGameOver(true);
       setGameStarted(false);
+      stopMusic();
     }
-  }, [getNextPiece, checkCollision, COLS, playSound]);
+  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic]);
 
   // Hard drop
   const hardDrop = useCallback(() => {
@@ -1131,6 +1404,7 @@ const Brikx = () => {
 
   const startCountdown = useCallback(() => {
     setCountdown(3);
+    playSound('menuClick', 600, 0.1);
     
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
@@ -1140,16 +1414,23 @@ const Brikx = () => {
             setCountdown(null);
             setGameStarted(true);
             resetGame();
+            // Start music after countdown
+            setTimeout(() => {
+              updateMusicIntensity(1);
+              startMusic();
+            }, 100);
           }, 1000); // Show "GO!" for 1 second
           return 'GO';
         }
+        playSound('menuClick', 600, 0.1);
         return prev - 1;
       });
     }, 1000);
-  }, [resetGame]);
+  }, [resetGame, startMusic, updateMusicIntensity, playSound]);
 
   // Main menu handler
   const handleMainMenu = useCallback(() => {
+    stopMusic();
     setGameStarted(false);
     setGameOver(false);
     setIsPaused(false);
@@ -1166,7 +1447,7 @@ const Brikx = () => {
     gameState.current.particles = [];
     gameState.current.clearingLines = [];
     gameState.current.clearAnimation = 0;
-  }, [ROWS, COLS]);
+  }, [ROWS, COLS, stopMusic]);
 
   // Keyboard controls
   useEffect(() => {
@@ -2062,6 +2343,17 @@ const Brikx = () => {
     }
   }, [isPaused, draw]);
 
+  // Handle music pause/resume
+  useEffect(() => {
+    if (!gameStarted || gameOver) return;
+    
+    if (isPaused) {
+      stopMusic();
+    } else if (musicEnabled) {
+      startMusic();
+    }
+  }, [isPaused, gameStarted, gameOver, musicEnabled, startMusic, stopMusic]);
+
   // Setup touch event listeners with passive: false to allow preventDefault
   useEffect(() => {
     const buttons = touchButtonsRef.current;
@@ -2795,6 +3087,50 @@ const Brikx = () => {
                       <span className="sound-label">Sound Effects: {soundEnabled ? 'ON' : 'OFF'}</span>
                     </button>
                   </div>
+                  {soundEnabled && (
+                    <div className="control-item" style={{gridColumn: '1 / -1', marginTop: '8px'}}>
+                      <label className="volume-label">SFX Volume: {Math.round(sfxVolume * 100)}%</label>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value={sfxVolume * 100}
+                        onChange={(e) => {
+                          const newVolume = parseFloat(e.target.value) / 100;
+                          setSfxVolume(newVolume);
+                          safeSetItem('brickxSfxVolume', newVolume.toString());
+                          playSound('menuClick', 600, 0.1);
+                        }}
+                        className="volume-slider"
+                      />
+                    </div>
+                  )}
+                  <div className="control-item" style={{gridColumn: '1 / -1', marginTop: '12px'}}>
+                    <button 
+                      className={`sound-toggle-btn ${musicEnabled ? 'enabled' : 'disabled'}`}
+                      onClick={toggleMusic}
+                    >
+                      <span className="sound-icon">{musicEnabled ? '🎵' : '🔇'}</span>
+                      <span className="sound-label">Background Music: {musicEnabled ? 'ON' : 'OFF'}</span>
+                    </button>
+                  </div>
+                  {musicEnabled && (
+                    <div className="control-item" style={{gridColumn: '1 / -1', marginTop: '8px'}}>
+                      <label className="volume-label">Music Volume: {Math.round(musicVolume * 100)}%</label>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value={musicVolume * 100}
+                        onChange={(e) => {
+                          const newVolume = parseFloat(e.target.value) / 100;
+                          setMusicVolume(newVolume);
+                          safeSetItem('brickxMusicVolume', newVolume.toString());
+                        }}
+                        className="volume-slider"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               
