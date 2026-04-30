@@ -2589,12 +2589,24 @@ const Brikx = () => {
     const canvas = canvasRef.current;
 
     const handleTouchStart = (e) => {
+      // Prevent scrolling when game is active
+      if (gameStarted && !gameOver && !isPaused) {
+        e.preventDefault();
+      }
+      
       const touch = e.touches[0];
       touchStart.current = {
         x: touch.clientX,
         y: touch.clientY,
         time: Date.now()
       };
+    };
+
+    const handleTouchMove = (e) => {
+      // Prevent scrolling during active gameplay
+      if (gameStarted && !gameOver && !isPaused) {
+        e.preventDefault();
+      }
     };
 
     const handleTouchEnd = (e) => {
@@ -2637,11 +2649,13 @@ const Brikx = () => {
       }
     };
 
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
     return () => {
       canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal, vibrate]);
