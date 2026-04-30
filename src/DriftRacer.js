@@ -362,19 +362,22 @@ const Brikx = () => {
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
-  const musicNodes = useRef({ 
-    oscillators: [], 
-    gains: [], 
-    playing: false,
-    currentChord: 0,
-    bassOsc: null,
-    bassGain: null,
-    melodyOscs: [],
-    melodyGains: [],
-    drumTimeout: null
-  });
-  const musicIntervalRef = useRef(null);
+  
+  // MP3 Music Player System
+  const musicPlayerRef = useRef(null);
+  const currentTrackRef = useRef(null);
   const musicIntensity = useRef(1);
+  
+  // Music playlist mapping
+  const musicPlaylist = {
+    menu: 'Urban_Street_Speak.mp3',
+    classic_low: 'Cycles_of_Existence.mp3',      // Levels 1-5
+    classic_mid: 'Dancing_with_a_Photon.mp3',    // Levels 6-10
+    classic_high: 'Sneaky_Charlie.mp3',          // Levels 11-15
+    classic_extreme: 'Nineteen_Eighty_Seven.mp3', // Levels 16+
+    sprint: 'EBS.mp3',
+    marathon: 'Dancing_with_a_Photon.mp3'
+  };
   
   useEffect(() => {
     if (!audioContext.current) {
@@ -535,6 +538,100 @@ const Brikx = () => {
     });
   }, [playSound]);
 
+  // Background Music System
+  const startMusic = useCallback((trackKey = null) => {
+    if (!musicEnabled) return;
+    
+    // Determine which track to play
+    let track;
+    if (trackKey) {
+      track = musicPlaylist[trackKey];
+    } else {
+      // Auto-select based on game mode and level
+      if (!gameStarted) {
+        track = musicPlaylist.menu;
+      } else if (gameMode === 'sprint') {
+        track = musicPlaylist.sprint;
+      } else if (gameMode === 'marathon') {
+        track = musicPlaylist.marathon;
+      } else {
+        // Classic mode - select based on level
+        if (level <= 5) {
+          track = musicPlaylist.classic_low;
+        } else if (level <= 10) {
+          track = musicPlaylist.classic_mid;
+        } else if (level <= 15) {
+          track = musicPlaylist.classic_high;
+        } else {
+          track = musicPlaylist.classic_extreme;
+        }
+      }
+    }
+    
+    // If already playing this track, don't restart
+    if (currentTrackRef.current === track && musicPlayerRef.current && !musicPlayerRef.current.paused) {
+      return;
+    }
+    
+    // Stop current music if playing
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.pause();
+      musicPlayerRef.current.currentTime = 0;
+    }
+    
+    // Create new audio element
+    try {
+      const audio = new Audio(`${process.env.PUBLIC_URL}/${track}`);
+      audio.loop = true;
+      audio.volume = musicVolume;
+      
+      // Play the track
+      audio.play().catch(err => {
+        console.warn('Music playback blocked:', err.message);
+      });
+      
+      musicPlayerRef.current = audio;
+      currentTrackRef.current = track;
+    } catch (err) {
+      console.error('Error loading music:', err);
+    }
+  }, [musicEnabled, musicVolume, gameStarted, gameMode, level]);
+
+  const stopMusic = useCallback(() => {
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.pause();
+      musicPlayerRef.current.currentTime = 0;
+      musicPlayerRef.current = null;
+      currentTrackRef.current = null;
+    }
+  }, []);
+
+  // Update music intensity based on level and speed - switches tracks
+  const updateMusicIntensity = useCallback((currentLevel) => {
+    // Intensity ranges from 1.0 (slow/easy) to 3.0 (fast/hard)
+    const newIntensity = Math.min(3.0, 1.0 + (currentLevel - 1) * 0.15);
+    musicIntensity.current = newIntensity;
+    
+    // Switch tracks based on level progression (Classic mode only)
+    if (gameMode === 'classic' && musicEnabled && gameStarted) {
+      let newTrack;
+      if (currentLevel <= 5) {
+        newTrack = musicPlaylist.classic_low;
+      } else if (currentLevel <= 10) {
+        newTrack = musicPlaylist.classic_mid;
+      } else if (currentLevel <= 15) {
+        newTrack = musicPlaylist.classic_high;
+      } else {
+        newTrack = musicPlaylist.classic_extreme;
+      }
+      
+      // Only switch if track changed
+      if (currentTrackRef.current !== newTrack) {
+        startMusic();
+      }
+    }
+  }, [gameMode, musicEnabled, gameStarted, startMusic]);
+  
   const toggleMusic = useCallback(() => {
     setMusicEnabled(prev => {
       const newValue = !prev;
@@ -546,181 +643,14 @@ const Brikx = () => {
       }
       return newValue;
     });
-  }, []);
-
-  // Background Music System
-  const startMusic = useCallback(() => {
-    if (!musicEnabled || !audioContext.current || musicNodes.current.playing) return;
-    
-    const ctx = audioContext.current;
-    musicNodes.current.playing = true;
-    
-    // Musical scales and chords for dynamic music
-    // Using C minor pentatonic for a dramatic game feel
-    const bassNotes = [130.81, 146.83, 164.81, 196.00, 220.00]; // C3, D3, E3, G3, A3
-    const chordProgressions = [
-      [261.63, 311.13, 392.00], // C minor chord
-      [293.66, 349.23, 440.00], // D minor chord  
-      [196.00, 246.94, 293.66], // G minor chord
-      [220.00, 261.63, 329.63]  // A minor chord
-    ];
-    
-    let chordIndex = 0;
-    let beatCount = 0;
-    
-    const playChord = () => {
-      if (!musicNodes.current.playing || !musicEnabled) return;
-      
-      // Clean up previous oscillators
-      musicNodes.current.oscillators.forEach(osc => {
-        try { osc.stop(); } catch (e) {}
-      });
-      musicNodes.current.gains.forEach(gain => {
-        try { gain.disconnect(); } catch (e) {}
-      });
-      
-      musicNodes.current.oscillators = [];
-      musicNodes.current.gains = [];
-      
-      const currentTime = ctx.currentTime;
-      const intensity = musicIntensity.current;
-      const baseVolume = musicVolume * 0.15;
-      
-      // Bass line
-      const bassOsc = ctx.createOscillator();
-      const bassGain = ctx.createGain();
-      bassOsc.type = 'triangle';
-      bassOsc.frequency.value = bassNotes[chordIndex % bassNotes.length];
-      bassGain.gain.value = baseVolume * 0.8 * intensity;
-      bassOsc.connect(bassGain);
-      bassGain.connect(ctx.destination);
-      bassOsc.start(currentTime);
-      bassOsc.stop(currentTime + 0.5);
-      
-      musicNodes.current.oscillators.push(bassOsc);
-      musicNodes.current.gains.push(bassGain);
-      
-      // Chord tones (play only when intensity > 1.2)
-      if (intensity > 1.2) {
-        chordProgressions[chordIndex % chordProgressions.length].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = freq;
-          gain.gain.value = baseVolume * 0.3 * (intensity - 1);
-          gain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.8);
-          
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(currentTime + i * 0.05);
-          osc.stop(currentTime + 0.8);
-          
-          musicNodes.current.oscillators.push(osc);
-          musicNodes.current.gains.push(gain);
-        });
-      }
-      
-      // High melody notes (play at high intensity > 1.5)
-      if (intensity > 1.5 && beatCount % 4 === 0) {
-        const melodyNotes = [523.25, 587.33, 659.25, 783.99]; // C5, D5, E5, G5
-        const melodyNote = melodyNotes[Math.floor(beatCount / 4) % melodyNotes.length];
-        
-        const melOsc = ctx.createOscillator();
-        const melGain = ctx.createGain();
-        melOsc.type = 'square';
-        melOsc.frequency.value = melodyNote;
-        melGain.gain.value = baseVolume * 0.2 * (intensity - 1.5);
-        melGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.4);
-        
-        melOsc.connect(melGain);
-        melGain.connect(ctx.destination);
-        melOsc.start(currentTime);
-        melOsc.stop(currentTime + 0.4);
-        
-        musicNodes.current.oscillators.push(melOsc);
-        musicNodes.current.gains.push(melGain);
-      }
-      
-      // Rhythmic pulse (high-intensity only)
-      if (intensity > 2.0 && beatCount % 2 === 0) {
-        const pulseOsc = ctx.createOscillator();
-        const pulseGain = ctx.createGain();
-        pulseOsc.type = 'sine';
-        pulseOsc.frequency.value = 80;
-        pulseGain.gain.value = baseVolume * 0.4 * (intensity - 2);
-        pulseGain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.1);
-        
-        pulseOsc.connect(pulseGain);
-        pulseGain.connect(ctx.destination);
-        pulseOsc.start(currentTime);
-        pulseOsc.stop(currentTime + 0.1);
-        
-        musicNodes.current.oscillators.push(pulseOsc);
-        musicNodes.current.gains.push(pulseGain);
-      }
-      
-      beatCount++;
-      if (beatCount % 8 === 0) {
-        chordIndex = (chordIndex + 1) % 4;
-      }
-    };
-    
-    // Start the music loop - tempo increases with intensity
-    const getInterval = () => Math.max(200, 500 - (musicIntensity.current * 50));
-    
-    playChord();
-    musicIntervalRef.current = setInterval(() => {
-      playChord();
-      // Adjust interval dynamically
-      if (musicIntervalRef.current) {
-        clearInterval(musicIntervalRef.current);
-        musicIntervalRef.current = setInterval(playChord, getInterval());
-      }
-    }, getInterval());
-    
-  }, [musicEnabled, musicVolume]);
-
-  const stopMusic = useCallback(() => {
-    if (!musicNodes.current.playing) return;
-    
-    musicNodes.current.playing = false;
-    
-    // Stop all oscillators
-    musicNodes.current.oscillators.forEach(osc => {
-      try {
-        osc.stop();
-        osc.disconnect();
-      } catch (e) {
-        // Already stopped
-      }
-    });
-    
-    // Disconnect all gains
-    musicNodes.current.gains.forEach(gain => {
-      try {
-        gain.disconnect();
-      } catch (e) {
-        // Already disconnected
-      }
-    });
-    
-    // Clear arrays
-    musicNodes.current.oscillators = [];
-    musicNodes.current.gains = [];
-    
-    // Clear interval
-    if (musicIntervalRef.current) {
-      clearInterval(musicIntervalRef.current);
-      musicIntervalRef.current = null;
+  }, [gameStarted, gameOver, isPaused, startMusic, stopMusic]);
+  
+  // Update music player volume when musicVolume changes
+  useEffect(() => {
+    if (musicPlayerRef.current) {
+      musicPlayerRef.current.volume = musicVolume;
     }
-  }, []);
-
-  // Update music intensity based on level and speed
-  const updateMusicIntensity = useCallback((currentLevel) => {
-    // Intensity ranges from 1.0 (slow/easy) to 3.0 (fast/hard)
-    const newIntensity = Math.min(3.0, 1.0 + (currentLevel - 1) * 0.15);
-    musicIntensity.current = newIntensity;
-  }, []);
+  }, [musicVolume]);
 
   // Enhanced sound effects with more variations
   const playPieceSound = useCallback((pieceType) => {
