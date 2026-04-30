@@ -1528,7 +1528,17 @@ const Brikx = () => {
     // Clear game over state when starting countdown
     setGameOver(false);
     setCountdown(3);
-    playSound('menuClick', 600, 0.1);
+    
+    // Play countdown click sound
+    if (soundEnabled && sfxVolume > 0) {
+      try {
+        const clickAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-sci-fi-click-900.wav`);
+        clickAudio.volume = sfxVolume * 0.7;
+        clickAudio.play().catch(err => console.warn('Countdown sound blocked:', err.message));
+      } catch (err) {
+        console.error('Error loading countdown sound:', err);
+      }
+    }
     
     // Play start game audio
     if (soundEnabled && sfxVolume > 0) {
@@ -1559,11 +1569,20 @@ const Brikx = () => {
           }, 1000); // Show "GO!" for 1 second
           return 'GO';
         }
-        playSound('menuClick', 600, 0.1);
+        // Play countdown click for each number
+        if (soundEnabled && sfxVolume > 0) {
+          try {
+            const clickAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-sci-fi-click-900.wav`);
+            clickAudio.volume = sfxVolume * 0.7;
+            clickAudio.play().catch(err => console.warn('Countdown sound blocked:', err.message));
+          } catch (err) {
+            console.error('Error loading countdown sound:', err);
+          }
+        }
         return prev - 1;
       });
     }, 1000);
-  }, [resetGame, startMusic, updateMusicIntensity, playSound, soundEnabled, sfxVolume]);
+  }, [resetGame, startMusic, updateMusicIntensity, soundEnabled, sfxVolume]);
 
   // Main menu handler with confirmation
   const handleQuitToMenu = useCallback(() => {
