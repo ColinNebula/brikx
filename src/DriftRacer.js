@@ -532,10 +532,16 @@ const Brikx = () => {
 
   const playLevelUpSound = useCallback(() => {
     if (!soundEnabled) return;
-    playSound('levelUp', 880, 0.2);
-    setTimeout(() => playSound('levelUp', 1047, 0.2), 150);
-    setTimeout(() => playSound('levelUp', 1319, 0.3), 300);
-  }, [soundEnabled, playSound]);
+    try {
+      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-video-game-treasure-2066.wav`);
+      audio.volume = sfxVolume * 0.6; // Apply SFX volume
+      audio.play().catch(err => {
+        console.warn('Level up sound blocked:', err.message);
+      });
+    } catch (err) {
+      console.error('Error playing level up sound:', err);
+    }
+  }, [soundEnabled, sfxVolume]);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
@@ -697,10 +703,16 @@ const Brikx = () => {
 
   const playGameOverSound = useCallback(() => {
     if (!soundEnabled) return;
-    playSound('gameOver', 150, 0.5, 0.25);
-    setTimeout(() => playSound('gameOver', 130, 0.3, 0.2), 200);
-    setTimeout(() => playSound('gameOver', 100, 0.6, 0.15), 400);
-  }, [soundEnabled, playSound]);
+    try {
+      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-game-experience-level-increased-2062.wav`);
+      audio.volume = sfxVolume * 0.5; // Apply SFX volume
+      audio.play().catch(err => {
+        console.warn('Game over sound blocked:', err.message);
+      });
+    } catch (err) {
+      console.error('Error playing game over sound:', err);
+    }
+  }, [soundEnabled, sfxVolume]);
 
   // Achievement definitions with avatar rewards
   const achievementsList = {
