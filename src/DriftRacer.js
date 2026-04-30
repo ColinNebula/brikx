@@ -498,23 +498,32 @@ const Brikx = () => {
   const playLineClearSound = useCallback((linesCleared) => {
     if (!soundEnabled) return;
     
+    // Play explosion sound for line clears
+    playExplosionSound();
+    
     if (linesCleared === 1) {
       playSound('lineClear1', 400, 0.15);
     } else if (linesCleared === 2) {
       playSound('lineClear2', 500, 0.2);
       setTimeout(() => playSound('lineClear2', 600, 0.15), 100);
+      setTimeout(() => playExplosionSound(), 100);
     } else if (linesCleared === 3) {
       playSound('lineClear3', 600, 0.2);
       setTimeout(() => playSound('lineClear3', 700, 0.15), 80);
       setTimeout(() => playSound('lineClear3', 800, 0.15), 160);
+      setTimeout(() => playExplosionSound(), 80);
+      setTimeout(() => playExplosionSound(), 160);
     } else if (linesCleared === 4) {
-      // Tetris sound - special fanfare
+      // Tetris sound - special fanfare with multiple explosions
       playSound('tetris', 800, 0.2);
       setTimeout(() => playSound('tetris', 900, 0.15), 100);
       setTimeout(() => playSound('tetris', 1000, 0.15), 200);
       setTimeout(() => playSound('tetris', 1200, 0.3), 300);
+      setTimeout(() => playExplosionSound(), 100);
+      setTimeout(() => playExplosionSound(), 200);
+      setTimeout(() => playExplosionSound(), 300);
     }
-  }, [soundEnabled, playSound]);
+  }, [soundEnabled, playSound, playExplosionSound]);
 
   const playComboSound = useCallback((comboCount) => {
     if (!soundEnabled) return;
@@ -701,6 +710,19 @@ const Brikx = () => {
     if (!soundEnabled) return;
     playSound('menuClick', 700, 0.1, 0.12);
   }, [soundEnabled, playSound]);
+
+  const playExplosionSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-pixel-chiptune-explosion-1692.wav`);
+      audio.volume = sfxVolume * 0.6; // Apply SFX volume
+      audio.play().catch(err => {
+        console.warn('Explosion sound blocked:', err.message);
+      });
+    } catch (err) {
+      console.error('Error playing explosion sound:', err);
+    }
+  }, [soundEnabled, sfxVolume]);
 
   const playGameOverSound = useCallback(() => {
     if (!soundEnabled) return;
