@@ -495,6 +495,19 @@ const Brikx = () => {
     oscillator.stop(ctx.currentTime + duration);
   }, [soundEnabled]);
 
+  const playExplosionSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-pixel-chiptune-explosion-1692.wav`);
+      audio.volume = sfxVolume * 0.6; // Apply SFX volume
+      audio.play().catch(err => {
+        console.warn('Explosion sound blocked:', err.message);
+      });
+    } catch (err) {
+      console.error('Error playing explosion sound:', err);
+    }
+  }, [soundEnabled, sfxVolume]);
+
   const playLineClearSound = useCallback((linesCleared) => {
     if (!soundEnabled) return;
     
@@ -710,19 +723,6 @@ const Brikx = () => {
     if (!soundEnabled) return;
     playSound('menuClick', 700, 0.1, 0.12);
   }, [soundEnabled, playSound]);
-
-  const playExplosionSound = useCallback(() => {
-    if (!soundEnabled) return;
-    try {
-      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-pixel-chiptune-explosion-1692.wav`);
-      audio.volume = sfxVolume * 0.6; // Apply SFX volume
-      audio.play().catch(err => {
-        console.warn('Explosion sound blocked:', err.message);
-      });
-    } catch (err) {
-      console.error('Error playing explosion sound:', err);
-    }
-  }, [soundEnabled, sfxVolume]);
 
   const playGameOverSound = useCallback(() => {
     if (!soundEnabled) return;
