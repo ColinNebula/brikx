@@ -21,7 +21,7 @@
     "X-XSS-Protection": "1; mode=block",
     "Referrer-Policy": "no-referrer-when-downgrade",
     "Permissions-Policy": "accelerometer=(self), camera=(), microphone=(), geolocation=()",
-    "Content-Security-Policy": "default-src 'self' https://www.clarity.ms https://scripts.clarity.ms https://c.clarity.ms https://f.clarity.ms https://v.clarity.ms; script-src 'self' 'unsafe-inline' https://www.clarity.ms https://scripts.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.clarity.ms https://scripts.clarity.ms https://c.clarity.ms https://f.clarity.ms https://v.clarity.ms; font-src 'self' data:; connect-src 'self' https://www.clarity.ms https://scripts.clarity.ms https://c.clarity.ms https://f.clarity.ms https://v.clarity.ms; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';",
+    "Content-Security-Policy": "default-src 'self' https://www.clarity.ms https://scripts.clarity.ms https://c.clarity.ms https://f.clarity.ms https://v.clarity.ms https://c.bing.com; script-src 'self' 'unsafe-inline' https://www.clarity.ms https://scripts.clarity.ms; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.clarity.ms https://scripts.clarity.ms https://c.clarity.ms https://f.clarity.ms https://v.clarity.ms https://c.bing.com; font-src 'self' data:; connect-src 'self' https://www.clarity.ms https://scripts.clarity.ms https://c.clarity.ms https://f.clarity.ms https://v.clarity.ms; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';",
     "Cache-Control": "no-cache, must-revalidate"
   },
   "mimeTypes": {
