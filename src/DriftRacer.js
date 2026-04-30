@@ -2395,10 +2395,11 @@ const Brikx = () => {
   // Setup touch event listeners with passive: false to allow preventDefault
   useEffect(() => {
     const buttons = touchButtonsRef.current;
-    if (!buttons.length || !isMobile) return;
+    if (!buttons.length || !isMobile || !gameStarted || gameOver || isPaused) return;
 
     const handleTouchStart = (e, callback, vibratePattern, enableHold = false, holdCallback = null) => {
       e.preventDefault();
+      e.stopPropagation();
       vibrate(vibratePattern);
       callback();
 
@@ -2414,7 +2415,9 @@ const Brikx = () => {
       }
     };
 
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       // Clear hold-to-move timers
       if (holdTimeoutRef.current) {
         clearTimeout(holdTimeoutRef.current);
@@ -2436,7 +2439,7 @@ const Brikx = () => {
           vibratePattern = 20;
           break;
         case 1: // Rotate
-          callback = rotate;
+          callback = () => rotate();
           vibratePattern = 15;
           break;
         case 2: // Left
@@ -2446,10 +2449,10 @@ const Brikx = () => {
           holdCallback = () => moveHorizontal(-1);
           break;
         case 3: // Down
-          callback = moveDown;
+          callback = () => moveDown();
           vibratePattern = 8;
           enableHold = true;
-          holdCallback = moveDown;
+          holdCallback = () => moveDown();
           break;
         case 4: // Right
           callback = () => moveHorizontal(1);
@@ -2458,18 +2461,18 @@ const Brikx = () => {
           holdCallback = () => moveHorizontal(1);
           break;
         case 5: // Hold piece
-          callback = holdCurrentPiece;
+          callback = () => holdCurrentPiece();
           vibratePattern = 25;
           break;
         case 6: // Hard drop
-          callback = hardDrop;
+          callback = () => hardDrop();
           vibratePattern = [10, 50, 30]; // Double pulse
           break;
         default: return null;
       }
 
       const startListener = (e) => handleTouchStart(e, callback, vibratePattern, enableHold, holdCallback);
-      const endListener = handleTouchEnd;
+      const endListener = (e) => handleTouchEnd(e);
       
       button.addEventListener('touchstart', startListener, { passive: false });
       button.addEventListener('touchend', endListener, { passive: false });
@@ -2489,7 +2492,7 @@ const Brikx = () => {
         button.removeEventListener('touchcancel', endListener);
       });
     };
-  }, [isMobile, gameStarted, gameOver, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate]);
+  }, [isMobile, gameStarted, gameOver, isPaused, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate]);
 
   // Swipe gesture detection on canvas
   useEffect(() => {
