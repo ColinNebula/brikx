@@ -379,6 +379,16 @@ const Brikx = () => {
     marathon: 'Dancing_with_a_Photon.mp3'
   };
   
+  // Gameplay music tracks - randomly cycle through these during gameplay
+  const gameplayTracks = [
+    'Cycles_of_Existence.mp3',
+    'Urban_Street_Speak.mp3',
+    'Sneaky_Charlie.mp3',
+    'Nineteen_Eighty_Seven.mp3',
+    'Dancing_with_a_Photon.mp3',
+    'EBS.mp3'
+  ];
+  
   useEffect(() => {
     if (!audioContext.current) {
       audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -539,33 +549,23 @@ const Brikx = () => {
   }, [playSound]);
 
   // Background Music System
-  const startMusic = useCallback((trackKey = null) => {
+  const startMusic = useCallback((trackKey = null, isGameplay = false) => {
     if (!musicEnabled) return;
     
     // Determine which track to play
     let track;
+    let shouldCycle = false;
+    
     if (trackKey) {
       track = musicPlaylist[trackKey];
+    } else if (isGameplay || gameStarted) {
+      // During gameplay, pick a random track from gameplayTracks
+      const availableTracks = gameplayTracks.filter(t => t !== currentTrackRef.current);
+      track = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+      shouldCycle = true;
     } else {
-      // Auto-select based on game mode and level
-      if (!gameStarted) {
-        track = musicPlaylist.menu;
-      } else if (gameMode === 'sprint') {
-        track = musicPlaylist.sprint;
-      } else if (gameMode === 'marathon') {
-        track = musicPlaylist.marathon;
-      } else {
-        // Classic mode - select based on level
-        if (level <= 5) {
-          track = musicPlaylist.classic_low;
-        } else if (level <= 10) {
-          track = musicPlaylist.classic_mid;
-        } else if (level <= 15) {
-          track = musicPlaylist.classic_high;
-        } else {
-          track = musicPlaylist.classic_extreme;
-        }
-      }
+      // Menu music
+      track = musicPlaylist.menu;
     }
     
     // If already playing this track, don't restart
@@ -577,13 +577,27 @@ const Brikx = () => {
     if (musicPlayerRef.current) {
       musicPlayerRef.current.pause();
       musicPlayerRef.current.currentTime = 0;
+      musicPlayerRef.current.removeEventListener('ended', musicPlayerRef.current.onEndedHandler);
     }
     
     // Create new audio element
     try {
       const audio = new Audio(`${process.env.PUBLIC_URL}/${track}`);
-      audio.loop = true;
       audio.volume = musicVolume;
+      
+      if (shouldCycle) {
+        // For gameplay, cycle to next random track when this one ends
+        const onEndedHandler = () => {
+          if (gameStarted && musicEnabled) {
+            startMusic(null, true);
+          }
+        };
+        audio.addEventListener('ended', onEndedHandler);
+        audio.onEndedHandler = onEndedHandler; // Store reference for cleanup
+      } else {
+        // For menu music, loop continuously
+        audio.loop = true;
+      }
       
       // Play the track
       audio.play().catch(err => {
@@ -595,7 +609,7 @@ const Brikx = () => {
     } catch (err) {
       console.error('Error loading music:', err);
     }
-  }, [musicEnabled, musicVolume, gameStarted, gameMode, level]);
+  }, [musicEnabled, musicVolume, gameStarted, gameMode, level, gameplayTracks]);
 
   const stopMusic = useCallback(() => {
     if (musicPlayerRef.current) {
@@ -606,31 +620,13 @@ const Brikx = () => {
     }
   }, []);
 
-  // Update music intensity based on level and speed - switches tracks
+  // Update music intensity based on level and speed
   const updateMusicIntensity = useCallback((currentLevel) => {
     // Intensity ranges from 1.0 (slow/easy) to 3.0 (fast/hard)
     const newIntensity = Math.min(3.0, 1.0 + (currentLevel - 1) * 0.15);
     musicIntensity.current = newIntensity;
-    
-    // Switch tracks based on level progression (Classic mode only)
-    if (gameMode === 'classic' && musicEnabled && gameStarted) {
-      let newTrack;
-      if (currentLevel <= 5) {
-        newTrack = musicPlaylist.classic_low;
-      } else if (currentLevel <= 10) {
-        newTrack = musicPlaylist.classic_mid;
-      } else if (currentLevel <= 15) {
-        newTrack = musicPlaylist.classic_high;
-      } else {
-        newTrack = musicPlaylist.classic_extreme;
-      }
-      
-      // Only switch if track changed
-      if (currentTrackRef.current !== newTrack) {
-        startMusic();
-      }
-    }
-  }, [gameMode, musicEnabled, gameStarted, startMusic]);
+    // Music now cycles randomly through gameplay tracks
+  }, []);
   
   const toggleMusic = useCallback(() => {
     setMusicEnabled(prev => {
@@ -639,7 +635,7 @@ const Brikx = () => {
       if (!newValue) {
         stopMusic();
       } else if (gameStarted && !gameOver && !isPaused) {
-        startMusic();
+        startMusic(null, true);
       }
       return newValue;
     });
@@ -1543,7 +1539,7 @@ const Brikx = () => {
             // Start music after countdown
             setTimeout(() => {
               updateMusicIntensity(1);
-              startMusic();
+              startMusic(null, true);
             }, 100);
           }, 1000); // Show "GO!" for 1 second
           return 'GO';
