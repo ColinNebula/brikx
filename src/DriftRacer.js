@@ -1222,17 +1222,23 @@ const Brikx = () => {
         
         if (newRemaining === 0) {
           // Sprint completed!
-          const completionTime = Date.now() - startTime;
-          setGameOver(true);
-          setGameStarted(false);
-          stopMusic();
-          
-          // Update best sprint time
-          if (!statistics.bestSprintTime || completionTime < statistics.bestSprintTime) {
-            updateStatistics({ bestSprintTime: completionTime });
+          try {
+            const completionTime = Date.now() - (startTime || Date.now());
+            setGameOver(true);
+            setGameStarted(false);
+            stopMusic();
+            
+            // Update best sprint time
+            if (!statistics.bestSprintTime || completionTime < statistics.bestSprintTime) {
+              updateStatistics({ bestSprintTime: completionTime });
+            }
+            
+            playSound('achievement', 1200, 0.5);
+          } catch (error) {
+            console.error('Error during sprint completion:', error);
+            setGameOver(true);
+            setGameStarted(false);
           }
-          
-          playSound('achievement', 1200, 0.5);
           return;
         }
       }
@@ -1345,32 +1351,39 @@ const Brikx = () => {
     updateStatistics({ totalPieces: statistics.totalPieces + 1 });
     
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
-      setGameOver(true);
-      setGameStarted(false);
-      stopMusic();
-      playGameOverSound();
-      vibrate([50, 50, 100]); // Game over - strong double pulse
-      
-      // Update Marathon high score
-      if (gameMode === 'marathon' && score > statistics.longestMarathon) {
-        updateStatistics({ longestMarathon: score });
+      try {
+        setGameOver(true);
+        setGameStarted(false);
+        stopMusic();
+        playGameOverSound();
+        vibrate([50, 50, 100]); // Game over - strong double pulse
+        
+        // Update Marathon high score
+        if (gameMode === 'marathon' && score > statistics.longestMarathon) {
+          updateStatistics({ longestMarathon: score });
+        }
+        
+        // Update total score and add to score history
+        const newHistory = [...(statistics.scoreHistory || []), {
+          score: score || 0,
+          date: new Date().toISOString(),
+          gameMode: gameMode || 'classic',
+          level: level || 1,
+          lines: lines || 0
+        }].slice(-50); // Keep last 50 games
+        
+        updateStatistics({ 
+          totalScore: (statistics.totalScore || 0) + (score || 0),
+          scoreHistory: newHistory
+        });
+      } catch (error) {
+        console.error('Error during game over:', error);
+        // Failsafe - still set game over even if stats fail
+        setGameOver(true);
+        setGameStarted(false);
       }
-      
-      // Update total score and add to score history
-      const newHistory = [...(statistics.scoreHistory || []), {
-        score: score,
-        date: new Date().toISOString(),
-        gameMode: gameMode,
-        level: level,
-        lines: lines
-      }].slice(-50); // Keep last 50 games
-      
-      updateStatistics({ 
-        totalScore: statistics.totalScore + score,
-        scoreHistory: newHistory
-      });
     }
-  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate]);
+  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound]);
 
   // Move piece down
   const moveDown = useCallback(() => {
@@ -1434,11 +1447,19 @@ const Brikx = () => {
     
     // Check if held piece can spawn
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
-      setGameOver(true);
-      setGameStarted(false);
-      stopMusic();
+      try {
+        setGameOver(true);
+        setGameStarted(false);
+        stopMusic();
+        playGameOverSound();
+        vibrate([50, 50, 100]);
+      } catch (error) {
+        console.error('Error during hold game over:', error);
+        setGameOver(true);
+        setGameStarted(false);
+      }
     }
-  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic]);
+  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic, playGameOverSound, vibrate]);
 
   // Hard drop
   const hardDrop = useCallback(() => {
@@ -2891,19 +2912,23 @@ const Brikx = () => {
   // Check daily challenge on game over
   useEffect(() => {
     if (gameOver && dailyChallenge && !dailyChallenge.completed) {
-      const gameData = {
-        mode: gameMode,
-        score: score,
-        lines: lines,
-        maxCombo: combo,
-        time: startTime ? Date.now() - startTime : 0,
-        piecesPlaced: statistics.totalPieces
-      };
-      
-      const result = checkDailyChallenge(gameData);
-      if (result.success) {
-        // Refresh daily challenge state
-        setDailyChallenge(getDailyChallenge());
+      try {
+        const gameData = {
+          mode: gameMode || 'classic',
+          score: score || 0,
+          lines: lines || 0,
+          maxCombo: combo || 0,
+          time: startTime ? Date.now() - startTime : 0,
+          piecesPlaced: statistics.totalPieces || 0
+        };
+        
+        const result = checkDailyChallenge(gameData);
+        if (result.success) {
+          // Refresh daily challenge state
+          setDailyChallenge(getDailyChallenge());
+        }
+      } catch (error) {
+        console.error('Error checking daily challenge:', error);
       }
     }
   }, [gameOver, dailyChallenge, gameMode, score, lines, combo, startTime, statistics.totalPieces]);
@@ -2911,15 +2936,19 @@ const Brikx = () => {
   // Queue high score for offline sync
   useEffect(() => {
     if (gameOver && score > 0) {
-      if (isOffline()) {
-        queueHighScore({
-          score: score,
-          lines: lines,
-          level: level,
-          mode: gameMode,
-          playerName: playerName,
-          date: Date.now()
-        });
+      try {
+        if (isOffline()) {
+          queueHighScore({
+            score: score || 0,
+            lines: lines || 0,
+            level: level || 1,
+            mode: gameMode || 'classic',
+            playerName: playerName || 'Player',
+            date: Date.now()
+          });
+        }
+      } catch (error) {
+        console.error('Error queueing high score:', error);
       }
     }
   }, [gameOver, score, lines, level, gameMode, playerName]);
