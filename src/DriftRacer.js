@@ -2708,23 +2708,45 @@ const Brikx = () => {
   useEffect(() => {
     if (!isMobile) return;
 
+    let twoFingerStart = null;
+
     const handleTwoFingerTap = (e) => {
       // Only respond during active gameplay
       if (!gameStarted || gameOver) return;
       
-      // Check if exactly 2 touches
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        setIsPaused(prev => !prev);
-        vibrate([30, 30, 30]); // Triple pulse feedback
-        playSound('menuClick', 600, 0.1);
+      // Check if exactly 2 touches at the START
+      if (e.type === 'touchstart' && e.touches.length === 2) {
+        twoFingerStart = {
+          x1: e.touches[0].clientX,
+          y1: e.touches[0].clientY,
+          x2: e.touches[1].clientX,
+          y2: e.touches[1].clientY,
+          time: Date.now()
+        };
+      }
+      
+      // Check on touchend if it was a tap (not a swipe)
+      if (e.type === 'touchend' && twoFingerStart) {
+        const deltaTime = Date.now() - twoFingerStart.time;
+        
+        // Must be quick (less than 300ms) to be a tap
+        if (deltaTime < 300 && e.changedTouches.length > 0) {
+          e.preventDefault();
+          setIsPaused(prev => !prev);
+          vibrate([30, 30, 30]); // Triple pulse feedback
+          playSound('menuClick', 600, 0.1);
+        }
+        
+        twoFingerStart = null;
       }
     };
 
     document.addEventListener('touchstart', handleTwoFingerTap, { passive: false });
+    document.addEventListener('touchend', handleTwoFingerTap, { passive: false });
 
     return () => {
       document.removeEventListener('touchstart', handleTwoFingerTap);
+      document.removeEventListener('touchend', handleTwoFingerTap);
     };
   }, [isMobile, gameStarted, gameOver, vibrate, playSound]);
 
