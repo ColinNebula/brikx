@@ -3132,24 +3132,36 @@
   }
   
   /* Immersive Layout Mobile */
+  .main-menu.immersive {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    align-items: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
   .menu-glass-overlay {
-    padding: 30px 25px;
-    max-width: 90%;
+    padding: 20px 20px;
+    max-width: 95%;
     border-radius: 20px;
+    margin: auto;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .menu-center-content {
-    gap: 20px;
+    gap: 15px;
   }
   
   .immersive-title {
-    max-width: 420px;
+    max-width: 360px;
   }
   
   .immersive-play-btn {
-    font-size: 1rem;
-    padding: 12px 24px;
-    max-width: 240px;
+    font-size: 0.95rem;
+    padding: 10px 20px;
+    max-width: 220px;
   }
   
   .play-icon-large {
@@ -3162,20 +3174,22 @@
   
   .immersive-stats {
     flex-direction: column;
-    gap: 15px;
-  }
-  
-  .stat-value-immersive {
-    font-size: 1.5rem;
-  }
-  
-  .immersive-menu-actions {
     gap: 10px;
   }
   
+  .stat-value-immersive {
+    font-size: 1.3rem;
+  }
+  
+  .immersive-menu-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
   .immersive-btn {
-    padding: 10px 20px;
-    font-size: 0.85rem;
+    padding: 8px 16px;
+    font-size: 0.8rem;
   }
 
   .menu-content {
@@ -3558,18 +3572,23 @@
   
   /* Mode selector for very small screens */
   .modal-overlay {
-    padding: 0;
+    padding: 10px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    align-items: flex-start;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
   
   .modal-content {
     min-height: auto;
-    padding: 50px 15px 90px 15px;
+    padding: 50px 20px 30px 20px;
     padding-top: max(calc(env(safe-area-inset-top) + 50px), 50px);
-    padding-bottom: max(calc(env(safe-area-inset-bottom) + 90px), 110px);
-    margin-bottom: 20px;
-    border-radius: 0;
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 30px), 30px);
+    margin: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border-radius: 15px;
     max-height: none;
     overflow-y: visible;
   }
