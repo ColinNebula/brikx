@@ -4071,8 +4071,8 @@ const Brikx = () => {
         </p>
       </div>
 
-      {/* Mobile Touch Controls - Outside canvas container for iPad visibility */}
-      {isMobile && gameStarted && !gameOver && !isPaused && (
+      {/* Mobile Touch Controls - Disabled since gestures work */}
+      {false && isMobile && gameStarted && !gameOver && !isPaused && (
         <div className="mobile-controls">
           <div className="mobile-controls-left">
             <div className="touch-dpad">
