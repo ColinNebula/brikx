@@ -854,25 +854,36 @@ const Brikx = () => {
   const checkAchievements = useCallback(() => {
     const newAchievements = { ...achievements };
     let hasNew = false;
+    let newlyUnlocked = null;
 
     Object.keys(achievementsList).forEach(key => {
       if (!newAchievements[key] && achievementsList[key].requirement()) {
         newAchievements[key] = { unlocked: true, date: new Date().toISOString() };
         hasNew = true;
-        const achievement = achievementsList[key];
-        setNewAchievement({
-          ...achievement,
-          key: key,
-          avatarRewards: achievement.rewards || []
-        });
-        setTimeout(() => setNewAchievement(null), 5000);
-        playSound('achievement', 800, 0.3);
+        
+        // Only show notification for first new achievement
+        if (!newlyUnlocked) {
+          const achievement = achievementsList[key];
+          newlyUnlocked = {
+            name: achievement.name || '',
+            description: achievement.description || '',
+            icon: achievement.icon || '🏆',
+            key: key,
+            avatarRewards: achievement.rewards || []
+          };
+        }
       }
     });
 
     if (hasNew) {
       setAchievements(newAchievements);
       safeSetItem('brikxAchievements', JSON.stringify(newAchievements));
+      
+      if (newlyUnlocked) {
+        setNewAchievement(newlyUnlocked);
+        setTimeout(() => setNewAchievement(null), 5000);
+        playSound('achievement', 800, 0.3);
+      }
     }
   }, [achievements, statistics, playSound]);
 
@@ -1543,6 +1554,19 @@ const Brikx = () => {
     setCountdown(3);
     playSound('menuClick', 600, 0.1);
     
+    // Play start game audio
+    if (soundEnabled && sfxVolume > 0) {
+      try {
+        const startAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-fairy-magic-sparkle-871.mp3`);
+        startAudio.volume = Math.min(1.0, sfxVolume); // Full SFX volume
+        startAudio.play().catch(err => {
+          console.warn('Start game audio blocked:', err.message);
+        });
+      } catch (err) {
+        console.error('Error loading start game audio:', err);
+      }
+    }
+    
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
         if (prev === 1) {
@@ -1563,7 +1587,7 @@ const Brikx = () => {
         return prev - 1;
       });
     }, 1000);
-  }, [resetGame, startMusic, updateMusicIntensity, playSound]);
+  }, [resetGame, startMusic, updateMusicIntensity, playSound, soundEnabled, sfxVolume]);
 
   // Main menu handler with confirmation
   const handleQuitToMenu = useCallback(() => {
@@ -2827,13 +2851,17 @@ const Brikx = () => {
   // Handle splash screen timeout and audio
   useEffect(() => {
     // Play splash audio when screen appears
-    if (soundEnabled) {
-      const splashAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-technology-alert-transition-3121.mp3`);
-      splashAudio.volume = sfxVolume * 0.8; // Slightly reduced volume for splash
-      splashAudio.play().catch(err => {
-        // Autoplay might be blocked by browser, fail silently
-        console.log('Splash audio autoplay blocked:', err);
-      });
+    if (soundEnabled && sfxVolume > 0) {
+      try {
+        const splashAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-technology-alert-transition-3121.mp3`);
+        splashAudio.volume = Math.min(1.0, sfxVolume); // Full SFX volume for splash
+        splashAudio.play().catch(err => {
+          // Autoplay might be blocked by browser
+          console.warn('Splash audio autoplay blocked by browser:', err.message);
+        });
+      } catch (err) {
+        console.error('Error loading splash audio:', err);
+      }
     }
 
     const timer = setTimeout(() => {
@@ -3815,12 +3843,6 @@ const Brikx = () => {
                 onClick={() => {
                   setShowModeSelect(false);
                   startCountdown();
-                  // Play fairy sparkle sound for starting game
-                  if (soundEnabled) {
-                    const startAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-fairy-magic-sparkle-871.mp3`);
-                    startAudio.volume = sfxVolume * 0.7;
-                    startAudio.play().catch(err => console.log('Start sound blocked:', err));
-                  }
                 }}
               >
                 ▶ Start {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)} Mode
