@@ -198,6 +198,7 @@ const Brikx = () => {
   const [lastClearWasCombo, setLastClearWasCombo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showPauseHint, setShowPauseHint] = useState(false);
   const [levelFlash, setLevelFlash] = useState(null);
   const [countdown, setCountdown] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -2703,6 +2704,41 @@ const Brikx = () => {
     };
   }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal, vibrate]);
 
+  // Two-finger tap to pause (mobile only)
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleTwoFingerTap = (e) => {
+      // Only respond during active gameplay
+      if (!gameStarted || gameOver) return;
+      
+      // Check if exactly 2 touches
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        setIsPaused(prev => !prev);
+        vibrate([30, 30, 30]); // Triple pulse feedback
+        playSound('menuClick', 600, 0.1);
+      }
+    };
+
+    document.addEventListener('touchstart', handleTwoFingerTap, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTwoFingerTap);
+    };
+  }, [isMobile, gameStarted, gameOver, vibrate, playSound]);
+
+  // Show pause hint when game starts (mobile only)
+  useEffect(() => {
+    if (isMobile && gameStarted && !gameOver && !isPaused) {
+      setShowPauseHint(true);
+      const timer = setTimeout(() => {
+        setShowPauseHint(false);
+      }, 4000); // Show for 4 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile, gameStarted, gameOver, isPaused]);
+
   // Prevent body scroll during active gameplay
   useEffect(() => {
     if (!isMobile) return;
@@ -4101,12 +4137,22 @@ const Brikx = () => {
       <div className="controls-info">
         <p>
           {gamepadConnected ? '🎮 Gamepad Ready • ' : ''}
-          {isMobile ? '📱 Touch controls enabled' : 'Use Arrow Keys to control • SPACE for hard drop • P or ESC to pause'}
+          {isMobile ? '📱 Swipe to play • Two-finger tap to pause' : 'Use Arrow Keys to control • SPACE for hard drop • P or ESC to pause'}
         </p>
         <p style={{color: '#f0a000', fontWeight: 'bold', marginTop: '5px'}}>
           ⭐ Color Matching: 3+ blocks = 50pts each • Full line = +500pts bonus!
         </p>
       </div>
+
+      {/* Two-finger pause hint banner (mobile) */}
+      {showPauseHint && isMobile && (
+        <div className="pause-hint-banner">
+          <div className="pause-hint-content">
+            <span className="pause-hint-icon">✌️</span>
+            <span className="pause-hint-text">Tap with 2 fingers to pause</span>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Touch Controls - Disabled since gestures work */}
       {false && isMobile && gameStarted && !gameOver && !isPaused && (
