@@ -294,14 +294,71 @@ const Brikx = () => {
   // Confirmation Dialog
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
-  // Avatar options
-  const avatars = [
-    '🎮', '👾', '🕹️', '🎯', '⭐', '🔥', '💎', '👑', 
-    '🚀', '⚡', '🌟', '💫', '🎪', '🎨', '🎭', '🦄',
-    '😎', '🤖', '👻', '🐉', '🦖', '🦁', '🐼', '🐸',
-    '🍕', '🍔', '🎂', '🍩', '☕', '🌈', '🎸', '🎵',
-    '💀', '🤡', '🥷', '🧙', '🧛', '🦸', '🦹', '👽'
-  ];
+  // Avatar options with unlock requirements
+  const avatarsList = {
+    // Always unlocked (starter pack)
+    '🎮': { unlocked: true },
+    '👾': { unlocked: true },
+    '🕹️': { unlocked: true },
+    '😎': { unlocked: true },
+    
+    // Unlock with achievements
+    '⭐': { achievement: 'scorer1000', name: 'Millennium' },
+    '👑': { achievement: 'scorer10000', name: 'Legend' },
+    '🎯': { achievement: 'lines100', name: 'Line Master' },
+    '🚀': { achievement: 'lines1000', name: 'Line Legend' },
+    '🔥': { achievement: 'combo5', name: 'Combo Starter' },
+    '💥': { achievement: 'combo10', name: 'Combo Master' },
+    '⚡': { achievement: 'speedster', name: 'Speedster' },
+    '🏃': { achievement: 'marathoner', name: 'Marathoner' },
+    '💎': { achievement: 'scorer1000', name: 'Millennium' },
+    '🌟': { achievement: 'lines100', name: 'Line Master' },
+    '💫': { achievement: 'lines1000', name: 'Line Legend' },
+    '🚁': { achievement: 'combo10', name: 'Combo Master' },
+    '🤖': { achievement: 'piecesPlacer', name: 'Block Builder' },
+    '🧱': { achievement: 'piecesPlacer', name: 'Block Builder' },
+    '🎪': { achievement: 'scorer100', name: 'Century' },
+    '🎨': { achievement: 'lines10', name: 'Line Clearer' },
+    '🎭': { achievement: 'combo5', name: 'Combo Starter' },
+    '🦄': { achievement: 'scorer10000', name: 'Legend' },
+    '👻': { achievement: 'speedster', name: 'Speedster' },
+    '🐉': { achievement: 'scorer10000', name: 'Legend' },
+    '🦖': { achievement: 'marathoner', name: 'Marathoner' },
+    '🦁': { achievement: 'combo10', name: 'Combo Master' },
+    '🐼': { achievement: 'lines1000', name: 'Line Legend' },
+    '🐸': { achievement: 'lines100', name: 'Line Master' },
+    '🍕': { achievement: 'scorer100', name: 'Century' },
+    '🍔': { achievement: 'scorer1000', name: 'Millennium' },
+    '🎂': { achievement: 'lines10', name: 'Line Clearer' },
+    '🍩': { achievement: 'combo5', name: 'Combo Starter' },
+    '☕': { achievement: 'piecesPlacer', name: 'Block Builder' },
+    '🌈': { achievement: 'speedster', name: 'Speedster' },
+    '🎸': { achievement: 'marathoner', name: 'Marathoner' },
+    '🎵': { achievement: 'lines10', name: 'Line Clearer' },
+    '💀': { achievement: 'scorer10000', name: 'Legend' },
+    '🤡': { achievement: 'combo10', name: 'Combo Master' },
+    '🥷': { achievement: 'speedster', name: 'Speedster' },
+    '🧙': { achievement: 'marathoner', name: 'Marathoner' },
+    '🧛': { achievement: 'scorer10000', name: 'Legend' },
+    '🦸': { achievement: 'lines1000', name: 'Line Legend' },
+    '🦹': { achievement: 'piecesPlacer', name: 'Block Builder' },
+    '👽': { achievement: 'combo10', name: 'Combo Master' }
+  };
+
+  // Get all available avatars (unlocked + locked)
+  const allAvatars = Object.keys(avatarsList);
+  
+  // Get unlocked avatars based on achievements
+  const getUnlockedAvatars = useCallback(() => {
+    return allAvatars.filter(avatar => {
+      const config = avatarsList[avatar];
+      if (config.unlocked) return true;
+      if (config.achievement && achievements[config.achievement]?.unlocked) return true;
+      return false;
+    });
+  }, [achievements]);
+  
+  const unlockedAvatars = getUnlockedAvatars();
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
@@ -705,20 +762,92 @@ const Brikx = () => {
     setTimeout(() => playSound('gameOver', 100, 0.6, 0.15), 400);
   }, [soundEnabled, playSound]);
 
-  // Achievement definitions
+  // Achievement definitions with avatar rewards
   const achievementsList = {
-    firstGame: { name: 'First Steps', description: 'Play your first game', icon: '🎮', requirement: () => statistics.totalGames >= 1 },
-    scorer100: { name: 'Century', description: 'Score 100 points', icon: '💯', requirement: () => statistics.totalScore >= 100 },
-    scorer1000: { name: 'Millennium', description: 'Score 1,000 points', icon: '⭐', requirement: () => statistics.totalScore >= 1000 },
-    scorer10000: { name: 'Legend', description: 'Score 10,000 points', icon: '👑', requirement: () => statistics.totalScore >= 10000 },
-    lines10: { name: 'Line Clearer', description: 'Clear 10 lines', icon: '📏', requirement: () => statistics.totalLines >= 10 },
-    lines100: { name: 'Line Master', description: 'Clear 100 lines', icon: '🎯', requirement: () => statistics.totalLines >= 100 },
-    lines1000: { name: 'Line Legend', description: 'Clear 1,000 lines', icon: '🚀', requirement: () => statistics.totalLines >= 1000 },
-    combo5: { name: 'Combo Starter', description: 'Get a 5x combo', icon: '🔥', requirement: () => statistics.bestCombo >= 5 },
-    combo10: { name: 'Combo Master', description: 'Get a 10x combo', icon: '💥', requirement: () => statistics.bestCombo >= 10 },
-    speedster: { name: 'Speedster', description: 'Complete Sprint mode under 2 minutes', icon: '⚡', requirement: () => statistics.bestSprintTime && statistics.bestSprintTime < 120000 },
-    marathoner: { name: 'Marathoner', description: 'Score 50,000 in Marathon mode', icon: '🏃', requirement: () => statistics.longestMarathon >= 50000 },
-    piecesPlacer: { name: 'Block Builder', description: 'Place 1,000 pieces', icon: '🧱', requirement: () => statistics.totalPieces >= 1000 }
+    firstGame: { 
+      name: 'First Steps', 
+      description: 'Play your first game', 
+      icon: '🎮', 
+      requirement: () => statistics.totalGames >= 1,
+      rewards: [] 
+    },
+    scorer100: { 
+      name: 'Century', 
+      description: 'Score 100 points', 
+      icon: '💯', 
+      requirement: () => statistics.totalScore >= 100,
+      rewards: ['🎪', '🍕']
+    },
+    scorer1000: { 
+      name: 'Millennium', 
+      description: 'Score 1,000 points', 
+      icon: '⭐', 
+      requirement: () => statistics.totalScore >= 1000,
+      rewards: ['⭐', '💎', '🍔']
+    },
+    scorer10000: { 
+      name: 'Legend', 
+      description: 'Score 10,000 points', 
+      icon: '👑', 
+      requirement: () => statistics.totalScore >= 10000,
+      rewards: ['👑', '🦄', '🐉', '💀', '🧛']
+    },
+    lines10: { 
+      name: 'Line Clearer', 
+      description: 'Clear 10 lines', 
+      icon: '📏', 
+      requirement: () => statistics.totalLines >= 10,
+      rewards: ['🎨', '🎂', '🎵']
+    },
+    lines100: { 
+      name: 'Line Master', 
+      description: 'Clear 100 lines', 
+      icon: '🎯', 
+      requirement: () => statistics.totalLines >= 100,
+      rewards: ['🎯', '🌟', '🐸']
+    },
+    lines1000: { 
+      name: 'Line Legend', 
+      description: 'Clear 1,000 lines', 
+      icon: '🚀', 
+      requirement: () => statistics.totalLines >= 1000,
+      rewards: ['🚀', '💫', '🐼', '🦸']
+    },
+    combo5: { 
+      name: 'Combo Starter', 
+      description: 'Get a 5x combo', 
+      icon: '🔥', 
+      requirement: () => statistics.bestCombo >= 5,
+      rewards: ['🔥', '🎭', '🍩']
+    },
+    combo10: { 
+      name: 'Combo Master', 
+      description: 'Get a 10x combo', 
+      icon: '💥', 
+      requirement: () => statistics.bestCombo >= 10,
+      rewards: ['💥', '🦁', '🤡', '👽']
+    },
+    speedster: { 
+      name: 'Speedster', 
+      description: 'Complete Sprint mode under 2 minutes', 
+      icon: '⚡', 
+      requirement: () => statistics.bestSprintTime && statistics.bestSprintTime < 120000,
+      rewards: ['⚡', '👻', '🌈', '🥷']
+    },
+    marathoner: { 
+      name: 'Marathoner', 
+      description: 'Score 50,000 in Marathon mode', 
+      icon: '🏃', 
+      requirement: () => statistics.longestMarathon >= 50000,
+      rewards: ['🏃', '🦖', '🎸', '🧙']
+    },
+    piecesPlacer: { 
+      name: 'Block Builder', 
+      description: 'Place 1,000 pieces', 
+      icon: '🧱', 
+      requirement: () => statistics.totalPieces >= 1000,
+      rewards: ['🤖', '🧱', '☕', '🦹']
+    }
   };
 
   // Check and unlock achievements
@@ -730,8 +859,13 @@ const Brikx = () => {
       if (!newAchievements[key] && achievementsList[key].requirement()) {
         newAchievements[key] = { unlocked: true, date: new Date().toISOString() };
         hasNew = true;
-        setNewAchievement(achievementsList[key]);
-        setTimeout(() => setNewAchievement(null), 4000);
+        const achievement = achievementsList[key];
+        setNewAchievement({
+          ...achievement,
+          key: key,
+          avatarRewards: achievement.rewards || []
+        });
+        setTimeout(() => setNewAchievement(null), 5000);
         playSound('achievement', 800, 0.3);
       }
     });
@@ -765,15 +899,15 @@ const Brikx = () => {
 
   // Save profile changes
   const saveProfile = useCallback((name, avatar) => {
-    // Sanitize inputs
-    const sanitizedName = name.slice(0, 15).replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Player';
-    const sanitizedAvatar = avatars.includes(avatar) ? avatar : '🎮';
-    
+    const sanitizedName = name.trim() || 'Player';
+    // Only allow unlocked avatars
+    const unlocked = getUnlockedAvatars();
+    const sanitizedAvatar = unlocked.includes(avatar) ? avatar : '🎮';
     setPlayerName(sanitizedName);
     setPlayerAvatar(sanitizedAvatar);
     safeSetItem('brickxPlayerName', sanitizedName);
     safeSetItem('brickxPlayerAvatar', sanitizedAvatar);
-  }, [avatars]);
+  }, [getUnlockedAvatars]);
 
   // Game constants
   const COLS = 10;
@@ -3340,20 +3474,32 @@ const Brikx = () => {
               </div>
               
               <div className="profile-section">
-                <h3 className="settings-heading">Choose Avatar</h3>
+                <h3 className="settings-heading">Choose Avatar ({unlockedAvatars.length}/{allAvatars.length} Unlocked)</h3>
                 <div className="avatar-grid">
-                  {avatars.map((avatar) => (
-                    <button
-                      key={avatar}
-                      className={`avatar-option ${playerAvatar === avatar ? 'selected' : ''}`}
-                      onClick={() => {
-                        setPlayerAvatar(avatar);
-                        saveProfile(playerName, avatar);
-                      }}
-                    >
-                      {avatar}
-                    </button>
-                  ))}
+                  {allAvatars.map((avatar) => {
+                    const config = avatarsList[avatar];
+                    const isUnlocked = unlockedAvatars.includes(avatar);
+                    const achievementName = config.achievement ? achievementsList[config.achievement]?.name : null;
+                    
+                    return (
+                      <button
+                        key={avatar}
+                        className={`avatar-option ${playerAvatar === avatar ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`}
+                        onClick={() => {
+                          if (isUnlocked) {
+                            setPlayerAvatar(avatar);
+                            saveProfile(playerName, avatar);
+                            playSound('menuClick', 600, 0.1);
+                          }
+                        }}
+                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        disabled={!isUnlocked}
+                      >
+                        {avatar}
+                        {!isUnlocked && <div className="avatar-lock">🔒</div>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               
@@ -3778,6 +3924,14 @@ const Brikx = () => {
                       <div className="achievement-details">
                         <div className="achievement-name">{achievement.name}</div>
                         <div className="achievement-description">{achievement.description}</div>
+                        {achievement.rewards && achievement.rewards.length > 0 && (
+                          <div className="achievement-rewards">
+                            <span className="rewards-label">Rewards:</span>
+                            {achievement.rewards.map((avatar, i) => (
+                              <span key={i} className="reward-avatar-small">{avatar}</span>
+                            ))}
+                          </div>
+                        )}
                         {unlocked && achievements[key]?.date && (
                           <div className="achievement-date">
                             Unlocked: {new Date(achievements[key].date).toLocaleDateString()}
@@ -3812,60 +3966,18 @@ const Brikx = () => {
             <div className="achievement-notif-text">
               <div className="achievement-notif-title">Achievement Unlocked!</div>
               <div className="achievement-notif-name">{newAchievement.name}</div>
+              {newAchievement.avatarRewards && newAchievement.avatarRewards.length > 0 && (
+                <div className="achievement-notif-rewards">
+                  <span className="reward-label">New Avatars:</span>
+                  {newAchievement.avatarRewards.map((avatar, i) => (
+                    <span key={i} className="reward-avatar">{avatar}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Profile Modal - existing code */}
-        {showProfile && false && (
-          <div className="modal-overlay" onClick={() => setShowProfile(false)}>
-            <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setShowProfile(false)}>×</button>
-              <h2 className="modal-title">Player Profile</h2>
-              
-              <div className="profile-edit-section">
-                <div className="profile-avatar-large">{playerAvatar}</div>
-                
-                <div className="profile-input-group">
-                  <label>Player Name</label>
-                  <input 
-                    type="text" 
-                    className="profile-input"
-                    value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
-                    maxLength={15}
-                    placeholder="Enter your name"
-                  />
-                </div>
-                
-                <div className="profile-input-group">
-                  <label>Choose Avatar</label>
-                  <div className="avatar-grid">
-                    {avatars.map(avatar => (
-                      <button
-                        key={avatar}
-                        className={`avatar-option ${playerAvatar === avatar ? 'selected' : ''}`}
-                        onClick={() => setPlayerAvatar(avatar)}
-                      >
-                        {avatar}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <button 
-                  className="profile-save-btn"
-                  onClick={() => {
-                    saveProfile(playerName, playerAvatar);
-                    setShowProfile(false);
-                  }}
-                >
-                  Save Profile
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Quit Confirmation Dialog */}

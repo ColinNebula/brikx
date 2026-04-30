@@ -1555,6 +1555,29 @@
   transform: scale(1.15);
 }
 
+.avatar-option.locked {
+  opacity: 0.3;
+  cursor: not-allowed;
+  position: relative;
+  filter: grayscale(100%);
+}
+
+.avatar-option.locked:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+.avatar-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  filter: none;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
 .profile-save-btn {
   width: 100%;
   padding: 12px;
@@ -3358,6 +3381,33 @@
   line-height: 1.3;
 }
 
+.achievement-rewards {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rewards-label {
+  font-size: 0.75rem;
+  color: rgba(0, 240, 240, 0.8);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reward-avatar-small {
+  font-size: 1.2rem;
+  display: inline-block;
+  padding: 2px 4px;
+  background: rgba(0, 240, 240, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 240, 240, 0.3);
+}
+
 .achievement-date {
   font-size: 0.75rem;
   color: rgba(0, 240, 240, 0.6);
@@ -3460,6 +3510,41 @@
   font-weight: bold;
   color: white;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.achievement-notif-rewards {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reward-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.reward-avatar {
+  font-size: 1.3rem;
+  display: inline-block;
+  animation: avatarPop 0.6s ease;
+}
+
+@keyframes avatarPop {
+  0%, 50% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Responsive for new components */
