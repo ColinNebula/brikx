@@ -652,6 +652,20 @@ const Brikx = () => {
     }
   }, [musicVolume]);
 
+  // Start menu music when at main menu
+  useEffect(() => {
+    if (!gameStarted && !gameOver && musicEnabled && !showSplash) {
+      // Small delay to ensure clean transition
+      const timer = setTimeout(() => {
+        startMusic('menu');
+      }, 100);
+      return () => clearTimeout(timer);
+    } else if (gameStarted || gameOver) {
+      // Music will be controlled by game flow
+      return;
+    }
+  }, [gameStarted, gameOver, musicEnabled, showSplash, startMusic]);
+
   // Enhanced sound effects with more variations
   const playPieceSound = useCallback((pieceType) => {
     if (!soundEnabled) return;
@@ -2659,6 +2673,35 @@ const Brikx = () => {
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal, vibrate]);
+
+  // Prevent body scroll during active gameplay
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const preventScroll = (e) => {
+      if (gameStarted && !gameOver && !isPaused) {
+        e.preventDefault();
+      }
+    };
+
+    if (gameStarted && !gameOver && !isPaused) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.addEventListener('touchmove', preventScroll, { passive: false });
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.removeEventListener('touchmove', preventScroll);
+    };
+  }, [isMobile, gameStarted, gameOver, isPaused]);
 
   // Update elapsed time for Sprint and Marathon modes
   useEffect(() => {
