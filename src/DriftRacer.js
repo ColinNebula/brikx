@@ -2713,6 +2713,13 @@ const Brikx = () => {
 
       e.preventDefault();
 
+      // Ensure music keeps playing after touch interaction (mobile audio context fix)
+      if (musicPlayerRef.current && musicPlayerRef.current.paused && musicEnabled && !isPaused) {
+        musicPlayerRef.current.play().catch(err => {
+          console.warn('Music resume after touch blocked:', err.message);
+        });
+      }
+
       // Determine swipe direction
       if (Math.abs(deltaY) > Math.abs(deltaX)) {
         // Vertical swipe
@@ -2748,7 +2755,7 @@ const Brikx = () => {
       canvas.removeEventListener('touchmove', handleTouchMove);
       canvas.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal, vibrate]);
+  }, [isMobile, gameStarted, gameOver, isPaused, rotate, hardDrop, moveHorizontal, vibrate, musicEnabled]);
 
   // Two-finger tap to pause (mobile only)
   useEffect(() => {
