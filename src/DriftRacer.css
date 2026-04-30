@@ -26,8 +26,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100vh;
+  height: 100vh;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-tertiary) 100%);
   font-family: 'Arial', sans-serif;
   color: var(--color-textPrimary);
@@ -38,6 +42,7 @@
   padding-bottom: max(20px, env(safe-area-inset-bottom));
   padding-left: max(20px, env(safe-area-inset-left));
   transition: background 0.5s ease;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Splash Screen */
@@ -141,6 +146,7 @@
   margin-bottom: 30px;
   width: 100%;
   max-width: 900px;
+  padding-top: max(0px, env(safe-area-inset-top));
 }
 
 .game-title {
@@ -3019,6 +3025,7 @@
 
   .game-header {
     margin-bottom: 10px;
+    padding-top: max(10px, calc(10px + env(safe-area-inset-top)));
   }
 
   .game-title {
@@ -3399,6 +3406,11 @@
 @media (min-width: 769px) and (max-width: 1024px) {
   .drift-racer {
     padding-bottom: 250px;
+    padding-top: max(15px, env(safe-area-inset-top));
+  }
+
+  .game-header {
+    padding-top: max(5px, calc(5px + env(safe-area-inset-top)));
   }
 
   .game-container {
