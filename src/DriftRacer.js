@@ -1525,6 +1525,8 @@ const Brikx = () => {
   }, [spawnPiece, ROWS, COLS, gameMode, updateStatistics, statistics.totalGames]);
 
   const startCountdown = useCallback(() => {
+    // Clear game over state when starting countdown
+    setGameOver(false);
     setCountdown(3);
     playSound('menuClick', 600, 0.1);
     
@@ -3245,7 +3247,7 @@ const Brikx = () => {
                   </div>
                   
                   <div className="menu-buttons">
-                    <button className="menu-btn restart-btn" onClick={resetGame}>
+                    <button className="menu-btn restart-btn" onClick={startCountdown}>
                       🔄 Play Again
                     </button>
                     <button className="menu-btn main-menu-btn" onClick={handleMainMenu}>
