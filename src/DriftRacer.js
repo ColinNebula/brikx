@@ -3128,23 +3128,23 @@ const Brikx = () => {
                   
                   <div className="final-score-display">
                     <div className="score-label">FINAL SCORE</div>
-                    <div className="score-number">{score.toLocaleString()}</div>
+                    <div className="score-number">{(score || 0).toLocaleString()}</div>
                   </div>
                   
                   <div className="game-over-stats">
                     <div className="stat-item">
                       <span className="stat-icon">🎯</span>
-                      <span className="stat-value">{level}</span>
+                      <span className="stat-value">{level || 1}</span>
                       <span className="stat-label">Level</span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-icon">📊</span>
-                      <span className="stat-value">{lines}</span>
+                      <span className="stat-value">{lines || 0}</span>
                       <span className="stat-label">Lines</span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-icon">🏆</span>
-                      <span className="stat-value">{highScore.toLocaleString()}</span>
+                      <span className="stat-value">{(highScore || 0).toLocaleString()}</span>
                       <span className="stat-label">Best</span>
                     </div>
                   </div>
