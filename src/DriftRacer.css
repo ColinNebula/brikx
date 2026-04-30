@@ -1052,7 +1052,7 @@
 
 /* Immersive Title */
 .immersive-title {
-  max-width: 500px;
+  max-width: 650px;
   width: 100%;
   height: auto;
   filter: drop-shadow(0 0 20px rgba(0, 240, 240, 0.8))
@@ -2820,7 +2820,7 @@
   }
   
   .immersive-title {
-    max-width: 280px;
+    max-width: 380px;
   }
   
   .immersive-play-btn {
@@ -3083,7 +3083,7 @@
   }
   
   .immersive-title {
-    max-width: 250px;
+    max-width: 320px;
   }
   
   .immersive-play-btn {
