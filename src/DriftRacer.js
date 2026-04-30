@@ -370,10 +370,10 @@ const Brikx = () => {
   
   // Music playlist mapping
   const musicPlaylist = {
-    menu: 'Urban_Street_Speak.mp3',
+    menu: 'Sneaky_Charlie.mp3',
     classic_low: 'Cycles_of_Existence.mp3',      // Levels 1-5
     classic_mid: 'Dancing_with_a_Photon.mp3',    // Levels 6-10
-    classic_high: 'Sneaky_Charlie.mp3',          // Levels 11-15
+    classic_high: 'Urban_Street_Speak.mp3',      // Levels 11-15
     classic_extreme: 'Nineteen_Eighty_Seven.mp3', // Levels 16+
     sprint: 'EBS.mp3',
     marathon: 'Dancing_with_a_Photon.mp3'
