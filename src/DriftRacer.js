@@ -2522,8 +2522,11 @@ const Brikx = () => {
     }
   }, [isPaused, gameStarted, gameOver, musicEnabled, startMusic, stopMusic]);
 
-  // Auto-pause when tab loses focus
+  // Auto-pause when tab loses focus (desktop only)
   useEffect(() => {
+    // Skip auto-pause on mobile - use two-finger tap instead
+    if (isMobile) return;
+    
     const handleVisibilityChange = () => {
       if (document.hidden && gameStarted && !gameOver && !isPaused) {
         setIsPaused(true);
@@ -2543,7 +2546,7 @@ const Brikx = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [gameStarted, gameOver, isPaused]);
+  }, [isMobile, gameStarted, gameOver, isPaused]);
 
   // Setup touch event listeners with passive: false to allow preventDefault
   useEffect(() => {
