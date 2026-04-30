@@ -3115,22 +3115,48 @@ const Brikx = () => {
           <div className="start-overlay">
             {gameOver ? (
               <>
-                <h2>💀 Game Over!</h2>
-                <div className="game-over-stats">
-                  <p>Final Score: {score}</p>
-                  <p>Level Reached: {level}</p>
-                  <p>Lines Cleared: {lines}</p>
+                <div className="game-over-container">
+                  <h2 className="game-over-title">💀 GAME OVER 💀</h2>
+                  
                   {score === highScore && score > 0 && (
-                    <p className="new-record">🎉 NEW HIGH SCORE! 🎉</p>
+                    <div className="new-record-banner">
+                      <span className="record-icon">🎉</span>
+                      <span className="record-text">NEW HIGH SCORE!</span>
+                      <span className="record-icon">🎉</span>
+                    </div>
                   )}
-                </div>
-                <div className="menu-buttons">
-                  <button className="menu-btn restart-btn" onClick={resetGame}>
-                    🔄 Play Again
-                  </button>
-                  <button className="menu-btn main-menu-btn" onClick={handleMainMenu}>
-                    🏠 Main Menu
-                  </button>
+                  
+                  <div className="final-score-display">
+                    <div className="score-label">FINAL SCORE</div>
+                    <div className="score-number">{score.toLocaleString()}</div>
+                  </div>
+                  
+                  <div className="game-over-stats">
+                    <div className="stat-item">
+                      <span className="stat-icon">🎯</span>
+                      <span className="stat-value">{level}</span>
+                      <span className="stat-label">Level</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-icon">📊</span>
+                      <span className="stat-value">{lines}</span>
+                      <span className="stat-label">Lines</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-icon">🏆</span>
+                      <span className="stat-value">{highScore.toLocaleString()}</span>
+                      <span className="stat-label">Best</span>
+                    </div>
+                  </div>
+                  
+                  <div className="menu-buttons">
+                    <button className="menu-btn restart-btn" onClick={resetGame}>
+                      🔄 Play Again
+                    </button>
+                    <button className="menu-btn main-menu-btn" onClick={handleMainMenu}>
+                      🏠 Main Menu
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
