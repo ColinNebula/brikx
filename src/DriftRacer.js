@@ -244,6 +244,18 @@ const Brikx = () => {
     return parseFloat(safeGetItem('brickxMusicVolume', '0.5')) || 0.5;
   });
 
+  // Detect reduced motion preference for accessibility
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = (e) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   // Game modes: 'classic', 'sprint', 'marathon'
   const [gameMode, setGameMode] = useState('classic');
   const [showModeSelect, setShowModeSelect] = useState(false);
@@ -381,6 +393,25 @@ const Brikx = () => {
   }, [achievements]);
   
   const unlockedAvatars = getUnlockedAvatars();
+
+  // Particle Pooling System for Performance
+  const particlePool = useRef([]);
+  const MAX_POOL_SIZE = 500;
+  const MAX_ACTIVE_PARTICLES = 500;
+
+  const getParticleFromPool = useCallback((particleData) => {
+    let particle = particlePool.current.pop();
+    if (!particle) {
+      particle = {};
+    }
+    return Object.assign(particle, particleData);
+  }, []);
+
+  const returnParticleToPool = useCallback((particle) => {
+    if (particlePool.current.length < MAX_POOL_SIZE) {
+      particlePool.current.push(particle);
+    }
+  }, []);
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
@@ -1057,13 +1088,25 @@ const Brikx = () => {
     });
   }, []);
 
-  // Add particles for visual effects
+  // Get color for combo tier
+  const getComboColor = useCallback((combo) => {
+    if (combo >= 15) return { color: '#ff00ff', glow: 25, name: 'LEGENDARY' };
+    if (combo >= 10) return { color: '#ff0000', glow: 20, name: 'MEGA' };
+    if (combo >= 5) return { color: '#ff8800', glow: 15, name: 'SUPER' };
+    if (combo >= 2) return { color: '#ffff00', glow: 12, name: 'COMBO' };
+    return { color: '#ffffff', glow: 10, name: '' };
+  }, []);
+
+  // Add particles for visual effects with pooling and new types
   const addLineParticles = useCallback((y, isCombo = false, isPerfect = false, comboCount = 0) => {
     const boardOffsetX = 130;
     const isHighCombo = comboCount >= 5;
     const isMegaCombo = comboCount >= 10;
-    const baseParticleCount = isMegaCombo ? 20 : isHighCombo ? 16 : isPerfect ? 12 : isCombo ? 8 : 6;
-    const particleTypes = ['circle', 'star', 'square', 'spark', 'diamond', 'ring'];
+    
+    // Reduce particle count for reduced motion preference
+    const motionMultiplier = prefersReducedMotion ? 0.3 : 1;
+    const baseParticleCount = Math.floor((isMegaCombo ? 20 : isHighCombo ? 16 : isPerfect ? 12 : isCombo ? 8 : 6) * motionMultiplier);
+    const particleTypes = ['circle', 'star', 'square', 'spark', 'diamond', 'ring', 'confetti'];
     
     for (let x = 0; x < COLS; x++) {
       const blockColor = gameState.current.board[y][x];
@@ -1083,7 +1126,7 @@ const Brikx = () => {
           const speed = ringSpeed + Math.random() * 2;
           const size = (isPerfect ? 5 : isCombo ? 4 : 3) + Math.random() * 2 - ring * 0.5;
           
-          gameState.current.particles.push({
+          const particle = getParticleFromPool({
             x: centerX,
             y: centerY,
             vx: Math.cos(angle) * speed,
@@ -1098,13 +1141,18 @@ const Brikx = () => {
             glow: true,
             trail: isPerfect || (isCombo && ring === 0),
             pulse: isPerfect || isCombo,
-            ring: ring
+            ring: ring,
+            bounce: isMegaCombo || isPerfect
           });
+          
+          if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+            gameState.current.particles.push(particle);
+          }
         }
         
         // Add expanding ring wave effect
         if (isPerfect || isCombo) {
-          gameState.current.particles.push({
+          const wave = getParticleFromPool({
             x: centerX,
             y: centerY,
             vx: 0,
@@ -1121,18 +1169,54 @@ const Brikx = () => {
             pulse: false,
             ring: ring,
             waveRadius: 5 + ring * 10,
-            waveSpeed: 4 + ring * 2
+            waveSpeed: 4 + ring * 2,
+            bounce: false
           });
+          if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+            gameState.current.particles.push(wave);
+          }
+        }
+      }
+      
+      // Add confetti for TETRIS or Perfect Clear
+      if (isPerfect || (isCombo && comboCount >= 4)) {
+        const confettiCount = Math.floor((isPerfect ? 25 : 15) * motionMultiplier);
+        const comboColors = getComboColor(comboCount);
+        for (let i = 0; i < confettiCount; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 3 + Math.random() * 5;
+          const confetti = getParticleFromPool({
+            x: centerX,
+            y: centerY,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2,
+            life: 80 + Math.random() * 40,
+            maxLife: 120,
+            color: Math.random() > 0.3 ? comboColors.color : blockColor,
+            size: 2 + Math.random() * 3,
+            type: 'confetti',
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.5,
+            glow: true,
+            trail: false,
+            pulse: false,
+            ring: 0,
+            bounce: true,
+            flutter: Math.random() * 0.3
+          });
+          if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+            gameState.current.particles.push(confetti);
+          }
         }
       }
       
       // Add burst of small particles in random directions
       if (isPerfect || isMegaCombo || isHighCombo) {
-        const burstCount = isMegaCombo ? 30 : isHighCombo ? 22 : 15;
+        const burstCount = Math.floor((isMegaCombo ? 30 : isHighCombo ? 22 : 15) * motionMultiplier);
         for (let i = 0; i < burstCount; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = 2 + Math.random() * 6;
-          gameState.current.particles.push({
+          const burst = getParticleFromPool({
             x: centerX,
             y: centerY,
             vx: Math.cos(angle) * speed,
@@ -1147,15 +1231,46 @@ const Brikx = () => {
             glow: true,
             trail: true,
             pulse: true,
-            ring: 0
+            ring: 0,
+            bounce: false
           });
+          if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+            gameState.current.particles.push(burst);
+          }
+        }
+      }
+      
+      // Add lightning chains for mega combos
+      if (isMegaCombo && x < COLS - 1) {
+        const lightning = getParticleFromPool({
+          x: centerX,
+          y: centerY,
+          x2: centerX + BLOCK_SIZE,
+          y2: centerY,
+          vx: 0,
+          vy: 0,
+          life: 20,
+          maxLife: 20,
+          color: getComboColor(comboCount).color,
+          size: 2,
+          type: 'lightning',
+          rotation: 0,
+          rotationSpeed: 0,
+          glow: true,
+          trail: false,
+          pulse: true,
+          ring: 0,
+          bounce: false
+        });
+        if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+          gameState.current.particles.push(lightning);
         }
       }
       
       // Add extra sparkle particles for special effects
       if (isPerfect || isCombo) {
         for (let i = 0; i < (isPerfect ? 5 : 3); i++) {
-          gameState.current.particles.push({
+          const sparkle = getParticleFromPool({
             x: centerX + (Math.random() - 0.5) * 20,
             y: centerY + (Math.random() - 0.5) * 20,
             vx: (Math.random() - 0.5) * 3,
@@ -1170,12 +1285,16 @@ const Brikx = () => {
             glow: true,
             trail: true,
             pulse: true,
-            ring: 0
+            ring: 0,
+            bounce: false
           });
+          if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+            gameState.current.particles.push(sparkle);
+          }
         }
       }
     }
-  }, [COLS, BLOCK_SIZE]);
+  }, [COLS, BLOCK_SIZE, getParticleFromPool, getComboColor, MAX_ACTIVE_PARTICLES, prefersReducedMotion]);
 
   // Clear completed lines with animation
   const clearLines = useCallback(() => {
@@ -1937,6 +2056,42 @@ const Brikx = () => {
     ctx.save();
     ctx.translate(boardOffsetX, 0);
     
+    // Draw danger zone indicator (top rows warning)
+    const dangerThreshold = 5; // Top 5 rows
+    let highestBlock = -1;
+    for (let y = 0; y < dangerThreshold; y++) {
+      if (board[y].some(cell => cell)) {
+        highestBlock = y;
+        break;
+      }
+    }
+    
+    if (highestBlock !== -1 && highestBlock < dangerThreshold) {
+      // Red pulsing overlay on top rows
+      const dangerAlpha = 0.15 + Math.sin(gridAnimation * 0.1) * 0.1;
+      const gradient = ctx.createLinearGradient(
+        0, 0, 0, dangerThreshold * BLOCK_SIZE
+      );
+      gradient.addColorStop(0, `rgba(255, 50, 50, ${dangerAlpha * 1.5})`);
+      gradient.addColorStop(0.5, `rgba(255, 100, 0, ${dangerAlpha})`);
+      gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, BOARD_WIDTH, dangerThreshold * BLOCK_SIZE);
+      
+      // Warning text
+      ctx.save();
+      ctx.globalAlpha = dangerAlpha * 2;
+      ctx.font = 'bold 16px Arial';
+      ctx.fillStyle = '#ff3333';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      ctx.textAlign = 'center';
+      const warningText = '⚠ DANGER ⚠';
+      ctx.strokeText(warningText, BOARD_WIDTH / 2, 20);
+      ctx.fillText(warningText, BOARD_WIDTH / 2, 20);
+      ctx.restore();
+    }
+    
     board.forEach((row, y) => {
       const isClearing = clearingLines.includes(y);
       const alpha = isClearing ? Math.sin((clearAnimation / 15) * Math.PI) : 1;
@@ -2130,6 +2285,38 @@ const Brikx = () => {
           ctx.lineTo(0, p.size * 1.2);
           ctx.stroke();
           break;
+        
+        case 'confetti':
+          // Rectangular confetti with flutter
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          const confettiWidth = p.size * 0.5;
+          const confettiHeight = p.size * 2;
+          ctx.fillRect(-confettiWidth, -confettiHeight, confettiWidth * 2, confettiHeight * 2);
+          break;
+        
+        case 'lightning':
+          // Lightning bolt between two points
+          if (p.x2 !== undefined && p.y2 !== undefined) {
+            ctx.globalAlpha = finalAlpha * 0.8;
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = p.size;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            // Jagged lightning effect
+            const segments = 3;
+            for (let s = 1; s <= segments; s++) {
+              const t = s / segments;
+              const midX = p.x + (p.x2 - p.x) * t;
+              const midY = p.y + (p.y2 - p.y) * t;
+              const offset = (Math.random() - 0.5) * 10;
+              ctx.lineTo(midX + offset, midY + offset);
+            }
+            ctx.stroke();
+          }
+          break;
+        
         default:
           // Default particle rendering
           ctx.translate(p.x, p.y);
@@ -2141,18 +2328,43 @@ const Brikx = () => {
       
       ctx.restore();
       
-      // Update particle physics
-      if (p.type !== 'wave') {
+      // Update particle physics with bouncing
+      if (p.type !== 'wave' && p.type !== 'lightning') {
         p.x += p.vx;
         p.y += p.vy;
         p.vx *= 0.98; // Air resistance
+        
+        // Add flutter for confetti
+        if (p.type === 'confetti' && p.flutter) {
+          p.vx += Math.sin(p.life * p.flutter) * 0.3;
+        }
+        
         p.vy += 0.15; // Gravity
+        
+        // Screen edge bouncing
+        if (p.bounce) {
+          const boardLeft = boardOffsetX;
+          const boardRight = boardOffsetX + BOARD_WIDTH;
+          const boardBottom = CANVAS_HEIGHT;
+          
+          if (p.x < boardLeft || p.x > boardRight) {
+            p.vx *= -0.7;
+            p.x = Math.max(boardLeft, Math.min(boardRight, p.x));
+          }
+          if (p.y > boardBottom) {
+            p.vy *= -0.7;
+            p.y = boardBottom;
+            p.vx *= 0.9; // Friction on ground
+          }
+        }
       }
       p.rotation += p.rotationSpeed;
       p.life--;
     });
     
-    // Remove dead particles
+    // Remove dead particles and return to pool
+    const deadParticles = particles.filter(p => p.life <= 0);
+    deadParticles.forEach(p => returnParticleToPool(p));
     gameState.current.particles = particles.filter(p => p.life > 0);
 
     // Update line clear animation
@@ -2327,6 +2539,55 @@ const Brikx = () => {
     }
     
     ctx.restore(); // End board translation
+    
+    // Draw Combo Meter Visual
+    if (combo > 0) {
+      const meterX = boardOffsetX;
+      const meterY = CANVAS_HEIGHT - 50;
+      const meterWidth = BOARD_WIDTH;
+      const meterHeight = 20;
+      const fillWidth = Math.min(1, combo / 15) * meterWidth;
+      const comboInfo = getComboColor(combo);
+      
+      // Background with glow
+      ctx.save();
+      ctx.shadowColor = comboInfo.color;
+      ctx.shadowBlur = 15;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(meterX, meterY, meterWidth, meterHeight);
+      
+      // Fill with gradient based on combo tier
+      const gradient = ctx.createLinearGradient(meterX, 0, meterX + meterWidth, 0);
+      gradient.addColorStop(0, '#00ff00');
+      gradient.addColorStop(0.3, '#ffff00');
+      gradient.addColorStop(0.6, '#ff8800');
+      gradient.addColorStop(0.8, '#ff0000');
+      gradient.addColorStop(1, '#ff00ff');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(meterX, meterY, fillWidth, meterHeight);
+      
+      // Animated pulse overlay
+      const pulseAlpha = 0.3 + Math.sin(gridAnimation * 0.2) * 0.2;
+      ctx.fillStyle = `rgba(255, 255, 255, ${pulseAlpha})`;
+      ctx.fillRect(meterX, meterY, fillWidth, meterHeight / 3);
+      
+      // Border with glow
+      ctx.strokeStyle = comboInfo.color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(meterX, meterY, meterWidth, meterHeight);
+      ctx.shadowBlur = 0;
+      
+      // Combo text
+      ctx.font = 'bold 18px Arial';
+      ctx.fillStyle = comboInfo.color;
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 4;
+      ctx.textAlign = 'center';
+      const comboText = `${combo}x ${comboInfo.name}`;
+      ctx.strokeText(comboText, meterX + meterWidth / 2, meterY - 5);
+      ctx.fillText(comboText, meterX + meterWidth / 2, meterY - 5);
+      ctx.restore();
+    }
     
     // Restore screen shake transform
     ctx.restore();
@@ -2512,7 +2773,7 @@ const Brikx = () => {
         gameState.current.colorBonusDisplay = null;
       }
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, level, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, level, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool]);
 
   // Game loop
   useEffect(() => {
