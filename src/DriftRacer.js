@@ -3571,6 +3571,68 @@ const Brikx = () => {
     `theme-motif-${shellVisual?.motif || 'ribbons'}`
   ].join(' ');
 
+  const renderShellMotifElements = (motif) => {
+    if (motif === 'flowers') {
+      return (
+        <>
+          <span className="theme-shell-flower shell-flower-a" />
+          <span className="theme-shell-flower shell-flower-b" />
+          <span className="theme-shell-flower shell-flower-c" />
+        </>
+      );
+    }
+
+    if (motif === 'leaves') {
+      return (
+        <>
+          <span className="theme-shell-leaf shell-leaf-a" />
+          <span className="theme-shell-leaf shell-leaf-b" />
+          <span className="theme-shell-leaf shell-leaf-c" />
+          <span className="theme-shell-leaf shell-leaf-d" />
+        </>
+      );
+    }
+
+    if (motif === 'petals') {
+      return (
+        <>
+          <span className="theme-shell-petal shell-petal-a" />
+          <span className="theme-shell-petal shell-petal-b" />
+          <span className="theme-shell-petal shell-petal-c" />
+          <span className="theme-shell-petal shell-petal-d" />
+        </>
+      );
+    }
+
+    if (motif === 'snow') {
+      return (
+        <>
+          <span className="theme-shell-snowflake shell-snow-a" />
+          <span className="theme-shell-snowflake shell-snow-b" />
+          <span className="theme-shell-snowflake shell-snow-c" />
+        </>
+      );
+    }
+
+    if (motif === 'embers') {
+      return (
+        <>
+          <span className="theme-shell-ember shell-ember-a" />
+          <span className="theme-shell-ember shell-ember-b" />
+          <span className="theme-shell-ember shell-ember-c" />
+          <span className="theme-shell-ember shell-ember-d" />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <span className="theme-shell-ribbon shell-ribbon-a" />
+        <span className="theme-shell-ribbon shell-ribbon-b" />
+      </>
+    );
+  };
+
   return (
     <div className={shellClasses} role="main" aria-label="BRIKX Game">
       {shellVisual?.animated && (
@@ -3581,6 +3643,7 @@ const Brikx = () => {
           <span className="theme-shell-orb shell-orb-b" />
           <span className="theme-shell-mote shell-mote-a" />
           <span className="theme-shell-mote shell-mote-b" />
+          {renderShellMotifElements(shellVisual?.motif)}
         </div>
       )}
 
