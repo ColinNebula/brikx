@@ -57,6 +57,18 @@
   opacity: 0.8;
 }
 
+.drift-racer.battery-saver .theme-shell-overlay {
+  opacity: 0.45;
+}
+
+.drift-racer.battery-saver .theme-shell-gradient {
+  animation: shellGradientFlow 18s ease-in-out infinite;
+}
+
+.drift-racer.battery-saver .theme-shell-pattern {
+  animation: shellPatternDrift 24s linear infinite;
+}
+
 .theme-shell-gradient {
   position: absolute;
   inset: -12%;
@@ -650,6 +662,34 @@
     0 0 60px color-mix(in srgb, var(--color-accentGlow) 70%, transparent),
     inset 0 0 20px color-mix(in srgb, var(--color-accentGlow) 40%, transparent);
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(10, 10, 46, 0.9) 100%);
+}
+
+.battery-saver-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 55%, white);
+  color: #ffffff;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(4px);
+}
+
+.battery-saver-badge-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.battery-saver-badge-text {
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .game-canvas {
@@ -4727,6 +4767,43 @@
   font-weight: bold;
 }
 
+.mode-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(0, 240, 240, 0.2);
+}
+
+.mode-segment-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 66px;
+  justify-content: center;
+}
+
+.mode-segment-btn:hover {
+  color: #ffffff;
+  border-color: rgba(0, 240, 240, 0.35);
+}
+
+.mode-segment-btn.active {
+  background: linear-gradient(135deg, rgba(0, 240, 240, 0.28), rgba(0, 120, 240, 0.3));
+  color: #ffffff;
+  border-color: rgba(0, 240, 240, 0.7);
+  box-shadow: 0 0 14px rgba(0, 240, 240, 0.22);
+}
+
 .install-settings-btn {
   background: linear-gradient(135deg, #00f0f0, #0078f0);
   border: none;
@@ -4813,6 +4890,24 @@
 
   .toggle-button {
     align-self: flex-end;
+  }
+
+  .mode-segment {
+    align-self: stretch;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .mode-segment-btn {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .battery-saver-badge {
+    top: 8px;
+    right: 8px;
+    font-size: 0.66rem;
+    padding: 4px 7px;
   }
 }
 

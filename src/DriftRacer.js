@@ -302,6 +302,28 @@ const Brikx = () => {
   const [musicVolume, setMusicVolume] = useState(() => {
     return parseFloat(safeGetItem('brickxMusicVolume', '0.5')) || 0.5;
   });
+  const [batterySaverMode, setBatterySaverMode] = useState(() => {
+    const savedMode = safeGetItem('brickxBatterySaverMode', '');
+    if (savedMode === 'off' || savedMode === 'auto' || savedMode === 'on') {
+      return savedMode;
+    }
+
+    // Migrate legacy boolean setting if present.
+    const legacySaved = safeGetItem('brickxBatterySaverEnabled', '');
+    if (legacySaved === 'true') return 'on';
+    if (legacySaved === 'false') return 'off';
+
+    return 'auto';
+  });
+  const [saveDataEnabled, setSaveDataEnabled] = useState(() => {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return Boolean(connection?.saveData);
+  });
+  const [isLowEndDevice] = useState(() => {
+    const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4;
+    const lowMemory = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4;
+    return lowCpu || lowMemory;
+  });
 
   // Detect reduced motion preference for accessibility
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
@@ -1004,6 +1026,25 @@ const Brikx = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!connection || typeof connection.addEventListener !== 'function') return undefined;
+
+    const handleConnectionChange = () => {
+      setSaveDataEnabled(Boolean(connection.saveData));
+    };
+
+    connection.addEventListener('change', handleConnectionChange);
+    return () => connection.removeEventListener('change', handleConnectionChange);
+  }, []);
+
+  const autoBatterySaverEnabled = isMobile && (saveDataEnabled || isLowEndDevice);
+  const lowPowerMode = batterySaverMode === 'on'
+    ? true
+    : batterySaverMode === 'off'
+      ? false
+      : autoBatterySaverEnabled;
+
   // Save profile changes
   const saveProfile = useCallback((name, avatar) => {
     const sanitizedName = name.trim() || 'Player';
@@ -1058,6 +1099,7 @@ const Brikx = () => {
     dropCounter: 0,
     dropInterval: 1000,
     lastTime: 0,
+    lastRenderTime: 0,
     colorBonusDisplay: null,
     bag: [],
     particles: [],
@@ -1184,7 +1226,7 @@ const Brikx = () => {
     const isMegaCombo = comboCount >= 10;
     
     // Reduce particle count for reduced motion preference
-    const motionMultiplier = prefersReducedMotion ? 0.3 : 1;
+    const motionMultiplier = lowPowerMode ? 0.2 : prefersReducedMotion ? 0.3 : 1;
     const baseParticleCount = Math.floor((isMegaCombo ? 20 : isHighCombo ? 16 : isPerfect ? 12 : isCombo ? 8 : 6) * motionMultiplier);
     const particleTypes = ['circle', 'star', 'square', 'spark', 'diamond', 'ring', 'confetti'];
     
@@ -1374,7 +1416,7 @@ const Brikx = () => {
         }
       }
     }
-  }, [COLS, BLOCK_SIZE, getParticleFromPool, getComboColor, MAX_ACTIVE_PARTICLES, prefersReducedMotion]);
+  }, [COLS, BLOCK_SIZE, getParticleFromPool, getComboColor, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode]);
 
   // Clear completed lines with animation
   const clearLines = useCallback(() => {
@@ -2058,8 +2100,8 @@ const Brikx = () => {
     
     // Draw floating geometric shapes in background
     ctx.save();
-    ctx.globalAlpha = 0.1 + comboIntensity * 0.15; // Brighter during combos
-    const shapeCount = 8 + Math.floor(combo * 0.5); // More shapes during combos
+    ctx.globalAlpha = lowPowerMode ? 0.05 + comboIntensity * 0.08 : 0.1 + comboIntensity * 0.15;
+    const shapeCount = lowPowerMode ? 3 + Math.floor(combo * 0.2) : 8 + Math.floor(combo * 0.5);
     for (let i = 0; i < shapeCount; i++) {
       const shapeAnim = (gridAnimation + i * 60) * (0.02 + comboIntensity * 0.03); // Faster during combos
       const x = (i * CANVAS_WIDTH / shapeCount + Math.sin(shapeAnim) * (50 + combo * 5)) % CANVAS_WIDTH;
@@ -2097,7 +2139,7 @@ const Brikx = () => {
     // Pattern overlay for premium and seasonal themes
     if (visualPattern) {
       ctx.save();
-      ctx.globalAlpha = prefersReducedMotion ? 0.08 : 0.15;
+      ctx.globalAlpha = lowPowerMode ? 0.05 : prefersReducedMotion ? 0.08 : 0.15;
       ctx.strokeStyle = rgbAlpha(themeAccent, 0.8);
       ctx.lineWidth = 1.2;
 
@@ -2149,7 +2191,7 @@ const Brikx = () => {
     // Animated seasonal and premium motifs
     if (visualMotif) {
       ctx.save();
-      const motifCount = prefersReducedMotion ? 8 : 22;
+      const motifCount = lowPowerMode ? 6 : prefersReducedMotion ? 8 : 22;
       for (let i = 0; i < motifCount; i++) {
         const speed = 16 + (i % 5) * 6;
         const baseX = ((i * 73) % CANVAS_WIDTH);
@@ -2356,7 +2398,7 @@ const Brikx = () => {
       
       // Draw enhanced trail effect with multiple segments
       if (p.trail) {
-        const trailSegments = 5;
+        const trailSegments = lowPowerMode ? 2 : 5;
         for (let t = 0; t < trailSegments; t++) {
           const trailFactor = (t + 1) / trailSegments;
           ctx.globalAlpha = finalAlpha * 0.3 * (1 - trailFactor);
@@ -2970,13 +3012,14 @@ const Brikx = () => {
         gameState.current.colorBonusDisplay = null;
       }
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode]);
 
   // Game loop
   useEffect(() => {
     if (!gameStarted || gameOver || isPaused) return;
 
     let animationFrameId;
+    const frameInterval = lowPowerMode ? 1000 / 30 : 1000 / 60;
     
     const gameLoop = (time = 0) => {
       const deltaTime = time - gameState.current.lastTime;
@@ -2991,7 +3034,10 @@ const Brikx = () => {
         gameState.current.dropCounter = 0;
       }
 
-      draw();
+      if (time - gameState.current.lastRenderTime >= frameInterval) {
+        draw();
+        gameState.current.lastRenderTime = time;
+      }
       animationFrameId = requestAnimationFrame(gameLoop);
     };
 
@@ -3002,7 +3048,7 @@ const Brikx = () => {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [gameStarted, gameOver, isPaused, moveDown, draw, handleGamepadInput]);
+  }, [gameStarted, gameOver, isPaused, moveDown, draw, handleGamepadInput, lowPowerMode]);
 
   // Draw when paused
   useEffect(() => {
@@ -3567,9 +3613,10 @@ const Brikx = () => {
   const shellVisual = shellTheme.visual || getThemeVisualProfile(currentTheme, shellTheme.category);
   const shellClasses = [
     'drift-racer',
+    lowPowerMode ? 'battery-saver' : '',
     `theme-pattern-${shellVisual?.pattern || 'wave-grid'}`,
     `theme-motif-${shellVisual?.motif || 'ribbons'}`
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 
   const renderShellMotifElements = (motif) => {
     if (motif === 'flowers') {
@@ -3825,6 +3872,15 @@ const Brikx = () => {
       )}
 
       <div className="game-container">
+        {lowPowerMode && (
+          <div className="battery-saver-badge" role="status" aria-live="polite">
+            <span className="battery-saver-badge-icon">🔋</span>
+            <span className="battery-saver-badge-text">
+              {batterySaverMode === 'auto' ? 'Battery Saver: Auto' : 'Battery Saver: On'}
+            </span>
+          </div>
+        )}
+
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
@@ -4371,6 +4427,34 @@ const Brikx = () => {
               <div className="settings-section">
                 <h3 className="settings-heading">Accessibility</h3>
                 <div className="setting-info">
+                  <div className="setting-item" style={{ marginBottom: '12px' }}>
+                    <label htmlFor="battery-saver-mode-auto" className="setting-label">
+                      Mobile Battery Saver
+                      <span className="setting-description">Off / Auto / On. Auto keeps full effects on high-end phones unless Save-Data is enabled.</span>
+                    </label>
+                    <div className="mode-segment" role="radiogroup" aria-label="Battery saver mode">
+                      {[
+                        { id: 'off', label: 'Off', icon: '⚡' },
+                        { id: 'auto', label: 'Auto', icon: '🧠' },
+                        { id: 'on', label: 'On', icon: '🔋' }
+                      ].map((mode) => (
+                        <button
+                          key={mode.id}
+                          id={`battery-saver-mode-${mode.id}`}
+                          className={`mode-segment-btn ${batterySaverMode === mode.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setBatterySaverMode(mode.id);
+                            safeSetItem('brickxBatterySaverMode', mode.id);
+                          }}
+                          aria-pressed={batterySaverMode === mode.id}
+                          aria-label={`Set battery saver mode to ${mode.label}`}
+                        >
+                          <span className="toggle-icon">{mode.icon}</span>
+                          <span className="toggle-text">{mode.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <p>✓ Full keyboard navigation support</p>
                   <p>✓ Screen reader compatible</p>
                   <p>✓ High contrast visual design</p>
