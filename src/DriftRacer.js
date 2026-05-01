@@ -157,6 +157,27 @@ const ScoreHistoryChart = ({ history }) => {
   );
 };
 
+// Music playlist configuration (static)
+const MUSIC_PLAYLIST = {
+  menu: 'Sneaky_Charlie.mp3',
+  classic_low: 'Cycles_of_Existence.mp3',      // Levels 1-5
+  classic_mid: 'Dancing_with_a_Photon.mp3',    // Levels 6-10
+  classic_high: 'Urban_Street_Speak.mp3',      // Levels 11-15
+  classic_extreme: 'Nineteen_Eighty_Seven.mp3', // Levels 16+
+  sprint: 'EBS.mp3',
+  marathon: 'Dancing_with_a_Photon.mp3'
+};
+
+// Gameplay music tracks - randomly cycle through these during gameplay
+const GAMEPLAY_TRACKS = [
+  'Cycles_of_Existence.mp3',
+  'Urban_Street_Speak.mp3',
+  'Sneaky_Charlie.mp3',
+  'Nineteen_Eighty_Seven.mp3',
+  'Dancing_with_a_Photon.mp3',
+  'EBS.mp3'
+];
+
 const Brikx = () => {
   // Safe localStorage operations with validation
   const safeGetItem = (key, defaultValue = '') => {
@@ -369,27 +390,6 @@ const Brikx = () => {
   const currentTrackRef = useRef(null);
   const musicIntensity = useRef(1);
   
-  // Music playlist mapping
-  const musicPlaylist = {
-    menu: 'Sneaky_Charlie.mp3',
-    classic_low: 'Cycles_of_Existence.mp3',      // Levels 1-5
-    classic_mid: 'Dancing_with_a_Photon.mp3',    // Levels 6-10
-    classic_high: 'Urban_Street_Speak.mp3',      // Levels 11-15
-    classic_extreme: 'Nineteen_Eighty_Seven.mp3', // Levels 16+
-    sprint: 'EBS.mp3',
-    marathon: 'Dancing_with_a_Photon.mp3'
-  };
-  
-  // Gameplay music tracks - randomly cycle through these during gameplay
-  const gameplayTracks = [
-    'Cycles_of_Existence.mp3',
-    'Urban_Street_Speak.mp3',
-    'Sneaky_Charlie.mp3',
-    'Nineteen_Eighty_Seven.mp3',
-    'Dancing_with_a_Photon.mp3',
-    'EBS.mp3'
-  ];
-  
   useEffect(() => {
     if (!audioContext.current) {
       audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -586,15 +586,15 @@ const Brikx = () => {
     let shouldCycle = false;
     
     if (trackKey) {
-      track = musicPlaylist[trackKey];
+      track = MUSIC_PLAYLIST[trackKey];
     } else if (isGameplay || gameStarted) {
-      // During gameplay, pick a random track from gameplayTracks
-      const availableTracks = gameplayTracks.filter(t => t !== currentTrackRef.current);
+      // During gameplay, pick a random track from GAMEPLAY_TRACKS
+      const availableTracks = GAMEPLAY_TRACKS.filter(t => t !== currentTrackRef.current);
       track = availableTracks[Math.floor(Math.random() * availableTracks.length)];
       shouldCycle = true;
     } else {
       // Menu music
-      track = musicPlaylist.menu;
+      track = MUSIC_PLAYLIST.menu;
     }
     
     // If already playing this track, don't restart
@@ -638,7 +638,7 @@ const Brikx = () => {
     } catch (err) {
       console.error('Error loading music:', err);
     }
-  }, [musicEnabled, musicVolume, gameStarted, gameMode, level, gameplayTracks]);
+  }, [musicEnabled, musicVolume, gameStarted]);
 
   const stopMusic = useCallback(() => {
     if (musicPlayerRef.current) {
@@ -689,7 +689,7 @@ const Brikx = () => {
       // Small delay to ensure clean transition
       const timer = setTimeout(() => {
         // Only start menu music if not already playing it
-        if (!musicPlayerRef.current || currentTrackRef.current !== musicPlaylist.menu) {
+        if (!musicPlayerRef.current || currentTrackRef.current !== MUSIC_PLAYLIST.menu) {
           startMusic('menu');
         }
       }, 100);
