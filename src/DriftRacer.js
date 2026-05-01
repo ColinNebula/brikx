@@ -1589,6 +1589,16 @@ const Brikx = () => {
       setCountdown(prev => {
         if (prev === 1) {
           clearInterval(countdownInterval);
+          // Play "GO" alarm tone
+          if (soundEnabled && sfxVolume > 0) {
+            try {
+              const goAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-alarm-tone-996.wav`);
+              goAudio.volume = sfxVolume * 0.8;
+              goAudio.play().catch(err => console.warn('Go sound blocked:', err.message));
+            } catch (err) {
+              console.error('Error loading Go sound:', err);
+            }
+          }
           setTimeout(() => {
             setCountdown(null);
             setGameStarted(true);
