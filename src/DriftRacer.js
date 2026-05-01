@@ -662,13 +662,19 @@ const Brikx = () => {
       const newValue = !prev;
       safeSetItem('brickxMusicEnabled', newValue.toString());
       if (!newValue) {
-        stopMusic();
+        // Stop music
+        if (musicPlayerRef.current) {
+          musicPlayerRef.current.pause();
+          musicPlayerRef.current.currentTime = 0;
+          musicPlayerRef.current = null;
+          currentTrackRef.current = null;
+        }
       } else if (gameStarted && !gameOver && !isPaused) {
         startMusic(null, true);
       }
       return newValue;
     });
-  }, [gameStarted, gameOver, isPaused, startMusic, stopMusic]);
+  }, [gameStarted, gameOver, isPaused, startMusic]);
   
   // Update music player volume when musicVolume changes
   useEffect(() => {
@@ -682,14 +688,18 @@ const Brikx = () => {
     if (!gameStarted && !gameOver && musicEnabled && !showSplash) {
       // Small delay to ensure clean transition
       const timer = setTimeout(() => {
-        startMusic('menu');
+        // Only start menu music if not already playing it
+        if (!musicPlayerRef.current || currentTrackRef.current !== musicPlaylist.menu) {
+          startMusic('menu');
+        }
       }, 100);
       return () => clearTimeout(timer);
     } else if (gameStarted || gameOver) {
       // Music will be controlled by game flow
       return;
     }
-  }, [gameStarted, gameOver, musicEnabled, showSplash, startMusic]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameStarted, gameOver, musicEnabled, showSplash]);
 
   // Enhanced sound effects with more variations
   const playPieceSound = useCallback((pieceType) => {
@@ -2538,11 +2548,24 @@ const Brikx = () => {
     if (!gameStarted || gameOver) return;
     
     if (isPaused) {
-      stopMusic();
+      // Pause music
+      if (musicPlayerRef.current) {
+        musicPlayerRef.current.pause();
+      }
     } else if (musicEnabled) {
-      startMusic();
+      // Resume or start music
+      if (musicPlayerRef.current && musicPlayerRef.current.paused) {
+        // Resume existing track
+        musicPlayerRef.current.play().catch(err => {
+          console.warn('Music resume blocked:', err.message);
+        });
+      } else if (!musicPlayerRef.current) {
+        // Start new track if no music playing
+        startMusic(null, true);
+      }
     }
-  }, [isPaused, gameStarted, gameOver, musicEnabled, startMusic, stopMusic]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPaused, gameStarted, gameOver, musicEnabled]);
 
   // Auto-pause when tab loses focus (desktop only)
   useEffect(() => {
