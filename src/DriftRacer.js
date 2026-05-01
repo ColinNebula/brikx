@@ -4721,48 +4721,54 @@ const Brikx = () => {
         {/* Game Mode Select */}
         {showModeSelect && !gameStarted && (
           <div className="modal-overlay" onClick={() => setShowModeSelect(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content mode-select-modal" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setShowModeSelect(false)}>×</button>
               <h2 className="modal-title">🎮 Game Mode</h2>
-              
-              <div className="modes-grid">
-                <div 
-                  className={`mode-card ${gameMode === 'classic' ? 'selected' : ''}`}
-                  onClick={() => { setGameMode('classic'); playSound('menuClick', 600, 0.1); }}
-                >
-                  <div className="mode-icon">🎮</div>
-                  <h3>Classic</h3>
-                  <p>Traditional Tetris gameplay. Clear lines and survive as level increases.</p>
-                </div>
-                
-                <div 
-                  className={`mode-card ${gameMode === 'sprint' ? 'selected' : ''}`}
-                  onClick={() => { setGameMode('sprint'); playSound('menuClick', 600, 0.1); }}
-                >
-                  <div className="mode-icon">⚡</div>
-                  <h3>Sprint</h3>
-                  <p>Clear 40 lines as fast as possible. Race against the clock!</p>
-                </div>
-                
-                <div 
-                  className={`mode-card ${gameMode === 'marathon' ? 'selected' : ''}`}
-                  onClick={() => { setGameMode('marathon'); playSound('menuClick', 600, 0.1); }}
-                >
-                  <div className="mode-icon">🏃</div>
-                  <h3>Marathon</h3>
-                  <p>Endurance mode. How high can you score with faster speeds?</p>
+
+              <p className="mode-select-hint">Pick a mode, then tap Start. The Start button stays pinned while you scroll.</p>
+
+              <div className="mode-select-scroll">
+                <div className="modes-grid">
+                  <div 
+                    className={`mode-card ${gameMode === 'classic' ? 'selected' : ''}`}
+                    onClick={() => { setGameMode('classic'); playSound('menuClick', 600, 0.1); }}
+                  >
+                    <div className="mode-icon">🎮</div>
+                    <h3>Classic</h3>
+                    <p>Traditional Tetris gameplay. Clear lines and survive as level increases.</p>
+                  </div>
+                  
+                  <div 
+                    className={`mode-card ${gameMode === 'sprint' ? 'selected' : ''}`}
+                    onClick={() => { setGameMode('sprint'); playSound('menuClick', 600, 0.1); }}
+                  >
+                    <div className="mode-icon">⚡</div>
+                    <h3>Sprint</h3>
+                    <p>Clear 40 lines as fast as possible. Race against the clock!</p>
+                  </div>
+                  
+                  <div 
+                    className={`mode-card ${gameMode === 'marathon' ? 'selected' : ''}`}
+                    onClick={() => { setGameMode('marathon'); playSound('menuClick', 600, 0.1); }}
+                  >
+                    <div className="mode-icon">🏃</div>
+                    <h3>Marathon</h3>
+                    <p>Endurance mode. How high can you score with faster speeds?</p>
+                  </div>
                 </div>
               </div>
-              
-              <button 
-                className="start-mode-btn"
-                onClick={() => {
-                  setShowModeSelect(false);
-                  startCountdown();
-                }}
-              >
-                ▶ Start {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)} Mode
-              </button>
+
+              <div className="mode-select-footer">
+                <button 
+                  className="start-mode-btn"
+                  onClick={() => {
+                    setShowModeSelect(false);
+                    startCountdown();
+                  }}
+                >
+                  ▶ Start {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)} Mode
+                </button>
+              </div>
             </div>
           </div>
         )}
