@@ -319,6 +319,11 @@ export const THEME_DEFINITIONS = {
       endDay: 14,
       alwaysUnlockedDuringPeriod: true
     },
+    visual: {
+      motif: 'petals',
+      pattern: 'soft-orbit',
+      animated: true
+    },
     colors: {
       primary: '#1a0515',
       secondary: '#2d0a25',
@@ -358,6 +363,11 @@ export const THEME_DEFINITIONS = {
       endMonth: 11,    // November
       endDay: 1,
       alwaysUnlockedDuringPeriod: true
+    },
+    visual: {
+      motif: 'embers',
+      pattern: 'diagonal-grid',
+      animated: true
     },
     colors: {
       primary: '#0a0a0a',
@@ -399,6 +409,11 @@ export const THEME_DEFINITIONS = {
       endDay: 7,
       alwaysUnlockedDuringPeriod: true
     },
+    visual: {
+      motif: 'snow',
+      pattern: 'frost-stripes',
+      animated: true
+    },
     colors: {
       primary: '#0a1520',
       secondary: '#142030',
@@ -439,6 +454,11 @@ export const THEME_DEFINITIONS = {
       endDay: 31,
       alwaysUnlockedDuringPeriod: true
     },
+    visual: {
+      motif: 'petals',
+      pattern: 'sun-rings',
+      animated: true
+    },
     colors: {
       primary: '#1a2a0a',
       secondary: '#2d4014',
@@ -462,6 +482,225 @@ export const THEME_DEFINITIONS = {
       
       gridLine: 'rgba(255, 221, 0, 0.2)',
       shadow: 'rgba(255, 221, 0, 0.3)'
+    }
+  },
+
+  spring: {
+    id: 'spring',
+    name: 'Spring Bloom',
+    category: 'seasonal',
+    unlocked: false,
+    icon: '🌸',
+    description: 'Petals, flowers, and fresh pastel motion',
+    season: {
+      startMonth: 3,
+      startDay: 1,
+      endMonth: 5,
+      endDay: 31,
+      alwaysUnlockedDuringPeriod: true
+    },
+    visual: {
+      motif: 'flowers',
+      pattern: 'soft-orbit',
+      animated: true
+    },
+    colors: {
+      primary: '#1b1a2a',
+      secondary: '#2a2340',
+      tertiary: '#3f2f5b',
+
+      accent: '#ff7fb5',
+      accentHover: '#f0629f',
+      accentGlow: 'rgba(255, 127, 181, 0.55)',
+
+      textPrimary: '#fff3fa',
+      textSecondary: 'rgba(255, 243, 250, 0.85)',
+      textMuted: 'rgba(255, 127, 181, 0.72)',
+
+      cardBg: 'rgba(255, 127, 181, 0.16)',
+      cardBorder: 'rgba(255, 127, 181, 0.38)',
+      cardHover: 'rgba(255, 127, 181, 0.24)',
+
+      success: '#6dffa2',
+      warning: '#ffd36b',
+      error: '#ff5d7a',
+
+      gridLine: 'rgba(255, 127, 181, 0.24)',
+      shadow: 'rgba(255, 127, 181, 0.3)'
+    }
+  },
+
+  autumn: {
+    id: 'autumn',
+    name: 'Autumn Drift',
+    category: 'seasonal',
+    unlocked: false,
+    icon: '🍂',
+    description: 'Falling leaves and warm harvest tones',
+    season: {
+      startMonth: 9,
+      startDay: 1,
+      endMonth: 11,
+      endDay: 30,
+      alwaysUnlockedDuringPeriod: true
+    },
+    visual: {
+      motif: 'leaves',
+      pattern: 'woven',
+      animated: true
+    },
+    colors: {
+      primary: '#1b1207',
+      secondary: '#2a1d0d',
+      tertiary: '#3d2a12',
+
+      accent: '#ff9a3d',
+      accentHover: '#f08b2e',
+      accentGlow: 'rgba(255, 154, 61, 0.55)',
+
+      textPrimary: '#fff3df',
+      textSecondary: 'rgba(255, 243, 223, 0.85)',
+      textMuted: 'rgba(255, 154, 61, 0.72)',
+
+      cardBg: 'rgba(255, 154, 61, 0.15)',
+      cardBorder: 'rgba(255, 154, 61, 0.37)',
+      cardHover: 'rgba(255, 154, 61, 0.25)',
+
+      success: '#99ff99',
+      warning: '#ffd166',
+      error: '#ff5d4d',
+
+      gridLine: 'rgba(255, 154, 61, 0.22)',
+      shadow: 'rgba(255, 154, 61, 0.3)'
+    }
+  },
+
+  premiumBotanical: {
+    id: 'premiumBotanical',
+    name: 'Premium Botanical Palace',
+    category: 'premium',
+    unlocked: false,
+    icon: '🌺',
+    description: 'Luxury floral motion with layered bloom trails',
+    unlockCondition: {
+      type: 'score',
+      value: 20000,
+      description: 'Score 20,000 points in one game'
+    },
+    visual: {
+      motif: 'flowers',
+      pattern: 'woven',
+      animated: true
+    },
+    colors: {
+      primary: '#120c1f',
+      secondary: '#241435',
+      tertiary: '#351d4f',
+
+      accent: '#ff6fa8',
+      accentHover: '#f05493',
+      accentGlow: 'rgba(255, 111, 168, 0.62)',
+
+      textPrimary: '#ffeef7',
+      textSecondary: 'rgba(255, 238, 247, 0.88)',
+      textMuted: 'rgba(255, 111, 168, 0.75)',
+
+      cardBg: 'rgba(255, 111, 168, 0.18)',
+      cardBorder: 'rgba(255, 111, 168, 0.44)',
+      cardHover: 'rgba(255, 111, 168, 0.28)',
+
+      success: '#8bffb7',
+      warning: '#ffd98a',
+      error: '#ff6588',
+
+      gridLine: 'rgba(255, 111, 168, 0.24)',
+      shadow: 'rgba(255, 111, 168, 0.32)'
+    }
+  },
+
+  premiumAurora: {
+    id: 'premiumAurora',
+    name: 'Premium Aurora Silk',
+    category: 'premium',
+    unlocked: false,
+    icon: '🪄',
+    description: 'Flowing ribbon gradients with cinematic patterns',
+    unlockCondition: {
+      type: 'games',
+      value: 120,
+      description: 'Play 120 total games'
+    },
+    visual: {
+      motif: 'ribbons',
+      pattern: 'wave-grid',
+      animated: true
+    },
+    colors: {
+      primary: '#071624',
+      secondary: '#10273a',
+      tertiary: '#17344f',
+
+      accent: '#60f0ff',
+      accentHover: '#43deef',
+      accentGlow: 'rgba(96, 240, 255, 0.62)',
+
+      textPrimary: '#e8fcff',
+      textSecondary: 'rgba(232, 252, 255, 0.88)',
+      textMuted: 'rgba(96, 240, 255, 0.75)',
+
+      cardBg: 'rgba(96, 240, 255, 0.17)',
+      cardBorder: 'rgba(96, 240, 255, 0.4)',
+      cardHover: 'rgba(96, 240, 255, 0.28)',
+
+      success: '#8bffda',
+      warning: '#ffe78a',
+      error: '#ff7b9e',
+
+      gridLine: 'rgba(96, 240, 255, 0.22)',
+      shadow: 'rgba(96, 240, 255, 0.3)'
+    }
+  },
+
+  premiumGilded: {
+    id: 'premiumGilded',
+    name: 'Premium Gilded Circuit',
+    category: 'premium',
+    unlocked: false,
+    icon: '🟨',
+    description: 'Gold circuitry pattern with elite motion accents',
+    unlockCondition: {
+      type: 'combo',
+      value: 15,
+      description: 'Reach a 15x combo'
+    },
+    visual: {
+      motif: 'embers',
+      pattern: 'circuit',
+      animated: true
+    },
+    colors: {
+      primary: '#171209',
+      secondary: '#241b0f',
+      tertiary: '#352814',
+
+      accent: '#ffd46b',
+      accentHover: '#f3c148',
+      accentGlow: 'rgba(255, 212, 107, 0.62)',
+
+      textPrimary: '#fff5de',
+      textSecondary: 'rgba(255, 245, 222, 0.86)',
+      textMuted: 'rgba(255, 212, 107, 0.74)',
+
+      cardBg: 'rgba(255, 212, 107, 0.16)',
+      cardBorder: 'rgba(255, 212, 107, 0.41)',
+      cardHover: 'rgba(255, 212, 107, 0.27)',
+
+      success: '#8effaa',
+      warning: '#ffd46b',
+      error: '#ff7e60',
+
+      gridLine: 'rgba(255, 212, 107, 0.23)',
+      shadow: 'rgba(255, 212, 107, 0.31)'
     }
   }
 };

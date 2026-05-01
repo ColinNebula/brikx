@@ -26,6 +26,43 @@ import {
   getThemeProgress
 } from './themes';
 
+const hexToRgbArray = (hex, fallback = [0, 240, 240]) => {
+  if (!hex || typeof hex !== 'string') return fallback;
+  const sanitized = hex.replace('#', '').trim();
+  if (sanitized.length !== 6) return fallback;
+  const num = Number.parseInt(sanitized, 16);
+  if (Number.isNaN(num)) return fallback;
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+};
+
+const rgbAlpha = (rgb, alpha) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+
+const drawFlower = (ctx, x, y, radius, color, alpha, rotation = 0) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.ellipse(
+      Math.cos((i * Math.PI * 2) / 5) * radius * 0.7,
+      Math.sin((i * Math.PI * 2) / 5) * radius * 0.7,
+      radius * 0.5,
+      radius * 0.25,
+      (i * Math.PI * 2) / 5,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+  ctx.fillStyle = '#fff8d6';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+};
+
 // Score History Chart Component
 const ScoreHistoryChart = ({ history }) => {
   const canvasRef = useRef(null);
@@ -321,6 +358,27 @@ const Brikx = () => {
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [newThemeUnlocked, setNewThemeUnlocked] = useState(null);
   const [seasonalThemes, setSeasonalThemes] = useState([]);
+  const [themePreviewEnabled, setThemePreviewEnabled] = useState(() => {
+    return safeGetItem('brickxThemePreviewEnabled', 'true') !== 'false';
+  });
+
+  const renderThemeMiniPreview = (theme) => {
+    if (!themePreviewEnabled) return null;
+
+    const motifClass = `motif-${theme?.visual?.motif || 'default'}`;
+    const patternClass = `pattern-${theme?.visual?.pattern || 'default'}`;
+
+    return (
+      <div className={`theme-live-preview ${motifClass} ${patternClass}`} aria-hidden="true">
+        <div className="theme-preview-gradient" />
+        <div className="theme-preview-pattern" />
+        <span className="theme-preview-orb orb-a" />
+        <span className="theme-preview-orb orb-b" />
+        <span className="theme-preview-mote mote-a" />
+        <span className="theme-preview-mote mote-b" />
+      </div>
+    );
+  };
 
   // Splash Screen
   const [showSplash, setShowSplash] = useState(true);
@@ -1942,17 +2000,14 @@ const Brikx = () => {
       ctx.translate(shakeX, shakeY);
     }
 
-    // Clear entire canvas with animated gradient background
-    const themeColors = [
-      { start: [10, 5, 30], end: [30, 10, 60], accent: [138, 43, 226] }, // Purple (Levels 1-3)
-      { start: [5, 20, 40], end: [10, 40, 80], accent: [0, 150, 255] }, // Blue (Levels 4-6)
-      { start: [20, 5, 30], end: [40, 10, 60], accent: [255, 0, 128] }, // Magenta (Levels 7-9)
-      { start: [0, 25, 30], end: [0, 50, 60], accent: [0, 200, 200] }, // Cyan (Levels 10-12)
-      { start: [25, 15, 0], end: [50, 30, 0], accent: [255, 150, 0] }, // Orange (Levels 13+)
-    ];
-    
-    const themeIndex = Math.min(Math.floor((level - 1) / 3), themeColors.length - 1);
-    const theme = themeColors[themeIndex];
+    // Build dynamic background from selected theme metadata
+    const selectedTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
+    const themePrimary = hexToRgbArray(selectedTheme?.colors?.primary, [10, 5, 30]);
+    const themeSecondary = hexToRgbArray(selectedTheme?.colors?.secondary, [30, 10, 60]);
+    const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
+    const visualMotif = selectedTheme?.visual?.motif || null;
+    const visualPattern = selectedTheme?.visual?.pattern || null;
+    const now = Date.now() * 0.001;
     const animOffset = gridAnimation * 0.01;
     
     // Add combo-based pulsing effect to background
@@ -1967,12 +2022,12 @@ const Brikx = () => {
       CANVAS_HEIGHT + Math.cos(animOffset + comboPulse) * CANVAS_HEIGHT * 0.3
     );
     // Brighten colors during combos
-    const r1 = Math.min(255, theme.start[0] + theme.accent[0] * comboIntensity * 0.3);
-    const g1 = Math.min(255, theme.start[1] + theme.accent[1] * comboIntensity * 0.3);
-    const b1 = Math.min(255, theme.start[2] + theme.accent[2] * comboIntensity * 0.3);
-    const r2 = Math.min(255, theme.end[0] + theme.accent[0] * comboIntensity * 0.2);
-    const g2 = Math.min(255, theme.end[1] + theme.accent[1] * comboIntensity * 0.2);
-    const b2 = Math.min(255, theme.end[2] + theme.accent[2] * comboIntensity * 0.2);
+    const r1 = Math.min(255, themePrimary[0] + themeAccent[0] * comboIntensity * 0.25);
+    const g1 = Math.min(255, themePrimary[1] + themeAccent[1] * comboIntensity * 0.25);
+    const b1 = Math.min(255, themePrimary[2] + themeAccent[2] * comboIntensity * 0.25);
+    const r2 = Math.min(255, themeSecondary[0] + themeAccent[0] * comboIntensity * 0.18);
+    const g2 = Math.min(255, themeSecondary[1] + themeAccent[1] * comboIntensity * 0.18);
+    const b2 = Math.min(255, themeSecondary[2] + themeAccent[2] * comboIntensity * 0.18);
     gradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
     gradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
     ctx.fillStyle = gradient;
@@ -1992,7 +2047,7 @@ const Brikx = () => {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotation);
-      ctx.strokeStyle = `rgb(${theme.accent[0]}, ${theme.accent[1]}, ${theme.accent[2]})`;
+      ctx.strokeStyle = `rgb(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]})`;
       ctx.lineWidth = 3;
       
       if (i % 3 === 0) {
@@ -2015,13 +2070,132 @@ const Brikx = () => {
       ctx.restore();
     }
     ctx.restore();
+
+    // Pattern overlay for premium and seasonal themes
+    if (visualPattern) {
+      ctx.save();
+      ctx.globalAlpha = prefersReducedMotion ? 0.06 : 0.11;
+      ctx.strokeStyle = rgbAlpha(themeAccent, 0.8);
+      ctx.lineWidth = 1.2;
+
+      if (visualPattern === 'wave-grid' || visualPattern === 'soft-orbit') {
+        const spacing = 48;
+        for (let y = -spacing; y < CANVAS_HEIGHT + spacing; y += spacing) {
+          ctx.beginPath();
+          for (let x = -20; x <= CANVAS_WIDTH + 20; x += 20) {
+            const py = y + Math.sin((x * 0.02) + now + y * 0.01) * 6;
+            if (x === -20) ctx.moveTo(x, py);
+            else ctx.lineTo(x, py);
+          }
+          ctx.stroke();
+        }
+      } else if (visualPattern === 'woven') {
+        const spacing = 42;
+        for (let x = -CANVAS_HEIGHT; x < CANVAS_WIDTH + CANVAS_HEIGHT; x += spacing) {
+          ctx.beginPath();
+          ctx.moveTo(x + Math.sin(now + x * 0.01) * 8, 0);
+          ctx.lineTo(x + CANVAS_HEIGHT, CANVAS_HEIGHT);
+          ctx.stroke();
+        }
+      } else if (visualPattern === 'circuit' || visualPattern === 'diagonal-grid') {
+        const step = 56;
+        for (let x = 20; x < CANVAS_WIDTH; x += step) {
+          for (let y = 20; y < CANVAS_HEIGHT; y += step) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + 20, y);
+            ctx.lineTo(x + 20, y + 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x + 20, y + 20, 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = rgbAlpha(themeAccent, 0.75);
+            ctx.fill();
+          }
+        }
+      } else if (visualPattern === 'sun-rings' || visualPattern === 'frost-stripes') {
+        for (let i = 0; i < 7; i++) {
+          const radius = 80 + i * 45 + Math.sin(now + i) * 8;
+          ctx.beginPath();
+          ctx.arc(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.45, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Animated seasonal and premium motifs
+    if (visualMotif) {
+      ctx.save();
+      const motifCount = prefersReducedMotion ? 8 : 22;
+      for (let i = 0; i < motifCount; i++) {
+        const speed = 16 + (i % 5) * 6;
+        const baseX = ((i * 73) % CANVAS_WIDTH);
+        const x = baseX + Math.sin(now * 1.2 + i * 0.7) * (12 + (i % 3) * 7);
+        const y = ((now * speed * 1.7) + i * 45) % (CANVAS_HEIGHT + 120) - 60;
+        const rotation = now * 0.6 + i * 0.4;
+        const size = 4 + (i % 4);
+
+        if (visualMotif === 'leaves') {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rotation);
+          ctx.fillStyle = i % 2 ? rgbAlpha([255, 160, 85], 0.5) : rgbAlpha([196, 120, 64], 0.45);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, size * 1.1, size * 0.5, Math.PI / 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (visualMotif === 'flowers') {
+          drawFlower(ctx, x, y, size, rgbAlpha([255, 190, 220], 0.5), 0.45, rotation);
+        } else if (visualMotif === 'petals') {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(rotation);
+          ctx.fillStyle = rgbAlpha([255, 170, 205], 0.5);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, size * 1.2, size * 0.55, Math.PI / 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (visualMotif === 'snow') {
+          ctx.save();
+          ctx.strokeStyle = rgbAlpha([210, 240, 255], 0.52);
+          ctx.lineWidth = 1;
+          ctx.translate(x, y);
+          ctx.rotate(rotation);
+          for (let s = 0; s < 3; s++) {
+            ctx.beginPath();
+            ctx.moveTo(-size, 0);
+            ctx.lineTo(size, 0);
+            ctx.stroke();
+            ctx.rotate(Math.PI / 3);
+          }
+          ctx.restore();
+        } else if (visualMotif === 'ribbons') {
+          ctx.save();
+          ctx.strokeStyle = rgbAlpha(themeAccent, 0.38);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x - 30, y);
+          ctx.quadraticCurveTo(x, y - 12, x + 28, y + Math.sin(now * 2 + i) * 8);
+          ctx.stroke();
+          ctx.restore();
+        } else if (visualMotif === 'embers') {
+          ctx.save();
+          ctx.fillStyle = i % 2 ? rgbAlpha([255, 190, 80], 0.45) : rgbAlpha([255, 110, 50], 0.38);
+          ctx.beginPath();
+          ctx.arc(x, CANVAS_HEIGHT - y * 0.5, size * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    }
     
     // Add level-based overlay glow
     const overlayGradient = ctx.createRadialGradient(
       CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
       CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_HEIGHT * 0.8
     );
-    overlayGradient.addColorStop(0, `rgba(${theme.accent[0]}, ${theme.accent[1]}, ${theme.accent[2]}, 0.05)`);
+    overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, 0.05)`);
     overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
     ctx.fillStyle = overlayGradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -2032,7 +2206,7 @@ const Brikx = () => {
     // Draw animated grid background
     ctx.save();
     ctx.translate(boardOffsetX, 0);
-    ctx.strokeStyle = `rgba(0, 240, 240, ${0.1 + Math.sin(gridAnimation * 0.05) * 0.05})`;
+    ctx.strokeStyle = selectedTheme?.colors?.gridLine || `rgba(0, 240, 240, ${0.1 + Math.sin(gridAnimation * 0.05) * 0.05})`;
     ctx.lineWidth = 1;
     
     // Vertical lines
@@ -2773,7 +2947,7 @@ const Brikx = () => {
         gameState.current.colorBonusDisplay = null;
       }
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, level, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion]);
 
   // Game loop
   useEffect(() => {
@@ -4108,6 +4282,24 @@ const Brikx = () => {
             <div className="modal-content themes-modal" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setShowThemeSelector(false)} aria-label="Close theme selector">×</button>
               <h2 className="modal-title">🎨 Themes</h2>
+              <div className="theme-preview-toggle-row">
+                <label className="theme-preview-toggle" htmlFor="theme-preview-toggle">
+                  <input
+                    id="theme-preview-toggle"
+                    type="checkbox"
+                    checked={themePreviewEnabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setThemePreviewEnabled(enabled);
+                      safeSetItem('brickxThemePreviewEnabled', enabled.toString());
+                    }}
+                  />
+                  <span className={`theme-preview-pill ${themePreviewEnabled ? 'on' : 'off'}`}>
+                    {themePreviewEnabled ? 'Live Preview: On' : 'Live Preview: Off'}
+                  </span>
+                </label>
+                <span className="theme-preview-help">Show animated mini previews on each theme card</span>
+              </div>
               
               {seasonalThemes.length > 0 && (
                 <>
@@ -4118,7 +4310,7 @@ const Brikx = () => {
                       return (
                         <div
                           key={theme.id}
-                          className={`theme-card ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                          className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
                           onClick={() => {
                             if (isUnlocked) {
                               setCurrentTheme(theme.id);
@@ -4126,10 +4318,14 @@ const Brikx = () => {
                             }
                           }}
                           style={{
+                            '--preview-primary': theme.colors.primary,
+                            '--preview-secondary': theme.colors.secondary,
+                            '--preview-accent': theme.colors.accent,
                             background: isUnlocked ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})` : 'rgba(0, 0, 0, 0.3)',
                             borderColor: isUnlocked ? theme.colors.accent : 'rgba(100, 100, 100, 0.3)'
                           }}
                         >
+                          {renderThemeMiniPreview(theme)}
                           <div className="theme-icon" style={{ color: isUnlocked ? theme.colors.accent : '#666' }}>
                             {theme.icon}
                           </div>
@@ -4139,6 +4335,9 @@ const Brikx = () => {
                           <div className="theme-description" style={{ color: isUnlocked ? theme.colors.textSecondary : '#666' }}>
                             {theme.description}
                           </div>
+                          {theme.visual?.animated && (
+                            <div className="theme-feature-tag">Animated {theme.visual.motif || 'effects'}</div>
+                          )}
                           {currentTheme === theme.id && <div className="theme-active-badge">✓ Active</div>}
                         </div>
                       );
@@ -4150,20 +4349,23 @@ const Brikx = () => {
               <h3 className="theme-category-title">🎭 Base Themes</h3>
               <div className="themes-grid">
                 {Object.values(THEME_DEFINITIONS).filter(t => t.category === 'base').map(theme => {
-                  const isUnlocked = unlockedThemes[theme.id];
                   return (
                     <div
                       key={theme.id}
-                      className={`theme-card ${currentTheme === theme.id ? 'selected' : ''} unlocked`}
+                      className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} unlocked`}
                       onClick={() => {
                         setCurrentTheme(theme.id);
                         playSound('menuClick', 600, 0.1);
                       }}
                       style={{
+                        '--preview-primary': theme.colors.primary,
+                        '--preview-secondary': theme.colors.secondary,
+                        '--preview-accent': theme.colors.accent,
                         background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})`,
                         borderColor: theme.colors.accent
                       }}
                     >
+                      {renderThemeMiniPreview(theme)}
                       <div className="theme-icon" style={{ color: theme.colors.accent }}>
                         {theme.icon}
                       </div>
@@ -4173,6 +4375,69 @@ const Brikx = () => {
                       <div className="theme-description" style={{ color: theme.colors.textSecondary }}>
                         {theme.description}
                       </div>
+                      {theme.visual?.animated && (
+                        <div className="theme-feature-tag">Animated {theme.visual.motif || 'effects'}</div>
+                      )}
+                      {currentTheme === theme.id && <div className="theme-active-badge">✓ Active</div>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <h3 className="theme-category-title">💎 Premium Themes</h3>
+              <div className="themes-grid">
+                {Object.values(THEME_DEFINITIONS).filter(t => t.category === 'premium').map(theme => {
+                  const isUnlocked = unlockedThemes[theme.id];
+                  const progress = getThemeProgress(theme.id, {
+                    highScore: highScore,
+                    totalLines: statistics.totalLines,
+                    bestCombo: statistics.bestCombo,
+                    highestLevel: level,
+                    totalGames: statistics.totalGames,
+                    bestSprintTime: statistics.bestSprintTime
+                  });
+
+                  return (
+                    <div
+                      key={theme.id}
+                      className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                      onClick={() => {
+                        if (isUnlocked) {
+                          setCurrentTheme(theme.id);
+                          playSound('menuClick', 600, 0.1);
+                        }
+                      }}
+                      style={{
+                        '--preview-primary': theme.colors.primary,
+                        '--preview-secondary': theme.colors.secondary,
+                        '--preview-accent': theme.colors.accent,
+                        background: isUnlocked ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})` : 'rgba(0, 0, 0, 0.3)',
+                        borderColor: isUnlocked ? theme.colors.accent : 'rgba(100, 100, 100, 0.3)'
+                      }}
+                    >
+                      {renderThemeMiniPreview(theme)}
+                      <div className="theme-icon" style={{ color: isUnlocked ? theme.colors.accent : '#666' }}>
+                        {isUnlocked ? theme.icon : '🔒'}
+                      </div>
+                      <div className="theme-name" style={{ color: isUnlocked ? theme.colors.textPrimary : '#888' }}>
+                        {theme.name}
+                      </div>
+                      <div className="theme-description" style={{ color: isUnlocked ? theme.colors.textSecondary : '#666' }}>
+                        {isUnlocked ? theme.description : theme.unlockCondition?.description || 'Locked'}
+                      </div>
+                      {theme.visual?.animated && (
+                        <div className="theme-feature-tag">Animated {theme.visual.motif || 'effects'}</div>
+                      )}
+                      {!isUnlocked && (
+                        <div className="theme-progress-bar">
+                          <div className="theme-progress-fill" style={{ width: `${progress.progress}%` }} />
+                        </div>
+                      )}
+                      {!isUnlocked && progress.current !== undefined && (
+                        <div className="theme-progress-text">
+                          {progress.current} / {progress.target}
+                        </div>
+                      )}
                       {currentTheme === theme.id && <div className="theme-active-badge">✓ Active</div>}
                     </div>
                   );
@@ -4195,7 +4460,7 @@ const Brikx = () => {
                   return (
                     <div
                       key={theme.id}
-                      className={`theme-card ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                      className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
                       onClick={() => {
                         if (isUnlocked) {
                           setCurrentTheme(theme.id);
@@ -4203,10 +4468,14 @@ const Brikx = () => {
                         }
                       }}
                       style={{
+                        '--preview-primary': theme.colors.primary,
+                        '--preview-secondary': theme.colors.secondary,
+                        '--preview-accent': theme.colors.accent,
                         background: isUnlocked ? `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})` : 'rgba(0, 0, 0, 0.3)',
                         borderColor: isUnlocked ? theme.colors.accent : 'rgba(100, 100, 100, 0.3)'
                       }}
                     >
+                      {renderThemeMiniPreview(theme)}
                       <div className="theme-icon" style={{ color: isUnlocked ? theme.colors.accent : '#666' }}>
                         {isUnlocked ? theme.icon : '🔒'}
                       </div>
@@ -4216,6 +4485,9 @@ const Brikx = () => {
                       <div className="theme-description" style={{ color: isUnlocked ? theme.colors.textSecondary : '#666' }}>
                         {isUnlocked ? theme.description : theme.unlockCondition?.description || 'Locked'}
                       </div>
+                      {theme.visual?.animated && (
+                        <div className="theme-feature-tag">Animated {theme.visual.motif || 'effects'}</div>
+                      )}
                       {!isUnlocked && (
                         <div className="theme-progress-bar">
                           <div className="theme-progress-fill" style={{ width: `${progress.progress}%` }} />
