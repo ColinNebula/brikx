@@ -3563,8 +3563,27 @@ const Brikx = () => {
     }
   }, [gameOver, score, lines, level, gameMode, playerName]);
 
+  const shellTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
+  const shellVisual = shellTheme.visual || getThemeVisualProfile(currentTheme, shellTheme.category);
+  const shellClasses = [
+    'drift-racer',
+    `theme-pattern-${shellVisual?.pattern || 'wave-grid'}`,
+    `theme-motif-${shellVisual?.motif || 'ribbons'}`
+  ].join(' ');
+
   return (
-    <div className="drift-racer" role="main" aria-label="BRIKX Game">
+    <div className={shellClasses} role="main" aria-label="BRIKX Game">
+      {shellVisual?.animated && (
+        <div className="theme-shell-overlay" aria-hidden="true">
+          <div className="theme-shell-gradient" />
+          <div className="theme-shell-pattern" />
+          <span className="theme-shell-orb shell-orb-a" />
+          <span className="theme-shell-orb shell-orb-b" />
+          <span className="theme-shell-mote shell-mote-a" />
+          <span className="theme-shell-mote shell-mote-b" />
+        </div>
+      )}
+
       {/* Splash Screen */}
       {showSplash && (
         <div 
