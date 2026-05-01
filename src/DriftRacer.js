@@ -227,8 +227,16 @@ const MUSIC_PLAYLIST = {
   marathon: 'Dancing_with_a_Photon.mp3'
 };
 
+const ALL_MUSIC_TRACKS = Array.from(new Set(
+  Object.values(MUSIC_PLAYLIST).filter((track) =>
+    typeof track === 'string' &&
+    track.toLowerCase().endsWith('.mp3') &&
+    !track.toLowerCase().startsWith('mixkit-')
+  )
+));
+
 // Gameplay music tracks - randomly cycle through these during gameplay
-const GAMEPLAY_TRACKS = [
+const BASE_GAMEPLAY_TRACKS = [
   'Cycles_of_Existence.mp3',
   'Urban_Street_Speak.mp3',
   'Sneaky_Charlie.mp3',
@@ -236,6 +244,25 @@ const GAMEPLAY_TRACKS = [
   'Dancing_with_a_Photon.mp3',
   'EBS.mp3'
 ];
+const GAMEPLAY_TRACKS = Array.from(new Set([...BASE_GAMEPLAY_TRACKS, ...ALL_MUSIC_TRACKS]));
+
+const shuffleTracks = (tracks) => {
+  const shuffled = [...tracks];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+const formatTrackLabel = (trackName) => {
+  if (!trackName || typeof trackName !== 'string') return '';
+  return trackName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 const Brikx = () => {
   // Safe localStorage operations with validation
@@ -302,6 +329,7 @@ const Brikx = () => {
   const [musicVolume, setMusicVolume] = useState(() => {
     return parseFloat(safeGetItem('brickxMusicVolume', '0.5')) || 0.5;
   });
+  const [nowPlayingTrack, setNowPlayingTrack] = useState('');
   const [batterySaverMode, setBatterySaverMode] = useState(() => {
     const savedMode = safeGetItem('brickxBatterySaverMode', '');
     if (savedMode === 'off' || savedMode === 'auto' || savedMode === 'on') {
@@ -521,6 +549,8 @@ const Brikx = () => {
   // MP3 Music Player System
   const musicPlayerRef = useRef(null);
   const currentTrackRef = useRef(null);
+  const gameplayTrackQueueRef = useRef([]);
+  const gameplayTrackCursorRef = useRef(0);
   const musicIntensity = useRef(1);
   
   useEffect(() => {
@@ -711,6 +741,26 @@ const Brikx = () => {
   }, [playSound]);
 
   // Background Music System
+  const getNextGameplayTrack = useCallback(() => {
+    // Rebuild queue when depleted so every track gets a turn before repeats.
+    if (gameplayTrackCursorRef.current >= gameplayTrackQueueRef.current.length) {
+      const queue = shuffleTracks(GAMEPLAY_TRACKS);
+
+      // Avoid immediate repeat across queue boundaries when possible.
+      if (queue.length > 1 && queue[0] === currentTrackRef.current) {
+        const swapIndex = 1 + Math.floor(Math.random() * (queue.length - 1));
+        [queue[0], queue[swapIndex]] = [queue[swapIndex], queue[0]];
+      }
+
+      gameplayTrackQueueRef.current = queue;
+      gameplayTrackCursorRef.current = 0;
+    }
+
+    const nextTrack = gameplayTrackQueueRef.current[gameplayTrackCursorRef.current];
+    gameplayTrackCursorRef.current += 1;
+    return nextTrack;
+  }, []);
+
   const startMusic = useCallback((trackKey = null, isGameplay = false) => {
     if (!musicEnabled) return;
     
@@ -721,14 +771,15 @@ const Brikx = () => {
     if (trackKey) {
       track = MUSIC_PLAYLIST[trackKey];
     } else if (isGameplay || gameStarted) {
-      // During gameplay, pick a random track from GAMEPLAY_TRACKS
-      const availableTracks = GAMEPLAY_TRACKS.filter(t => t !== currentTrackRef.current);
-      track = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+      // During gameplay, cycle through a shuffled queue for variety without repeats.
+      track = getNextGameplayTrack();
       shouldCycle = true;
     } else {
       // Menu music
       track = MUSIC_PLAYLIST.menu;
     }
+
+    if (!track) return;
     
     // If already playing this track, don't restart
     if (currentTrackRef.current === track && musicPlayerRef.current && !musicPlayerRef.current.paused) {
@@ -754,6 +805,7 @@ const Brikx = () => {
             startMusic(null, true);
           }
         };
+        audio.loop = false;
         audio.addEventListener('ended', onEndedHandler);
         audio.onEndedHandler = onEndedHandler; // Store reference for cleanup
       } else {
@@ -768,10 +820,11 @@ const Brikx = () => {
       
       musicPlayerRef.current = audio;
       currentTrackRef.current = track;
+      setNowPlayingTrack(formatTrackLabel(track));
     } catch (err) {
       console.error('Error loading music:', err);
     }
-  }, [musicEnabled, musicVolume, gameStarted]);
+  }, [musicEnabled, musicVolume, gameStarted, getNextGameplayTrack]);
 
   const stopMusic = useCallback(() => {
     if (musicPlayerRef.current) {
@@ -780,6 +833,9 @@ const Brikx = () => {
       musicPlayerRef.current = null;
       currentTrackRef.current = null;
     }
+    setNowPlayingTrack('');
+    gameplayTrackQueueRef.current = [];
+    gameplayTrackCursorRef.current = 0;
   }, []);
 
   // Update music intensity based on level and speed
@@ -802,6 +858,7 @@ const Brikx = () => {
           musicPlayerRef.current = null;
           currentTrackRef.current = null;
         }
+        setNowPlayingTrack('');
       } else if (gameStarted && !gameOver && !isPaused) {
         startMusic(null, true);
       }
@@ -3868,6 +3925,14 @@ const Brikx = () => {
             </div>
           </div>
         </div>
+
+        {musicEnabled && nowPlayingTrack && (
+          <div className="now-playing-hud" role="status" aria-live="polite">
+            <span className="now-playing-dot" aria-hidden="true" />
+            <span className="now-playing-label">Now Playing:</span>
+            <span className="now-playing-track">{nowPlayingTrack}</span>
+          </div>
+        )}
       </div>
       )}
 
