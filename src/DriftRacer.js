@@ -63,6 +63,28 @@ const drawFlower = (ctx, x, y, radius, color, alpha, rotation = 0) => {
   ctx.restore();
 };
 
+const getThemeVisualProfile = (themeId, category) => {
+  const defaultByCategory = {
+    premium: { motif: 'ribbons', pattern: 'wave-grid', animated: true },
+    seasonal: { motif: 'petals', pattern: 'soft-orbit', animated: true },
+    unlockable: { motif: 'ribbons', pattern: 'diagonal-grid', animated: true },
+    base: { motif: 'ribbons', pattern: 'wave-grid', animated: true }
+  };
+
+  const overrides = {
+    dark: { motif: 'ribbons', pattern: 'wave-grid', animated: true },
+    light: { motif: 'petals', pattern: 'sun-rings', animated: true },
+    neon: { motif: 'ribbons', pattern: 'wave-grid', animated: true },
+    retro: { motif: 'embers', pattern: 'diagonal-grid', animated: true },
+    synthwave: { motif: 'ribbons', pattern: 'soft-orbit', animated: true },
+    matrix: { motif: 'embers', pattern: 'circuit', animated: true },
+    ocean: { motif: 'ribbons', pattern: 'wave-grid', animated: true },
+    sunset: { motif: 'embers', pattern: 'sun-rings', animated: true }
+  };
+
+  return overrides[themeId] || defaultByCategory[category] || defaultByCategory.base;
+};
+
 // Score History Chart Component
 const ScoreHistoryChart = ({ history }) => {
   const canvasRef = useRef(null);
@@ -2005,8 +2027,9 @@ const Brikx = () => {
     const themePrimary = hexToRgbArray(selectedTheme?.colors?.primary, [10, 5, 30]);
     const themeSecondary = hexToRgbArray(selectedTheme?.colors?.secondary, [30, 10, 60]);
     const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
-    const visualMotif = selectedTheme?.visual?.motif || null;
-    const visualPattern = selectedTheme?.visual?.pattern || null;
+    const resolvedVisual = selectedTheme?.visual || getThemeVisualProfile(currentTheme, selectedTheme?.category);
+    const visualMotif = resolvedVisual?.motif || null;
+    const visualPattern = resolvedVisual?.pattern || null;
     const now = Date.now() * 0.001;
     const animOffset = gridAnimation * 0.01;
     
@@ -2074,7 +2097,7 @@ const Brikx = () => {
     // Pattern overlay for premium and seasonal themes
     if (visualPattern) {
       ctx.save();
-      ctx.globalAlpha = prefersReducedMotion ? 0.06 : 0.11;
+      ctx.globalAlpha = prefersReducedMotion ? 0.08 : 0.15;
       ctx.strokeStyle = rgbAlpha(themeAccent, 0.8);
       ctx.lineWidth = 1.2;
 

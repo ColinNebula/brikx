@@ -10,6 +10,11 @@ export const THEME_DEFINITIONS = {
     unlocked: true,
     icon: '🌙',
     description: 'Classic dark theme with cyan accents',
+    visual: {
+      motif: 'ribbons',
+      pattern: 'wave-grid',
+      animated: true
+    },
     colors: {
       // Backgrounds
       primary: '#0a0a2e',
@@ -49,6 +54,11 @@ export const THEME_DEFINITIONS = {
     unlocked: true,
     icon: '☀️',
     description: 'Bright theme perfect for daytime play',
+    visual: {
+      motif: 'petals',
+      pattern: 'sun-rings',
+      animated: true
+    },
     colors: {
       primary: '#f0f4f8',
       secondary: '#d9e2ec',
@@ -88,6 +98,11 @@ export const THEME_DEFINITIONS = {
       value: 10000,
       description: 'Score 10,000 points in one game'
     },
+    visual: {
+      motif: 'ribbons',
+      pattern: 'wave-grid',
+      animated: true
+    },
     colors: {
       primary: '#0d0221',
       secondary: '#1f0e3a',
@@ -125,6 +140,11 @@ export const THEME_DEFINITIONS = {
       type: 'lines',
       value: 100,
       description: 'Clear 100 total lines'
+    },
+    visual: {
+      motif: 'embers',
+      pattern: 'diagonal-grid',
+      animated: true
     },
     colors: {
       primary: '#1a1a2e',
@@ -164,6 +184,11 @@ export const THEME_DEFINITIONS = {
       value: 10,
       description: 'Achieve a 10x combo'
     },
+    visual: {
+      motif: 'ribbons',
+      pattern: 'soft-orbit',
+      animated: true
+    },
     colors: {
       primary: '#2b0845',
       secondary: '#3d195b',
@@ -201,6 +226,11 @@ export const THEME_DEFINITIONS = {
       type: 'level',
       value: 10,
       description: 'Reach level 10'
+    },
+    visual: {
+      motif: 'embers',
+      pattern: 'circuit',
+      animated: true
     },
     colors: {
       primary: '#000000',
@@ -240,6 +270,11 @@ export const THEME_DEFINITIONS = {
       value: 50,
       description: 'Play 50 games'
     },
+    visual: {
+      motif: 'ribbons',
+      pattern: 'wave-grid',
+      animated: true
+    },
     colors: {
       primary: '#001f3f',
       secondary: '#003d5c',
@@ -277,6 +312,11 @@ export const THEME_DEFINITIONS = {
       type: 'sprint',
       value: 120000, // 2 minutes in ms
       description: 'Complete Sprint mode in under 2 minutes'
+    },
+    visual: {
+      motif: 'embers',
+      pattern: 'sun-rings',
+      animated: true
     },
     colors: {
       primary: '#1a0a0a',
