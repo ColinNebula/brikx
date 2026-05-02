@@ -244,7 +244,11 @@ const BASE_GAMEPLAY_TRACKS = [
   'Dancing_with_a_Photon.mp3',
   'EBS.mp3'
 ];
-const GAMEPLAY_TRACKS = Array.from(new Set([...BASE_GAMEPLAY_TRACKS, ...ALL_MUSIC_TRACKS]));
+const EXTRA_GAMEPLAY_TRACKS = [
+  'mixkit-fairy-magic-sparkle-871.mp3',
+  'mixkit-technology-alert-transition-3121.mp3'
+];
+const GAMEPLAY_TRACKS = Array.from(new Set([...BASE_GAMEPLAY_TRACKS, ...ALL_MUSIC_TRACKS, ...EXTRA_GAMEPLAY_TRACKS]));
 
 const shuffleTracks = (tracks) => {
   const shuffled = [...tracks];
@@ -552,6 +556,8 @@ const Brikx = () => {
   const gameplayTrackQueueRef = useRef([]);
   const gameplayTrackCursorRef = useRef(0);
   const musicIntensity = useRef(1);
+  const gameStartedRef = useRef(gameStarted);
+  const musicEnabledRef = useRef(musicEnabled);
   
   useEffect(() => {
     if (!audioContext.current) {
@@ -563,6 +569,14 @@ const Brikx = () => {
       stopMusic();
     };
   }, []);
+
+  useEffect(() => {
+    gameStartedRef.current = gameStarted;
+  }, [gameStarted]);
+
+  useEffect(() => {
+    musicEnabledRef.current = musicEnabled;
+  }, [musicEnabled]);
 
   const playSound = useCallback((type, frequency = 440, duration = 0.1, volume = 0.3) => {
     if (!soundEnabled || !audioContext.current) return;
@@ -799,9 +813,9 @@ const Brikx = () => {
       audio.volume = musicVolume;
       
       if (shouldCycle) {
-        // For gameplay, cycle to next random track when this one ends
+        // Use refs so cycling logic reads the latest game/music state.
         const onEndedHandler = () => {
-          if (gameStarted && musicEnabled) {
+          if (gameStartedRef.current && musicEnabledRef.current) {
             startMusic(null, true);
           }
         };
