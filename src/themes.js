@@ -21,29 +21,29 @@ export const THEME_DEFINITIONS = {
       secondary: '#16213e',
       tertiary: '#0f3460',
       
-      // Accents - Enhanced cyan with more vibrancy
+      // Accents - Ultra-vibrant electric cyan
       accent: '#00ffff',
-      accentHover: '#00e6e6',
-      accentGlow: 'rgba(0, 255, 255, 0.7)',
+      accentHover: '#33ffff',
+      accentGlow: 'rgba(0, 255, 255, 0.9)',
       
       // Text
       textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.9)',
-      textMuted: 'rgba(0, 255, 255, 0.7)',
+      textSecondary: 'rgba(255, 255, 255, 0.95)',
+      textMuted: 'rgba(0, 255, 255, 0.85)',
       
       // UI Elements
-      cardBg: 'rgba(0, 255, 255, 0.12)',
-      cardBorder: 'rgba(0, 255, 255, 0.4)',
-      cardHover: 'rgba(0, 255, 255, 0.25)',
+      cardBg: 'rgba(0, 255, 255, 0.18)',
+      cardBorder: 'rgba(0, 255, 255, 0.6)',
+      cardHover: 'rgba(0, 255, 255, 0.35)',
       
-      // Status colors - More vibrant
-      success: '#00ff88',
-      warning: '#ffbb00',
-      error: '#ff4466',
+      // Status colors - Ultra vibrant
+      success: '#00ff99',
+      warning: '#ffcc00',
+      error: '#ff3366',
       
       // Game elements
-      gridLine: 'rgba(0, 255, 255, 0.25)',
-      shadow: 'rgba(0, 0, 0, 0.6)'
+      gridLine: 'rgba(0, 255, 255, 0.35)',
+      shadow: 'rgba(0, 255, 255, 0.4)'
     }
   },
 
@@ -60,28 +60,28 @@ export const THEME_DEFINITIONS = {
       animated: true
     },
     colors: {
-      primary: '#f0f4f8',
-      secondary: '#d9e2ec',
-      tertiary: '#bcccdc',
+      primary: '#f0f7ff',
+      secondary: '#d9e7f7',
+      tertiary: '#c0d9f0',
       
-      accent: '#0088ff',
-      accentHover: '#0070dd',
-      accentGlow: 'rgba(0, 136, 255, 0.4)',
+      accent: '#0099ff',
+      accentHover: '#0077ff',
+      accentGlow: 'rgba(0, 153, 255, 0.65)',
       
       textPrimary: '#0a1929',
-      textSecondary: 'rgba(10, 25, 41, 0.85)',
-      textMuted: 'rgba(0, 136, 255, 0.7)',
+      textSecondary: 'rgba(10, 25, 41, 0.9)',
+      textMuted: 'rgba(0, 153, 255, 0.8)',
       
-      cardBg: 'rgba(255, 255, 255, 0.85)',
-      cardBorder: 'rgba(0, 136, 255, 0.35)',
-      cardHover: 'rgba(0, 136, 255, 0.15)',
+      cardBg: 'rgba(255, 255, 255, 0.9)',
+      cardBorder: 'rgba(0, 153, 255, 0.5)',
+      cardHover: 'rgba(0, 153, 255, 0.25)',
       
-      success: '#00c793',
-      warning: '#ff9500',
-      error: '#ff3b30',
+      success: '#00dd88',
+      warning: '#ffaa00',
+      error: '#ff3344',
       
-      gridLine: 'rgba(0, 136, 255, 0.2)',
-      shadow: 'rgba(0, 0, 0, 0.25)'
+      gridLine: 'rgba(0, 153, 255, 0.3)',
+      shadow: 'rgba(0, 136, 255, 0.35)'
     }
   },
 
@@ -109,23 +109,23 @@ export const THEME_DEFINITIONS = {
       tertiary: '#2e1753',
       
       accent: '#ff00ff',
-      accentHover: '#ee00ee',
-      accentGlow: 'rgba(255, 0, 255, 0.8)',
+      accentHover: '#ff33ff',
+      accentGlow: 'rgba(255, 0, 255, 0.95)',
       
       textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.95)',
-      textMuted: 'rgba(255, 0, 255, 0.75)',
+      textSecondary: 'rgba(255, 255, 255, 0.98)',
+      textMuted: 'rgba(255, 0, 255, 0.85)',
       
-      cardBg: 'rgba(255, 0, 255, 0.18)',
-      cardBorder: 'rgba(255, 0, 255, 0.5)',
-      cardHover: 'rgba(255, 0, 255, 0.3)',
+      cardBg: 'rgba(255, 0, 255, 0.25)',
+      cardBorder: 'rgba(255, 0, 255, 0.7)',
+      cardHover: 'rgba(255, 0, 255, 0.4)',
       
-      success: '#ff00cc',
-      warning: '#ffcc00',
+      success: '#ff00dd',
+      warning: '#ffdd00',
       error: '#ff0066',
       
-      gridLine: 'rgba(255, 0, 255, 0.3)',
-      shadow: 'rgba(255, 0, 255, 0.4)'
+      gridLine: 'rgba(255, 0, 255, 0.4)',
+      shadow: 'rgba(255, 0, 255, 0.6)'
     }
   },
 
@@ -151,24 +151,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#16213e',
       tertiary: '#0f3460',
       
-      accent: '#ff4757',
-      accentHover: '#ee3344',
-      accentGlow: 'rgba(255, 71, 87, 0.7)',
+      accent: '#ff5577',
+      accentHover: '#ff3355',
+      accentGlow: 'rgba(255, 71, 87, 0.9)',
       
       textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.9)',
-      textMuted: 'rgba(255, 71, 87, 0.8)',
+      textSecondary: 'rgba(255, 255, 255, 0.95)',
+      textMuted: 'rgba(255, 71, 87, 0.9)',
       
-      cardBg: 'rgba(255, 71, 87, 0.15)',
-      cardBorder: 'rgba(255, 71, 87, 0.45)',
-      cardHover: 'rgba(255, 71, 87, 0.25)',
+      cardBg: 'rgba(255, 71, 87, 0.22)',
+      cardBorder: 'rgba(255, 71, 87, 0.65)',
+      cardHover: 'rgba(255, 71, 87, 0.35)',
       
-      success: '#00ddff',
-      warning: '#ffdd00',
+      success: '#00eeff',
+      warning: '#ffee00',
       error: '#ff4757',
       
-      gridLine: 'rgba(255, 71, 87, 0.25)',
-      shadow: 'rgba(255, 71, 87, 0.5)'
+      gridLine: 'rgba(255, 71, 87, 0.35)',
+      shadow: 'rgba(255, 71, 87, 0.65)'
     }
   },
 
@@ -194,24 +194,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#3d195b',
       tertiary: '#4f2a71',
       
-      accent: '#ff6c11',
-      accentHover: '#e65c00',
-      accentGlow: 'rgba(255, 108, 17, 0.6)',
+      accent: '#ff7722',
+      accentHover: '#ff5500',
+      accentGlow: 'rgba(255, 119, 34, 0.85)',
       
-      textPrimary: '#ffd9f0',
-      textSecondary: 'rgba(255, 217, 240, 0.85)',
-      textMuted: 'rgba(255, 108, 17, 0.7)',
+      textPrimary: '#ffeeff',
+      textSecondary: 'rgba(255, 238, 255, 0.9)',
+      textMuted: 'rgba(255, 119, 34, 0.85)',
       
-      cardBg: 'rgba(255, 108, 17, 0.15)',
-      cardBorder: 'rgba(255, 108, 17, 0.4)',
-      cardHover: 'rgba(255, 108, 17, 0.25)',
+      cardBg: 'rgba(255, 119, 34, 0.22)',
+      cardBorder: 'rgba(255, 119, 34, 0.6)',
+      cardHover: 'rgba(255, 119, 34, 0.35)',
       
-      success: '#00ff9f',
-      warning: '#ffed00',
-      error: '#ff006e',
+      success: '#00ffaa',
+      warning: '#ffff00',
+      error: '#ff0077',
       
-      gridLine: 'rgba(255, 108, 17, 0.25)',
-      shadow: 'rgba(255, 108, 17, 0.4)'
+      gridLine: 'rgba(255, 119, 34, 0.35)',
+      shadow: 'rgba(255, 119, 34, 0.6)'
     }
   },
 
@@ -235,26 +235,26 @@ export const THEME_DEFINITIONS = {
     colors: {
       primary: '#000000',
       secondary: '#0a0a0a',
-      tertiary: '#121212',
+      tertiary: '#0f1a0f',
       
-      accent: '#00ff41',
-      accentHover: '#00ee38',
-      accentGlow: 'rgba(0, 255, 65, 0.7)',
+      accent: '#00ff55',
+      accentHover: '#00ff77',
+      accentGlow: 'rgba(0, 255, 85, 0.9)',
       
-      textPrimary: '#00ff41',
-      textSecondary: 'rgba(0, 255, 65, 0.9)',
-      textMuted: 'rgba(0, 255, 65, 0.6)',
+      textPrimary: '#00ff55',
+      textSecondary: 'rgba(0, 255, 85, 0.95)',
+      textMuted: 'rgba(0, 255, 85, 0.75)',
       
-      cardBg: 'rgba(0, 255, 65, 0.1)',
-      cardBorder: 'rgba(0, 255, 65, 0.4)',
-      cardHover: 'rgba(0, 255, 65, 0.2)',
+      cardBg: 'rgba(0, 255, 85, 0.15)',
+      cardBorder: 'rgba(0, 255, 85, 0.6)',
+      cardHover: 'rgba(0, 255, 85, 0.3)',
       
-      success: '#00ff41',
+      success: '#00ff55',
       warning: '#ffff00',
-      error: '#ff0055',
+      error: '#ff0066',
       
-      gridLine: 'rgba(0, 255, 65, 0.25)',
-      shadow: 'rgba(0, 255, 65, 0.4)'
+      gridLine: 'rgba(0, 255, 85, 0.35)',
+      shadow: 'rgba(0, 255, 85, 0.6)'
     }
   },
 
@@ -280,24 +280,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#003d5c',
       tertiary: '#005b7f',
       
-      accent: '#00d4ff',
-      accentHover: '#00bceb',
-      accentGlow: 'rgba(0, 212, 255, 0.5)',
+      accent: '#00eeff',
+      accentHover: '#00ddff',
+      accentGlow: 'rgba(0, 238, 255, 0.75)',
       
       textPrimary: '#e0f7ff',
-      textSecondary: 'rgba(224, 247, 255, 0.85)',
-      textMuted: 'rgba(0, 212, 255, 0.6)',
+      textSecondary: 'rgba(224, 247, 255, 0.9)',
+      textMuted: 'rgba(0, 238, 255, 0.8)',
       
-      cardBg: 'rgba(0, 212, 255, 0.12)',
-      cardBorder: 'rgba(0, 212, 255, 0.35)',
-      cardHover: 'rgba(0, 212, 255, 0.2)',
+      cardBg: 'rgba(0, 238, 255, 0.18)',
+      cardBorder: 'rgba(0, 238, 255, 0.55)',
+      cardHover: 'rgba(0, 238, 255, 0.3)',
       
-      success: '#00ffc8',
-      warning: '#ffd700',
-      error: '#ff6b6b',
+      success: '#00ffdd',
+      warning: '#ffee00',
+      error: '#ff6677',
       
-      gridLine: 'rgba(0, 212, 255, 0.2)',
-      shadow: 'rgba(0, 61, 92, 0.5)'
+      gridLine: 'rgba(0, 238, 255, 0.3)',
+      shadow: 'rgba(0, 238, 255, 0.5)'
     }
   },
 
@@ -323,24 +323,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#2d1414',
       tertiary: '#401e1e',
       
-      accent: '#ff6b35',
-      accentHover: '#e65a25',
-      accentGlow: 'rgba(255, 107, 53, 0.6)',
+      accent: '#ff7744',
+      accentHover: '#ff5522',
+      accentGlow: 'rgba(255, 119, 68, 0.8)',
       
       textPrimary: '#fff5e1',
-      textSecondary: 'rgba(255, 245, 225, 0.85)',
-      textMuted: 'rgba(255, 107, 53, 0.7)',
+      textSecondary: 'rgba(255, 245, 225, 0.9)',
+      textMuted: 'rgba(255, 119, 68, 0.85)',
       
-      cardBg: 'rgba(255, 107, 53, 0.15)',
-      cardBorder: 'rgba(255, 107, 53, 0.4)',
-      cardHover: 'rgba(255, 107, 53, 0.25)',
+      cardBg: 'rgba(255, 119, 68, 0.22)',
+      cardBorder: 'rgba(255, 119, 68, 0.6)',
+      cardHover: 'rgba(255, 119, 68, 0.35)',
       
-      success: '#ffaa00',
-      warning: '#ffd700',
-      error: '#ff4757',
+      success: '#ffbb00',
+      warning: '#ffdd00',
+      error: '#ff5566',
       
-      gridLine: 'rgba(255, 107, 53, 0.25)',
-      shadow: 'rgba(255, 107, 53, 0.4)'
+      gridLine: 'rgba(255, 119, 68, 0.35)',
+      shadow: 'rgba(255, 119, 68, 0.6)'
     }
   },
 
@@ -370,23 +370,23 @@ export const THEME_DEFINITIONS = {
       tertiary: '#400f35',
       
       accent: '#ff1493',
-      accentHover: '#e01280',
-      accentGlow: 'rgba(255, 20, 147, 0.6)',
+      accentHover: '#ff3399',
+      accentGlow: 'rgba(255, 20, 147, 0.85)',
       
       textPrimary: '#ffecf5',
-      textSecondary: 'rgba(255, 236, 245, 0.85)',
-      textMuted: 'rgba(255, 20, 147, 0.7)',
+      textSecondary: 'rgba(255, 236, 245, 0.9)',
+      textMuted: 'rgba(255, 20, 147, 0.85)',
       
-      cardBg: 'rgba(255, 20, 147, 0.15)',
-      cardBorder: 'rgba(255, 20, 147, 0.4)',
-      cardHover: 'rgba(255, 20, 147, 0.25)',
+      cardBg: 'rgba(255, 20, 147, 0.22)',
+      cardBorder: 'rgba(255, 20, 147, 0.6)',
+      cardHover: 'rgba(255, 20, 147, 0.35)',
       
-      success: '#ff69b4',
+      success: '#ff77bb',
       warning: '#ff1493',
-      error: '#ff0066',
+      error: '#ff0077',
       
-      gridLine: 'rgba(255, 20, 147, 0.25)',
-      shadow: 'rgba(255, 20, 147, 0.4)'
+      gridLine: 'rgba(255, 20, 147, 0.35)',
+      shadow: 'rgba(255, 20, 147, 0.6)'
     }
   },
 
@@ -414,24 +414,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#1a0f00',
       tertiary: '#2a1f0a',
       
-      accent: '#ff6600',
-      accentHover: '#e65a00',
-      accentGlow: 'rgba(255, 102, 0, 0.6)',
+      accent: '#ff7722',
+      accentHover: '#ff5500',
+      accentGlow: 'rgba(255, 119, 34, 0.85)',
       
       textPrimary: '#ffeecc',
-      textSecondary: 'rgba(255, 238, 204, 0.85)',
-      textMuted: 'rgba(255, 102, 0, 0.7)',
+      textSecondary: 'rgba(255, 238, 204, 0.9)',
+      textMuted: 'rgba(255, 119, 34, 0.85)',
       
-      cardBg: 'rgba(255, 102, 0, 0.15)',
-      cardBorder: 'rgba(255, 102, 0, 0.4)',
-      cardHover: 'rgba(255, 102, 0, 0.25)',
+      cardBg: 'rgba(255, 119, 34, 0.22)',
+      cardBorder: 'rgba(255, 119, 34, 0.6)',
+      cardHover: 'rgba(255, 119, 34, 0.35)',
       
-      success: '#00ff00',
-      warning: '#ffaa00',
-      error: '#ff0000',
+      success: '#00ff22',
+      warning: '#ffbb00',
+      error: '#ff2200',
       
-      gridLine: 'rgba(255, 102, 0, 0.25)',
-      shadow: 'rgba(255, 102, 0, 0.4)'
+      gridLine: 'rgba(255, 119, 34, 0.35)',
+      shadow: 'rgba(255, 119, 34, 0.6)'
     }
   },
 
@@ -459,24 +459,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#142030',
       tertiary: '#1e2b40',
       
-      accent: '#88ddff',
-      accentHover: '#70c5eb',
-      accentGlow: 'rgba(136, 221, 255, 0.5)',
+      accent: '#99eeff',
+      accentHover: '#77ddff',
+      accentGlow: 'rgba(153, 238, 255, 0.75)',
       
       textPrimary: '#f0f8ff',
-      textSecondary: 'rgba(240, 248, 255, 0.85)',
-      textMuted: 'rgba(136, 221, 255, 0.7)',
+      textSecondary: 'rgba(240, 248, 255, 0.9)',
+      textMuted: 'rgba(153, 238, 255, 0.85)',
       
-      cardBg: 'rgba(136, 221, 255, 0.12)',
-      cardBorder: 'rgba(136, 221, 255, 0.35)',
-      cardHover: 'rgba(136, 221, 255, 0.2)',
+      cardBg: 'rgba(153, 238, 255, 0.18)',
+      cardBorder: 'rgba(153, 238, 255, 0.55)',
+      cardHover: 'rgba(153, 238, 255, 0.3)',
       
-      success: '#00ff88',
-      warning: '#ffd700',
-      error: '#ff4466',
+      success: '#00ffaa',
+      warning: '#ffee00',
+      error: '#ff5577',
       
-      gridLine: 'rgba(136, 221, 255, 0.2)',
-      shadow: 'rgba(136, 221, 255, 0.3)'
+      gridLine: 'rgba(153, 238, 255, 0.3)',
+      shadow: 'rgba(153, 238, 255, 0.5)'
     }
   },
 
@@ -504,24 +504,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#2d4014',
       tertiary: '#40551e',
       
-      accent: '#ffdd00',
-      accentHover: '#e6c700',
-      accentGlow: 'rgba(255, 221, 0, 0.5)',
+      accent: '#ffee00',
+      accentHover: '#ffdd00',
+      accentGlow: 'rgba(255, 238, 0, 0.75)',
       
       textPrimary: '#fffde7',
-      textSecondary: 'rgba(255, 253, 231, 0.85)',
-      textMuted: 'rgba(255, 221, 0, 0.7)',
+      textSecondary: 'rgba(255, 253, 231, 0.9)',
+      textMuted: 'rgba(255, 238, 0, 0.85)',
       
-      cardBg: 'rgba(255, 221, 0, 0.12)',
-      cardBorder: 'rgba(255, 221, 0, 0.35)',
-      cardHover: 'rgba(255, 221, 0, 0.2)',
+      cardBg: 'rgba(255, 238, 0, 0.18)',
+      cardBorder: 'rgba(255, 238, 0, 0.55)',
+      cardHover: 'rgba(255, 238, 0, 0.3)',
       
-      success: '#00ff88',
-      warning: '#ffaa00',
-      error: '#ff6b6b',
+      success: '#00ff99',
+      warning: '#ffbb00',
+      error: '#ff6677',
       
-      gridLine: 'rgba(255, 221, 0, 0.2)',
-      shadow: 'rgba(255, 221, 0, 0.3)'
+      gridLine: 'rgba(255, 238, 0, 0.3)',
+      shadow: 'rgba(255, 238, 0, 0.5)'
     }
   },
 
