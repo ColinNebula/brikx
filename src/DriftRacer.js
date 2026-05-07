@@ -1179,6 +1179,12 @@ const Brikx = () => {
     scorePopups: [],
     screenShake: 0,
     gridAnimation: 0,
+    pieceLockAnimation: 0,
+    flashEffect: 0,
+    hardDropTrail: [],
+    perfectClearFlash: 0,
+    comboFlash: 0,
+    lastMoveWasTSpin: false,
     gamepadState: {
       lastButtons: [],
       lastAxes: [0, 0],
@@ -1623,16 +1629,22 @@ const Brikx = () => {
       // Add screen shake based on clear type
       if (isPerfectClear) {
         gameState.current.screenShake = 25;
+        gameState.current.perfectClearFlash = 30; // Full-screen flash for perfect clear
       } else if (combo >= 10) {
         gameState.current.screenShake = 22;
+        gameState.current.comboFlash = 18; // Strong flash for mega combo
       } else if (combo >= 5) {
         gameState.current.screenShake = 18;
+        gameState.current.comboFlash = 14; // Flash for high combo
       } else if (linesCleared >= 4) {
         gameState.current.screenShake = 16; // TETRIS gets intense shake!
+        gameState.current.flashEffect = 15; // White flash for Tetris
       } else if (isCombo || linesCleared >= 3) {
         gameState.current.screenShake = 12;
+        gameState.current.flashEffect = 12; // Flash for triple
       } else if (linesCleared >= 2) {
         gameState.current.screenShake = 6;
+        gameState.current.flashEffect = 8; // Small flash for double
       }
       
       // Add score popup
@@ -1747,10 +1759,51 @@ const Brikx = () => {
     } else {
       mergePiece();
       playCollisionSound();
+      
+      // Add piece lock animation
+      gameState.current.pieceLockAnimation = 12;
+      
+      // Add lock particles at piece position
+      const boardOffsetX = 130;
+      currentPiece.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value) {
+            const centerX = boardOffsetX + (currentX + x) * BLOCK_SIZE + BLOCK_SIZE / 2;
+            const centerY = (currentY + y) * BLOCK_SIZE + BLOCK_SIZE / 2;
+            
+            // Small burst of particles on lock
+            for (let i = 0; i < 4; i++) {
+              const angle = (Math.PI * 2 * i) / 4;
+              const particle = getParticleFromPool({
+                x: centerX,
+                y: centerY,
+                vx: Math.cos(angle) * 2,
+                vy: Math.sin(angle) * 2,
+                life: 20,
+                maxLife: 20,
+                color: currentPiece.color,
+                size: 2,
+                type: 'spark',
+                rotation: angle,
+                rotationSpeed: 0.2,
+                glow: true,
+                trail: false,
+                pulse: false,
+                ring: 0,
+                bounce: false
+              });
+              if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+                gameState.current.particles.push(particle);
+              }
+            }
+          }
+        });
+      });
+      
       clearLines();
       spawnPiece();
     }
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, playCollisionSound]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, playCollisionSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool]);
 
   // Move piece horizontally
   const moveHorizontal = useCallback((dir) => {
@@ -1769,10 +1822,59 @@ const Brikx = () => {
     const rotated = rotatePiece(currentPiece);
     
     if (!checkCollision(board, rotated, currentX, currentY)) {
+      const wasTPiece = currentPiece.shape === SHAPES.T.shape;
       gameState.current.currentPiece = rotated;
+      
+      // Check for T-Spin (3+ corners filled around T)
+      if (wasTPiece) {
+        const corners = [
+          { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
+          { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
+        ];
+        
+        let filledCorners = 0;
+        corners.forEach(corner => {
+          const checkX = currentX + 1 + corner.dx;
+          const checkY = currentY + 1 + corner.dy;
+          
+          if (checkX < 0 || checkX >= COLS || checkY >= ROWS || 
+              (checkY >= 0 && board[checkY][checkX])) {
+            filledCorners++;
+          }
+        });
+        
+        if (filledCorners >= 3) {
+          gameState.current.lastMoveWasTSpin = true;
+          
+          // T-Spin particles
+          const boardOffsetX = 130;
+          const centerX = boardOffsetX + currentX * BLOCK_SIZE + (BLOCK_SIZE * 1.5);
+          const centerY = currentY * BLOCK_SIZE + (BLOCK_SIZE * 1.5);
+          
+          for (let i = 0; i < 12; i++) {
+            const angle = (Math.PI * 2 * i) / 12;
+            const particle = getParticleFromPool({
+              x: centerX, y: centerY,
+              vx: Math.cos(angle) * 4, vy: Math.sin(angle) * 4,
+              life: 30, maxLife: 30, color: '#ff00ff', size: 4,
+              type: 'star', rotation: angle, rotationSpeed: 0.4,
+              glow: true, trail: true, pulse: true, ring: 0, bounce: false
+            });
+            if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+              gameState.current.particles.push(particle);
+            }
+          }
+          
+          playSound('combo', 800, 0.3);
+          vibrate([30, 10, 30]);
+        } else {
+          gameState.current.lastMoveWasTSpin = false;
+        }
+      }
+      
       playRotateSuccessSound();
     }
-  }, [checkCollision, rotatePiece, playRotateSuccessSound]);
+  }, [checkCollision, rotatePiece, playRotateSuccessSound, SHAPES.T.shape, COLS, ROWS, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSound, vibrate]);
 
   // Hold piece
   const holdCurrentPiece = useCallback(() => {
@@ -1823,13 +1925,68 @@ const Brikx = () => {
       dropDistance++;
     }
     
+    // Create hard drop trail effect
+    if (dropDistance > 0) {
+      const boardOffsetX = 130;
+      const trailPositions = Math.min(dropDistance, 8); // Limit trail length
+      
+      for (let i = 0; i < trailPositions; i++) {
+        const trailY = currentY + Math.floor((dropDistance * i) / trailPositions);
+        gameState.current.hardDropTrail.push({
+          piece: currentPiece,
+          x: currentX,
+          y: trailY,
+          life: 15 - i * 2, // Stagger fade
+          maxLife: 15,
+          offsetX: boardOffsetX
+        });
+      }
+      
+      // Add impact particles at landing position
+      const landY = currentY + dropDistance;
+      currentPiece.shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value) {
+            const centerX = boardOffsetX + (currentX + x) * BLOCK_SIZE + BLOCK_SIZE / 2;
+            const centerY = (landY + y) * BLOCK_SIZE + BLOCK_SIZE / 2;
+            
+            // Impact burst
+            for (let i = 0; i < 6; i++) {
+              const angle = (Math.PI * 2 * i) / 6 + Math.PI / 2; // Upward burst
+              const particle = getParticleFromPool({
+                x: centerX,
+                y: centerY,
+                vx: Math.cos(angle) * 3,
+                vy: Math.sin(angle) * 3 - 2,
+                life: 25,
+                maxLife: 25,
+                color: currentPiece.color,
+                size: 3,
+                type: Math.random() > 0.5 ? 'star' : 'spark',
+                rotation: angle,
+                rotationSpeed: 0.3,
+                glow: true,
+                trail: true,
+                pulse: false,
+                ring: 0,
+                bounce: false
+              });
+              if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+                gameState.current.particles.push(particle);
+              }
+            }
+          }
+        });
+      });
+    }
+    
     gameState.current.currentY += dropDistance;
     setScore(prev => prev + dropDistance * 2);
     playSound('drop', 100, 0.15, 0.2);
     mergePiece();
     clearLines();
     spawnPiece();
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, playSound]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, playSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool]);
 
   // Reset game
   const resetGame = useCallback(() => {
@@ -2682,6 +2839,39 @@ const Brikx = () => {
       gameState.current.clearAnimation--;
     }
 
+    // Draw hard drop trail (motion blur effect)
+    if (gameState.current.hardDropTrail.length > 0) {
+      gameState.current.hardDropTrail.forEach(trail => {
+        const alpha = trail.life / trail.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.4; // Semi-transparent trail
+        ctx.translate(trail.offsetX, 0);
+        
+        trail.piece.shape.forEach((row, y) => {
+          row.forEach((value, x) => {
+            if (value) {
+              const blockX = (trail.x + x) * BLOCK_SIZE;
+              const blockY = (trail.y + y) * BLOCK_SIZE;
+              const size = BLOCK_SIZE - 2;
+              
+              // Simple colored block with glow
+              ctx.fillStyle = trail.piece.color;
+              ctx.shadowColor = trail.piece.color;
+              ctx.shadowBlur = 15;
+              ctx.fillRect(blockX + 1, blockY + 1, size, size);
+              ctx.shadowBlur = 0;
+            }
+          });
+        });
+        
+        ctx.restore();
+        trail.life--;
+      });
+      
+      // Remove dead trails
+      gameState.current.hardDropTrail = gameState.current.hardDropTrail.filter(t => t.life > 0);
+    }
+
     // Draw current piece
     if (currentPiece && !isPaused) {
       currentPiece.shape.forEach((row, y) => {
@@ -3082,6 +3272,101 @@ const Brikx = () => {
       if (bonus.time <= 0) {
         gameState.current.colorBonusDisplay = null;
       }
+    }
+    
+    // Draw white flash effect for line clears
+    if (gameState.current.flashEffect > 0) {
+      const alpha = (gameState.current.flashEffect / 15) * 0.4; // Max 40% opacity
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.restore();
+      gameState.current.flashEffect--;
+    }
+    
+    // Draw combo flash effect (colored flash for high combos)
+    if (gameState.current.comboFlash > 0) {
+      const alpha = (gameState.current.comboFlash / 18) * 0.5;
+      const comboInfo = getComboColor(combo);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const gradient = ctx.createRadialGradient(
+        CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
+        CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_HEIGHT * 0.8
+      );
+      gradient.addColorStop(0, comboInfo.color);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.restore();
+      gameState.current.comboFlash--;
+    }
+    
+    // Draw perfect clear flash (full-screen rainbow flash)
+    if (gameState.current.perfectClearFlash > 0) {
+      const alpha = (gameState.current.perfectClearFlash / 30) * 0.7;
+      const flashPhase = (30 - gameState.current.perfectClearFlash) / 30;
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      
+      // Rainbow gradient effect
+      const gradient = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      const hue1 = (flashPhase * 360) % 360;
+      const hue2 = (flashPhase * 360 + 120) % 360;
+      const hue3 = (flashPhase * 360 + 240) % 360;
+      gradient.addColorStop(0, `hsl(${hue1}, 100%, 70%)`);
+      gradient.addColorStop(0.5, `hsl(${hue2}, 100%, 70%)`);
+      gradient.addColorStop(1, `hsl(${hue3}, 100%, 70%)`);
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Add pulsing border
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 8;
+      const pulseSize = Math.sin(flashPhase * Math.PI * 4) * 20;
+      ctx.strokeRect(pulseSize, pulseSize, CANVAS_WIDTH - pulseSize * 2, CANVAS_HEIGHT - pulseSize * 2);
+      
+      ctx.restore();
+      gameState.current.perfectClearFlash--;
+    }
+    
+    // Draw piece lock animation (scale effect on recently placed piece)
+    if (gameState.current.pieceLockAnimation > 0) {
+      const alpha = gameState.current.pieceLockAnimation / 12;
+      const scale = 1 + (1 - alpha) * 0.15; // Slight scale increase
+      
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.translate(boardOffsetX, 0);
+      
+      // Draw glow effect at lock position
+      const { board } = gameState.current;
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          if (board[y][x]) {
+            const centerX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
+            const centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
+            
+            // Only draw on the top few rows (where piece just landed)
+            if (y < 5) {
+              const gradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, BLOCK_SIZE * scale
+              );
+              gradient.addColorStop(0, board[y][x]);
+              gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+              ctx.fillStyle = gradient;
+              ctx.fillRect(centerX - BLOCK_SIZE, centerY - BLOCK_SIZE, BLOCK_SIZE * 2, BLOCK_SIZE * 2);
+            }
+          }
+        }
+      }
+      
+      ctx.restore();
+      gameState.current.pieceLockAnimation--;
     }
   }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode]);
 
