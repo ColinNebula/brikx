@@ -28,19 +28,20 @@
   align-items: center;
   justify-content: flex-start; /* Changed from center to prevent bottom cutoff */
   min-height: 100vh;
+  height: auto; /* Allow container to grow beyond viewport */
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-tertiary) 100%);
   font-family: 'Inter', 'Rajdhani', sans-serif;
   color: var(--color-textPrimary);
   padding: 20px;
   padding-top: 40px; /* Extra top padding since we're not centering */
   position: relative;
-  overflow: hidden;
-  overflow-y: auto; /* Allow scrolling if needed */
+  overflow-x: hidden; /* Hide horizontal overflow only */
+  overflow-y: auto; /* Allow vertical scrolling */
   isolation: isolate;
   /* Safe area insets for notched devices */
   padding-top: max(40px, calc(40px + env(safe-area-inset-top)));
   padding-right: max(20px, env(safe-area-inset-right));
-  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  padding-bottom: max(60px, calc(60px + env(safe-area-inset-bottom))); /* Increased for full canvas visibility */
   padding-left: max(20px, env(safe-area-inset-left));
   transition: background 0.5s ease;
 }
@@ -3274,6 +3275,8 @@
   
   .game-container {
     transform: scale(0.9);
+    transform-origin: top center; /* Scale from top to prevent bottom cutoff */
+    margin-bottom: 40px; /* Add space for scaled container */
   }
   
   .start-overlay h2 {
@@ -3545,6 +3548,7 @@
 
   .game-container {
     transform: scale(0.85);
+    transform-origin: top center; /* Scale from top to prevent bottom cutoff */
     margin-bottom: 20px;
   }
 
@@ -3794,6 +3798,8 @@
 
   .game-container {
     transform: scale(0.7); /* Adjusted for 35px block size - provides good balance on mobile */
+    transform-origin: top center; /* Scale from top to prevent bottom cutoff */
+    margin-bottom: 30px; /* Add space for scaled container */
   }
 
   .stats-container {
@@ -3919,6 +3925,7 @@
 
   .game-container {
     transform: scale(0.95);
+    transform-origin: top center; /* Scale from top to prevent bottom cutoff */
   }
 
   /* Larger touch controls for tablet */
@@ -3968,6 +3975,8 @@
 @media (max-width: 480px) {
   .game-container {
     transform: scale(0.7); /* Keep 0.7 for this breakpoint - provides better balance */
+    transform-origin: top center; /* Scale from top to prevent bottom cutoff */
+    margin-bottom: 30px; /* Add space for scaled container */
   }
 
   .stats-container {
