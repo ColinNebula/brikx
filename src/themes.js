@@ -861,6 +861,24 @@ export function applyTheme(themeId) {
     root.style.setProperty(`--color-${key}`, theme.colors[key]);
   });
 
+  // Add data attribute for CSS targeting
+  root.setAttribute('data-theme', themeId);
+
+  // Brief flash overlay so the change is visually obvious
+  const flash = document.createElement('div');
+  flash.style.cssText = `
+    position: fixed; inset: 0; z-index: 99999; pointer-events: none;
+    background: ${theme.colors.accent};
+    opacity: 0.15;
+    animation: none;
+    transition: opacity 0.5s ease;
+  `;
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 600);
+  });
+
   // Store theme preference
   localStorage.setItem('brikx_theme', themeId);
 }
