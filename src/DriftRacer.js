@@ -5087,9 +5087,9 @@ const Brikx = () => {
           <div className="modal-overlay" onClick={() => setShowModeSelect(false)}>
             <div className="modal-content mode-select-modal" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setShowModeSelect(false)}>×</button>
-              <h2 className="modal-title">🎮 Game Mode</h2>
+              <h2 className="modal-title">🎮 Choose Your Game Mode</h2>
 
-              <p className="mode-select-hint">Pick a mode, then tap Start. The Start button stays pinned while you scroll.</p>
+              <p className="mode-select-hint">👆 Select a mode below • The START button stays visible while you scroll 👇</p>
 
               <div className="mode-select-scroll">
                 <div className="modes-grid">
