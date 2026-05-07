@@ -3789,7 +3789,7 @@
   }
 
   .game-container {
-    transform: scale(0.7);
+    transform: scale(0.7); /* Adjusted for 35px block size - provides good balance on mobile */
   }
 
   .stats-container {
@@ -3962,7 +3962,7 @@
 
 @media (max-width: 480px) {
   .game-container {
-    transform: scale(0.7);
+    transform: scale(0.7); /* Keep 0.7 for this breakpoint - provides better balance */
   }
 
   .stats-container {

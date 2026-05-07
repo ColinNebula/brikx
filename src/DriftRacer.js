@@ -1131,11 +1131,11 @@ const Brikx = () => {
   // Game constants
   const COLS = 10;
   const ROWS = 20;
-  const BLOCK_SIZE = 30;
-  const BOARD_WIDTH = COLS * BLOCK_SIZE;
-  const BOARD_HEIGHT = ROWS * BLOCK_SIZE;
-  const CANVAS_WIDTH = BOARD_WIDTH + 260; // Add space for hold (130) and next (130) panels
-  const CANVAS_HEIGHT = BOARD_HEIGHT;
+  const BLOCK_SIZE = 35; // Upgraded from 30px for better visibility (17% larger)
+  const BOARD_WIDTH = COLS * BLOCK_SIZE; // 350px
+  const BOARD_HEIGHT = ROWS * BLOCK_SIZE; // 700px
+  const CANVAS_WIDTH = BOARD_WIDTH + 260; // 610px total (350 + 130 hold + 130 next panels)
+  const CANVAS_HEIGHT = BOARD_HEIGHT; // 700px
 
   // Tetromino shapes
   const SHAPES = {

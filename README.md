@@ -414,17 +414,19 @@ const checkCollision = (board, piece, x, y) => {
 
 ### Responsive Breakpoints
 
-**Desktop (> 768px):**
-- Full canvas (560×600px)
+**Desktop (> 1000px):**
+- Full canvas (610×700px)
+- 35px block size
 - Keyboard controls
 
-**Tablet (481-768px):**
-- Canvas scaled 0.7x
-- 70px touch buttons
+**Tablet (≤ 1000px):**
+- Canvas scaled 0.9x (549×630px)
+- Touch-optimized interface
 
-**Phone (< 480px):**
-- Canvas scaled 0.5x
+**Phone (≤ 480px):**
+- Canvas scaled 0.7x (427×490px)
 - 60px touch buttons
+- Compact layout
 
 ### Touch Layout
 
