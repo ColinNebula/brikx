@@ -3568,6 +3568,7 @@
   
   .menu-glass-overlay {
     padding: 20px 20px;
+    padding-bottom: 100px; /* Extra space for sticky button */
     max-width: 95%;
     border-radius: 20px;
     margin: auto;
@@ -3578,6 +3579,8 @@
   
   .menu-center-content {
     gap: 15px;
+    position: relative;
+    padding-bottom: 80px; /* Space for sticky button */
   }
   
   .immersive-title {
@@ -3588,6 +3591,21 @@
     font-size: 0.95rem;
     padding: 10px 20px;
     max-width: 220px;
+    /* Sticky positioning for mobile */
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    /* Add background so content doesn't show through */
+    background: linear-gradient(135deg, 
+      rgba(255, 0, 255, 0.95) 0%, 
+      rgba(0, 255, 255, 0.95) 100%);
+    box-shadow: 
+      0 10px 40px rgba(255, 0, 255, 0.5),
+      0 0 60px rgba(0, 255, 255, 0.4),
+      0 -20px 40px rgba(10, 10, 46, 0.9), /* Shadow above to mask content */
+      inset 0 0 30px rgba(255, 255, 255, 0.2);
+    /* Safe area for mobile devices */
+    margin-bottom: max(15px, env(safe-area-inset-bottom));
   }
   
   .play-icon-large {
