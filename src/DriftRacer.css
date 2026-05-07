@@ -26,19 +26,21 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* Changed from center to prevent bottom cutoff */
   min-height: 100vh;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-tertiary) 100%);
   font-family: 'Inter', 'Rajdhani', sans-serif;
   color: var(--color-textPrimary);
   padding: 20px;
+  padding-top: 40px; /* Extra top padding since we're not centering */
   position: relative;
   overflow: hidden;
+  overflow-y: auto; /* Allow scrolling if needed */
   isolation: isolate;
   /* Safe area insets for notched devices */
-  padding-top: max(20px, env(safe-area-inset-top));
+  padding-top: max(40px, calc(40px + env(safe-area-inset-top)));
   padding-right: max(20px, env(safe-area-inset-right));
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
   padding-left: max(20px, env(safe-area-inset-left));
   transition: background 0.5s ease;
 }
@@ -437,14 +439,14 @@
 
 .game-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px; /* Reduced from 30px to save vertical space */
   width: 100%;
   max-width: 900px;
   padding-top: max(0px, env(safe-area-inset-top));
 }
 
 .game-title {
-  margin: 0 0 30px 0;
+  margin: 0 0 20px 0; /* Reduced from 30px to save vertical space */
   font-size: 4rem;
   font-family: 'Orbitron', 'Exo 2', sans-serif;
   color: var(--color-accent);
@@ -464,7 +466,7 @@
   max-width: 600px;
   width: 100%;
   height: auto;
-  margin: 0 0 30px 0;
+  margin: 0 0 20px 0; /* Reduced from 30px to save vertical space */
   filter: drop-shadow(0 0 15px var(--color-accentGlow))
           drop-shadow(0 0 30px var(--color-accentGlow))
           drop-shadow(0 0 45px var(--color-accentGlow));
@@ -3485,9 +3487,11 @@
 @media (max-width: 768px) {
   .drift-racer {
     padding: 10px;
+    padding-top: 20px; /* Extra space at top */
     min-height: 100vh;
+    justify-content: flex-start; /* Ensure content starts from top */
     /* Safe area insets for mobile with touch controls */
-    padding-top: max(10px, env(safe-area-inset-top));
+    padding-top: max(20px, env(safe-area-inset-top));
     padding-right: max(10px, env(safe-area-inset-right));
     padding-bottom: max(220px, calc(220px + env(safe-area-inset-bottom))); /* Space for touch controls + safe area */
     padding-left: max(10px, env(safe-area-inset-left));
@@ -3784,6 +3788,8 @@
 @media (max-width: 480px) {
   .drift-racer {
     padding-bottom: 200px;
+    padding-top: 15px; /* Minimal top padding for small screens */
+    justify-content: flex-start; /* Ensure content starts from top */
   }
 
   .game-container {
@@ -3903,7 +3909,8 @@
 @media (min-width: 769px) and (max-width: 1024px) {
   .drift-racer {
     padding-bottom: 250px;
-    padding-top: max(15px, env(safe-area-inset-top));
+    padding-top: max(30px, calc(30px + env(safe-area-inset-top)));
+    justify-content: flex-start; /* Ensure content starts from top */
   }
 
   .game-header {
