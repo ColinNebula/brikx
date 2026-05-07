@@ -29,7 +29,7 @@
   justify-content: center;
   min-height: 100vh;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-tertiary) 100%);
-  font-family: 'Arial', sans-serif;
+  font-family: 'Inter', 'Rajdhani', sans-serif;
   color: var(--color-textPrimary);
   padding: 20px;
   position: relative;
@@ -403,9 +403,11 @@
 }
 
 .splash-text {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 1.2rem;
-  letter-spacing: 2px;
+  font-family: 'Rajdhani', sans-serif;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 3px;
   text-transform: uppercase;
   animation: textBlink 2s ease-in-out infinite;
 }
@@ -444,14 +446,16 @@
 .game-title {
   margin: 0 0 30px 0;
   font-size: 4rem;
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
   color: var(--color-accent);
   text-shadow: 
-    0 0 15px var(--color-accent),
-    0 0 30px var(--color-accentGlow),
-    0 0 45px var(--color-accentGlow),
-    3px 3px 6px var(--color-shadow);
-  letter-spacing: 8px;
+    0 0 20px var(--color-accent),
+    0 0 40px var(--color-accentGlow),
+    0 0 60px var(--color-accentGlow),
+    3px 3px 8px var(--color-shadow);
+  letter-spacing: 10px;
   font-weight: 900;
+  text-transform: uppercase;
   animation: titlePulse 3s ease-in-out infinite;
   transition: color 0.5s ease, text-shadow 0.5s ease;
 }
@@ -499,12 +503,15 @@
 }
 
 .now-playing-label {
+  font-family: 'Rajdhani', sans-serif;
   color: var(--color-textMuted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
 .now-playing-track {
+  font-family: 'Inter', sans-serif;
   color: var(--color-textPrimary);
   font-weight: 700;
   white-space: nowrap;
@@ -571,18 +578,21 @@
 
 .stat-label {
   font-size: 0.75rem;
-  color: #888;
-  letter-spacing: 1px;
+  font-family: 'Rajdhani', 'Exo 2', sans-serif;
+  color: var(--color-textMuted);
+  letter-spacing: 1.5px;
   margin-bottom: 4px;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 .stat-value {
   font-size: 1.5rem;
-  font-weight: bold;
+  font-family: 'Exo 2', 'Orbitron', monospace;
+  font-weight: 800;
   color: var(--color-accent);
-  text-shadow: 0 0 10px var(--color-accentGlow);
-  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 15px var(--color-accentGlow);
+  letter-spacing: 0.5px;
 }
 
 .score-animate {
@@ -629,8 +639,10 @@
 }
 
 .combo-value {
-  color: #ff6400;
-  text-shadow: 0 0 10px rgba(255, 100, 0, 0.8);
+  font-family: 'Exo 2', 'Orbitron', monospace;
+  font-weight: 800;
+  color: #ff6600;
+  text-shadow: 0 0 15px rgba(255, 102, 0, 0.9);
 }
 
 @keyframes titlePulse {
@@ -787,15 +799,16 @@
 }
 
 .countdown-number {
+  font-family: 'Orbitron', sans-serif;
   font-size: 15rem;
   font-weight: 900;
   color: #ffffff;
   text-shadow: 
-    0 0 30px rgba(0, 240, 240, 1),
-    0 0 60px rgba(0, 240, 240, 0.8),
-    0 0 90px rgba(0, 240, 240, 0.6),
-    0 0 120px rgba(0, 136, 255, 0.5),
-    0 0 150px rgba(0, 136, 255, 0.3);
+    0 0 40px var(--color-accent),
+    0 0 80px var(--color-accentGlow),
+    0 0 120px var(--color-accentGlow),
+    0 0 160px rgba(0, 136, 255, 0.6),
+    0 0 200px rgba(0, 136, 255, 0.4);
   animation: countdownPulse 1s ease-out;
   line-height: 1;
 }
@@ -835,28 +848,31 @@
 }
 
 .level-flash-title {
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
   font-size: 3rem;
   font-weight: 900;
-  color: #00f0f0;
+  color: var(--color-accent);
   text-shadow: 
-    0 0 20px rgba(0, 240, 240, 1),
-    0 0 40px rgba(0, 240, 240, 0.8),
-    0 0 60px rgba(0, 240, 240, 0.6),
-    0 0 80px rgba(0, 240, 240, 0.4);
+    0 0 25px var(--color-accent),
+    0 0 50px var(--color-accentGlow),
+    0 0 75px var(--color-accentGlow),
+    0 0 100px rgba(0, 136, 255, 0.5);
   margin-bottom: 20px;
-  letter-spacing: 8px;
+  letter-spacing: 10px;
+  text-transform: uppercase;
   animation: levelFlashPulse 0.5s ease-in-out 3;
 }
 
 .level-flash-number {
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
   font-size: 8rem;
   font-weight: 900;
   color: #ffffff;
   text-shadow: 
-    0 0 30px rgba(0, 240, 240, 1),
-    0 0 60px rgba(0, 240, 240, 0.8),
-    0 0 90px rgba(0, 240, 240, 0.6),
-    0 0 120px rgba(0, 136, 255, 0.4);
+    0 0 35px var(--color-accent),
+    0 0 70px var(--color-accentGlow),
+    0 0 105px var(--color-accentGlow),
+    0 0 140px rgba(0, 136, 255, 0.5);
   line-height: 1;
   animation: levelNumberGlow 0.5s ease-in-out 3;
 }
@@ -926,11 +942,15 @@
 }
 
 .start-overlay h2 {
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
   font-size: 2.5rem;
-  color: #00f0f0;
+  font-weight: 700;
+  color: var(--color-accent);
   margin-bottom: 30px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   animation: pulse 1.5s ease-in-out infinite;
-  text-shadow: 0 0 20px rgba(0, 240, 240, 0.5);
+  text-shadow: 0 0 25px var(--color-accentGlow);
 }
 
 .pause-title {
@@ -951,17 +971,19 @@
 }
 
 .game-over-title {
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
   font-size: 3rem;
-  color: #ff4444;
+  color: #ff4455;
   margin-bottom: 20px;
   font-weight: 900;
-  letter-spacing: 6px;
+  letter-spacing: 8px;
+  text-transform: uppercase;
   animation: gameOverPulse 1.5s ease-in-out infinite;
   text-shadow: 
-    0 0 20px rgba(255, 68, 68, 1),
-    0 0 40px rgba(255, 68, 68, 0.8),
-    0 0 60px rgba(255, 68, 68, 0.6),
-    0 0 80px rgba(255, 68, 68, 0.4);
+    0 0 25px rgba(255, 68, 85, 1),
+    0 0 50px rgba(255, 68, 85, 0.9),
+    0 0 75px rgba(255, 68, 85, 0.7),
+    0 0 100px rgba(255, 68, 85, 0.5);
 }
 
 .new-record-banner {
@@ -983,15 +1005,17 @@
 }
 
 .record-text {
-  font-size: 1.8rem;
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
+  font-size: 1.9rem;
   font-weight: 900;
   color: #ffd700;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
   animation: rainbow 2s linear infinite;
   text-shadow: 
-    0 0 10px rgba(255, 215, 0, 1),
-    0 0 20px rgba(255, 215, 0, 0.8),
-    0 0 30px rgba(255, 215, 0, 0.6);
+    0 0 15px rgba(255, 215, 0, 1),
+    0 0 30px rgba(255, 215, 0, 0.9),
+    0 0 45px rgba(255, 215, 0, 0.7);
 }
 
 .final-score-display {
@@ -1471,8 +1495,11 @@
     rgba(0, 255, 255, 0.8) 100%);
   border: 3px solid rgba(255, 255, 255, 0.5);
   border-radius: 50px;
+  font-family: 'Exo 2', 'Rajdhani', sans-serif;
   font-size: 1.1rem;
   font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   color: #fff;
   cursor: pointer;
   display: flex;
@@ -1516,8 +1543,8 @@
 }
 
 .play-text-large {
-  letter-spacing: 2px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2.5px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
 /* Immersive Stats */
@@ -1554,9 +1581,11 @@
 }
 
 .stat-label-immersive {
+  font-family: 'Rajdhani', sans-serif;
   font-size: 0.7rem;
-  color: #888;
-  letter-spacing: 1.5px;
+  color: var(--color-textMuted);
+  letter-spacing: 1.8px;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -1583,9 +1612,12 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(0, 240, 240, 0.3);
   border-radius: 20px;
+  font-family: 'Rajdhani', 'Exo 2', sans-serif;
   color: #fff;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -2303,8 +2335,12 @@
 }
 
 .settings-heading {
-  font-size: 1.3rem;
-  color: #fff;
+  font-family: 'Exo 2', 'Rajdhani', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-accent);
   margin: 0 0 20px 0;
 }
 
@@ -2328,8 +2364,11 @@
 }
 
 .control-description {
-  color: #aaa;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-textMuted);
   font-size: 0.9rem;
+  font-weight: 500;
+}
   margin-bottom: 5px;
 }
 
@@ -4116,15 +4155,22 @@
 }
 
 .mode-card h3 {
-  font-size: 1.5rem;
+  font-family: 'Exo 2', 'Rajdhani', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
   margin: 10px 0;
-  color: #00f0f0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  text-shadow: 0 0 10px var(--color-accentGlow);
 }
 
 .mode-card p {
+  font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.4;
+  font-weight: 500;
+  color: var(--color-textSecondary);
+  line-height: 1.5;
 }
 
 .start-mode-btn {
@@ -4281,16 +4327,21 @@
 }
 
 .achievement-name {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #00f0f0;
+  font-family: 'Exo 2', 'Rajdhani', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--color-accent);
   margin-bottom: 5px;
+  text-shadow: 0 0 8px var(--color-accentGlow);
 }
 
 .achievement-description {
+  font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 1.35;
+  font-weight: 500;
+  color: var(--color-textSecondary);
+  line-height: 1.4;
 }
 
 .achievement-rewards {

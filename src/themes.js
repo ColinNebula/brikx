@@ -21,29 +21,29 @@ export const THEME_DEFINITIONS = {
       secondary: '#16213e',
       tertiary: '#0f3460',
       
-      // Accents
-      accent: '#00f0f0',
-      accentHover: '#00d8d8',
-      accentGlow: 'rgba(0, 240, 240, 0.5)',
+      // Accents - Enhanced cyan with more vibrancy
+      accent: '#00ffff',
+      accentHover: '#00e6e6',
+      accentGlow: 'rgba(0, 255, 255, 0.7)',
       
       // Text
       textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.8)',
-      textMuted: 'rgba(255, 255, 255, 0.6)',
+      textSecondary: 'rgba(255, 255, 255, 0.9)',
+      textMuted: 'rgba(0, 255, 255, 0.7)',
       
       // UI Elements
-      cardBg: 'rgba(0, 240, 240, 0.1)',
-      cardBorder: 'rgba(0, 240, 240, 0.3)',
-      cardHover: 'rgba(0, 240, 240, 0.2)',
+      cardBg: 'rgba(0, 255, 255, 0.12)',
+      cardBorder: 'rgba(0, 255, 255, 0.4)',
+      cardHover: 'rgba(0, 255, 255, 0.25)',
       
-      // Status colors
-      success: '#00f0a0',
-      warning: '#f0a000',
-      error: '#f05050',
+      // Status colors - More vibrant
+      success: '#00ff88',
+      warning: '#ffbb00',
+      error: '#ff4466',
       
       // Game elements
-      gridLine: 'rgba(0, 240, 240, 0.2)',
-      shadow: 'rgba(0, 0, 0, 0.5)'
+      gridLine: 'rgba(0, 255, 255, 0.25)',
+      shadow: 'rgba(0, 0, 0, 0.6)'
     }
   },
 
@@ -64,24 +64,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#d9e2ec',
       tertiary: '#bcccdc',
       
-      accent: '#0078f0',
-      accentHover: '#0060d0',
-      accentGlow: 'rgba(0, 120, 240, 0.3)',
+      accent: '#0088ff',
+      accentHover: '#0070dd',
+      accentGlow: 'rgba(0, 136, 255, 0.4)',
       
-      textPrimary: '#102a43',
-      textSecondary: 'rgba(16, 42, 67, 0.8)',
-      textMuted: 'rgba(16, 42, 67, 0.6)',
+      textPrimary: '#0a1929',
+      textSecondary: 'rgba(10, 25, 41, 0.85)',
+      textMuted: 'rgba(0, 136, 255, 0.7)',
       
-      cardBg: 'rgba(255, 255, 255, 0.8)',
-      cardBorder: 'rgba(0, 120, 240, 0.3)',
-      cardHover: 'rgba(0, 120, 240, 0.1)',
+      cardBg: 'rgba(255, 255, 255, 0.85)',
+      cardBorder: 'rgba(0, 136, 255, 0.35)',
+      cardHover: 'rgba(0, 136, 255, 0.15)',
       
-      success: '#00a878',
-      warning: '#f08000',
-      error: '#e63946',
+      success: '#00c793',
+      warning: '#ff9500',
+      error: '#ff3b30',
       
-      gridLine: 'rgba(0, 120, 240, 0.15)',
-      shadow: 'rgba(0, 0, 0, 0.2)'
+      gridLine: 'rgba(0, 136, 255, 0.2)',
+      shadow: 'rgba(0, 0, 0, 0.25)'
     }
   },
 
@@ -109,23 +109,23 @@ export const THEME_DEFINITIONS = {
       tertiary: '#2e1753',
       
       accent: '#ff00ff',
-      accentHover: '#e000e0',
-      accentGlow: 'rgba(255, 0, 255, 0.6)',
+      accentHover: '#ee00ee',
+      accentGlow: 'rgba(255, 0, 255, 0.8)',
       
       textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.9)',
-      textMuted: 'rgba(255, 0, 255, 0.6)',
+      textSecondary: 'rgba(255, 255, 255, 0.95)',
+      textMuted: 'rgba(255, 0, 255, 0.75)',
       
-      cardBg: 'rgba(255, 0, 255, 0.15)',
-      cardBorder: 'rgba(255, 0, 255, 0.4)',
-      cardHover: 'rgba(255, 0, 255, 0.25)',
+      cardBg: 'rgba(255, 0, 255, 0.18)',
+      cardBorder: 'rgba(255, 0, 255, 0.5)',
+      cardHover: 'rgba(255, 0, 255, 0.3)',
       
-      success: '#ff00aa',
-      warning: '#ffaa00',
+      success: '#ff00cc',
+      warning: '#ffcc00',
       error: '#ff0066',
       
-      gridLine: 'rgba(255, 0, 255, 0.25)',
-      shadow: 'rgba(255, 0, 255, 0.3)'
+      gridLine: 'rgba(255, 0, 255, 0.3)',
+      shadow: 'rgba(255, 0, 255, 0.4)'
     }
   },
 
@@ -151,24 +151,24 @@ export const THEME_DEFINITIONS = {
       secondary: '#16213e',
       tertiary: '#0f3460',
       
-      accent: '#e94560',
-      accentHover: '#d03550',
-      accentGlow: 'rgba(233, 69, 96, 0.5)',
+      accent: '#ff4757',
+      accentHover: '#ee3344',
+      accentGlow: 'rgba(255, 71, 87, 0.7)',
       
       textPrimary: '#ffffff',
-      textSecondary: 'rgba(255, 255, 255, 0.85)',
-      textMuted: 'rgba(233, 69, 96, 0.7)',
+      textSecondary: 'rgba(255, 255, 255, 0.9)',
+      textMuted: 'rgba(255, 71, 87, 0.8)',
       
-      cardBg: 'rgba(233, 69, 96, 0.12)',
-      cardBorder: 'rgba(233, 69, 96, 0.35)',
-      cardHover: 'rgba(233, 69, 96, 0.2)',
+      cardBg: 'rgba(255, 71, 87, 0.15)',
+      cardBorder: 'rgba(255, 71, 87, 0.45)',
+      cardHover: 'rgba(255, 71, 87, 0.25)',
       
-      success: '#00d9ff',
-      warning: '#ffd700',
-      error: '#e94560',
+      success: '#00ddff',
+      warning: '#ffdd00',
+      error: '#ff4757',
       
-      gridLine: 'rgba(233, 69, 96, 0.2)',
-      shadow: 'rgba(233, 69, 96, 0.4)'
+      gridLine: 'rgba(255, 71, 87, 0.25)',
+      shadow: 'rgba(255, 71, 87, 0.5)'
     }
   },
 
@@ -238,23 +238,23 @@ export const THEME_DEFINITIONS = {
       tertiary: '#121212',
       
       accent: '#00ff41',
-      accentHover: '#00e838',
-      accentGlow: 'rgba(0, 255, 65, 0.5)',
+      accentHover: '#00ee38',
+      accentGlow: 'rgba(0, 255, 65, 0.7)',
       
       textPrimary: '#00ff41',
-      textSecondary: 'rgba(0, 255, 65, 0.8)',
-      textMuted: 'rgba(0, 255, 65, 0.5)',
+      textSecondary: 'rgba(0, 255, 65, 0.9)',
+      textMuted: 'rgba(0, 255, 65, 0.6)',
       
-      cardBg: 'rgba(0, 255, 65, 0.08)',
-      cardBorder: 'rgba(0, 255, 65, 0.3)',
-      cardHover: 'rgba(0, 255, 65, 0.15)',
+      cardBg: 'rgba(0, 255, 65, 0.1)',
+      cardBorder: 'rgba(0, 255, 65, 0.4)',
+      cardHover: 'rgba(0, 255, 65, 0.2)',
       
       success: '#00ff41',
       warning: '#ffff00',
-      error: '#ff0000',
+      error: '#ff0055',
       
-      gridLine: 'rgba(0, 255, 65, 0.2)',
-      shadow: 'rgba(0, 255, 65, 0.3)'
+      gridLine: 'rgba(0, 255, 65, 0.25)',
+      shadow: 'rgba(0, 255, 65, 0.4)'
     }
   },
 
