@@ -4059,7 +4059,7 @@
     overflow: hidden;
     --mode-footer-height: 70px;
     --mode-footer-side: 15px;
-    --mode-footer-bottom: max(12px, calc(12px + env(safe-area-inset-bottom)));
+    --mode-footer-bottom: max(8px, calc(8px + env(safe-area-inset-bottom)));
   }
   
   .mode-select-hint {
@@ -4137,7 +4137,7 @@
   position: relative;
   --mode-footer-height: 80px;
   --mode-footer-side: 40px;
-  --mode-footer-bottom: 20px;
+  --mode-footer-bottom: 12px;
   animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
@@ -4849,7 +4849,7 @@
   }
 
   .modal-content.mode-select-modal {
-    padding-bottom: max(calc(env(safe-area-inset-bottom) + 12px), 20px);
+    padding-bottom: max(calc(env(safe-area-inset-bottom) + 8px), 12px);
     overflow: hidden;
   }
 
@@ -4859,7 +4859,7 @@
     overflow: hidden;
     --mode-footer-height: 64px;
     --mode-footer-side: 20px;
-    --mode-footer-bottom: max(8px, env(safe-area-inset-bottom));
+    --mode-footer-bottom: max(4px, env(safe-area-inset-bottom));
   }
 
   .mode-select-scroll {
