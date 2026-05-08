@@ -443,9 +443,11 @@ const Brikx = () => {
 
     const motifClass = `motif-${theme?.visual?.motif || 'default'}`;
     const patternClass = `pattern-${theme?.visual?.pattern || 'default'}`;
+    const themeIdClass = `theme-id-${theme?.id || 'unknown'}`;
+    const themeCategoryClass = `theme-category-${theme?.category || 'base'}`;
 
     return (
-      <div className={`theme-live-preview ${motifClass} ${patternClass}`} aria-hidden="true">
+      <div className={`theme-live-preview ${motifClass} ${patternClass} ${themeIdClass} ${themeCategoryClass}`} aria-hidden="true">
         <div className="theme-preview-gradient" />
         <div className="theme-preview-pattern" />
         <span className="theme-preview-orb orb-a" />
@@ -3971,6 +3973,8 @@ const Brikx = () => {
     'drift-racer',
     !gameStarted ? 'menu-active' : 'game-active',
     lowPowerMode ? 'battery-saver' : '',
+    `theme-id-${shellTheme.id || 'dark'}`,
+    `theme-category-${shellTheme.category || 'base'}`,
     `theme-pattern-${shellVisual?.pattern || 'wave-grid'}`,
     `theme-motif-${shellVisual?.motif || 'ribbons'}`
   ].filter(Boolean).join(' ');
@@ -4254,7 +4258,7 @@ const Brikx = () => {
         />
         
         {!gameStarted && !countdown && (
-          <div className="start-overlay">
+          <div className={`start-overlay${!gameOver ? ' start-overlay-immersive' : ''}`}>
             {gameOver ? (
               <>
                 <div className="game-over-container">
@@ -4864,7 +4868,7 @@ const Brikx = () => {
                       return (
                         <div
                           key={theme.id}
-                          className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                          className={`theme-card theme-category-${theme.category} theme-id-${theme.id} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
                           onClick={() => {
                             if (isUnlocked) {
                               setCurrentTheme(theme.id);
@@ -4906,7 +4910,7 @@ const Brikx = () => {
                   return (
                     <div
                       key={theme.id}
-                      className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} unlocked`}
+                      className={`theme-card theme-category-${theme.category} theme-id-${theme.id} ${currentTheme === theme.id ? 'selected' : ''} unlocked`}
                       onClick={() => {
                         setCurrentTheme(theme.id);
                         playSound('menuClick', 600, 0.1);
@@ -4954,7 +4958,7 @@ const Brikx = () => {
                   return (
                     <div
                       key={theme.id}
-                      className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                      className={`theme-card theme-category-${theme.category} theme-id-${theme.id} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
                       onClick={() => {
                         if (isUnlocked) {
                           setCurrentTheme(theme.id);
@@ -5014,7 +5018,7 @@ const Brikx = () => {
                   return (
                     <div
                       key={theme.id}
-                      className={`theme-card theme-category-${theme.category} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
+                      className={`theme-card theme-category-${theme.category} theme-id-${theme.id} ${currentTheme === theme.id ? 'selected' : ''} ${isUnlocked ? 'unlocked' : 'locked'}`}
                       onClick={() => {
                         if (isUnlocked) {
                           setCurrentTheme(theme.id);

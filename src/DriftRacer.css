@@ -44,6 +44,127 @@
   padding-bottom: max(60px, calc(60px + env(safe-area-inset-bottom))); /* Increased for full canvas visibility */
   padding-left: max(20px, env(safe-area-inset-left));
   transition: background 0.6s ease, color 0.6s ease;
+  --bubble-blur: 1px;
+  --bubble-opacity: 0.4;
+  --mote-opacity: 0.5;
+  --bubble-shape-radius: 999px;
+  --bubble-shadow-alpha: 45%;
+  --bubble-highlight-size: 44%;
+  --bubble-highlight-top: 12%;
+  --bubble-highlight-left: 16%;
+  --bubble-highlight-opacity: 0.85;
+  --bubble-highlight-duration: 4.8s;
+  --bubble-glimmer-width: 120%;
+  --bubble-glimmer-height: 42%;
+  --bubble-glimmer-opacity: 0.5;
+  --bubble-glimmer-duration: 6.2s;
+  --bubble-specular-angle: -12deg;
+}
+
+.drift-racer.theme-category-base {
+  --bubble-highlight-duration: 5.2s;
+  --bubble-glimmer-duration: 6.8s;
+}
+
+.drift-racer.theme-category-unlockable {
+  --bubble-highlight-duration: 4.6s;
+  --bubble-glimmer-duration: 5.8s;
+  --bubble-shadow-alpha: 50%;
+}
+
+.drift-racer.theme-category-premium {
+  --bubble-opacity: 0.46;
+  --mote-opacity: 0.58;
+  --bubble-highlight-opacity: 0.95;
+  --bubble-glimmer-opacity: 0.62;
+  --bubble-shadow-alpha: 62%;
+  --bubble-highlight-duration: 3.9s;
+  --bubble-glimmer-duration: 4.9s;
+}
+
+.drift-racer.theme-category-seasonal {
+  --bubble-opacity: 0.42;
+  --mote-opacity: 0.54;
+  --bubble-highlight-opacity: 0.88;
+  --bubble-glimmer-opacity: 0.58;
+  --bubble-highlight-duration: 4.3s;
+  --bubble-glimmer-duration: 5.3s;
+}
+
+/* Ocean: softer, liquid highlights */
+.drift-racer.theme-id-ocean {
+  --bubble-blur: 1.6px;
+  --bubble-opacity: 0.34;
+  --mote-opacity: 0.42;
+  --bubble-highlight-size: 56%;
+  --bubble-highlight-top: 8%;
+  --bubble-highlight-left: 10%;
+  --bubble-highlight-opacity: 0.62;
+  --bubble-highlight-duration: 6.8s;
+  --bubble-glimmer-width: 136%;
+  --bubble-glimmer-height: 50%;
+  --bubble-glimmer-opacity: 0.34;
+  --bubble-glimmer-duration: 8.2s;
+  --bubble-specular-angle: -7deg;
+  --bubble-shadow-alpha: 38%;
+}
+
+/* Winter: sharp crystalline glints */
+.drift-racer.theme-id-winter {
+  --bubble-blur: 0.18px;
+  --bubble-opacity: 0.56;
+  --mote-opacity: 0.66;
+  --bubble-shape-radius: 34% 60% 42% 58%;
+  --bubble-highlight-size: 28%;
+  --bubble-highlight-top: 6%;
+  --bubble-highlight-left: 24%;
+  --bubble-highlight-opacity: 1;
+  --bubble-highlight-duration: 2.2s;
+  --bubble-glimmer-width: 106%;
+  --bubble-glimmer-height: 24%;
+  --bubble-glimmer-opacity: 0.92;
+  --bubble-glimmer-duration: 2.7s;
+  --bubble-specular-angle: -28deg;
+  --bubble-shadow-alpha: 82%;
+}
+
+/* Premium Aurora: softer ribbon-like glow, less icy */
+.drift-racer.theme-id-premiumAurora {
+  --bubble-blur: 1.05px;
+  --bubble-opacity: 0.4;
+  --mote-opacity: 0.5;
+  --bubble-shape-radius: 999px;
+  --bubble-highlight-size: 50%;
+  --bubble-highlight-top: 10%;
+  --bubble-highlight-left: 12%;
+  --bubble-highlight-opacity: 0.74;
+  --bubble-highlight-duration: 5.8s;
+  --bubble-glimmer-width: 148%;
+  --bubble-glimmer-height: 44%;
+  --bubble-glimmer-opacity: 0.34;
+  --bubble-glimmer-duration: 6.8s;
+  --bubble-specular-angle: -9deg;
+  --bubble-shadow-alpha: 48%;
+}
+
+.drift-racer.theme-id-winter .theme-shell-pattern {
+  animation-duration: 11s;
+  opacity: 0.88;
+  filter: none;
+}
+
+.drift-racer.theme-id-winter .theme-shell-gradient {
+  animation-duration: 8.5s;
+}
+
+.drift-racer.theme-id-premiumAurora .theme-shell-pattern {
+  animation-duration: 18s;
+  opacity: 0.68;
+  filter: blur(0.45px);
+}
+
+.drift-racer.theme-id-premiumAurora .theme-shell-gradient {
+  animation-duration: 13s;
 }
 
 .drift-racer > * {
@@ -94,10 +215,10 @@
 .theme-shell-orb,
 .theme-shell-mote {
   position: absolute;
-  border-radius: 999px;
+  border-radius: var(--bubble-shape-radius);
   background: color-mix(in srgb, var(--color-accent) 70%, white);
   overflow: hidden;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--color-accent) 45%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--color-accent) var(--bubble-shadow-alpha), transparent);
 }
 
 .theme-shell-orb::before,
@@ -112,27 +233,27 @@
 
 .theme-shell-orb::before,
 .theme-shell-mote::before {
-  width: 44%;
-  height: 44%;
-  top: 12%;
-  left: 16%;
+  width: var(--bubble-highlight-size);
+  height: var(--bubble-highlight-size);
+  top: var(--bubble-highlight-top);
+  left: var(--bubble-highlight-left);
   background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.18) 55%, transparent 100%);
   filter: blur(0.3px);
   mix-blend-mode: screen;
-  animation: shellBubbleHighlightDrift 4.8s ease-in-out infinite;
+  animation: shellBubbleHighlightDrift var(--bubble-highlight-duration) ease-in-out infinite;
 }
 
 .theme-shell-orb::after,
 .theme-shell-mote::after {
-  width: 120%;
-  height: 42%;
+  width: var(--bubble-glimmer-width);
+  height: var(--bubble-glimmer-height);
   left: -24%;
   top: -10%;
   background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.55) 46%, rgba(255, 255, 255, 0.12) 64%, transparent 100%);
   filter: blur(0.5px);
-  opacity: 0.5;
-  transform: rotate(-12deg);
-  animation: shellBubbleGlimmer 6.2s linear infinite;
+  opacity: var(--bubble-glimmer-opacity);
+  transform: rotate(var(--bubble-specular-angle));
+  animation: shellBubbleGlimmer var(--bubble-glimmer-duration) linear infinite;
 }
 
 .theme-shell-flower,
@@ -291,14 +412,14 @@
 .theme-shell-orb {
   width: 34px;
   height: 34px;
-  filter: blur(1px);
-  opacity: 0.4;
+  filter: blur(var(--bubble-blur));
+  opacity: var(--bubble-opacity);
 }
 
 .theme-shell-mote {
   width: 14px;
   height: 14px;
-  opacity: 0.5;
+  opacity: var(--mote-opacity);
 }
 
 .theme-shell-overlay .shell-orb-a {
@@ -382,15 +503,15 @@
 }
 
 @keyframes shellBubbleHighlightDrift {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.85; }
-  50% { transform: translate(22%, 18%) scale(0.8); opacity: 0.5; }
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: var(--bubble-highlight-opacity); }
+  50% { transform: translate(22%, 18%) scale(0.8); opacity: calc(var(--bubble-highlight-opacity) * 0.58); }
 }
 
 @keyframes shellBubbleGlimmer {
-  0% { transform: translateX(-18%) rotate(-12deg); opacity: 0.2; }
-  20% { opacity: 0.58; }
-  50% { transform: translateX(24%) rotate(-10deg); opacity: 0.18; }
-  100% { transform: translateX(54%) rotate(-8deg); opacity: 0.08; }
+  0% { transform: translateX(-18%) rotate(var(--bubble-specular-angle)); opacity: calc(var(--bubble-glimmer-opacity) * 0.32); }
+  20% { opacity: var(--bubble-glimmer-opacity); }
+  50% { transform: translateX(24%) rotate(calc(var(--bubble-specular-angle) + 2deg)); opacity: calc(var(--bubble-glimmer-opacity) * 0.28); }
+  100% { transform: translateX(54%) rotate(calc(var(--bubble-specular-angle) + 4deg)); opacity: calc(var(--bubble-glimmer-opacity) * 0.14); }
 }
 
 /* Splash Screen */
@@ -838,6 +959,19 @@
   overflow-x: hidden;
   padding: 20px;
   animation: fadeIn 0.4s ease;
+}
+
+.start-overlay.start-overlay-immersive {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  z-index: 60;
+  overflow: hidden;
 }
 
 .countdown-overlay {
@@ -1406,8 +1540,9 @@
 .main-menu.immersive {
   max-width: 100%;
   width: 100vw;
-  height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
   padding: 0;
   margin: 0;
   display: flex;
@@ -5672,6 +5807,96 @@
   pointer-events: none;
   opacity: 0.65;
   transition: opacity 0.4s ease;
+  --preview-bubble-blur: 0.4px;
+  --preview-bubble-shape-radius: 999px;
+  --preview-bubble-highlight-size: 42%;
+  --preview-bubble-highlight-top: 12%;
+  --preview-bubble-highlight-left: 16%;
+  --preview-bubble-highlight-opacity: 0.9;
+  --preview-bubble-highlight-duration: 3.8s;
+  --preview-bubble-glimmer-opacity: 0.48;
+  --preview-bubble-glimmer-duration: 4.6s;
+  --preview-bubble-glimmer-width: 126%;
+  --preview-bubble-glimmer-height: 38%;
+  --preview-bubble-specular-angle: -12deg;
+}
+
+.theme-card.theme-category-base .theme-live-preview {
+  --preview-bubble-highlight-duration: 4.1s;
+  --preview-bubble-glimmer-duration: 4.9s;
+}
+
+.theme-card.theme-category-unlockable .theme-live-preview {
+  --preview-bubble-highlight-duration: 3.6s;
+  --preview-bubble-glimmer-duration: 4.3s;
+}
+
+.theme-card.theme-category-premium .theme-live-preview {
+  --preview-bubble-highlight-opacity: 1;
+  --preview-bubble-highlight-duration: 3s;
+  --preview-bubble-glimmer-opacity: 0.62;
+  --preview-bubble-glimmer-duration: 3.7s;
+}
+
+.theme-card.theme-category-seasonal .theme-live-preview {
+  --preview-bubble-highlight-opacity: 0.95;
+  --preview-bubble-highlight-duration: 3.2s;
+  --preview-bubble-glimmer-opacity: 0.58;
+  --preview-bubble-glimmer-duration: 4.1s;
+}
+
+.theme-card.theme-id-ocean .theme-live-preview {
+  --preview-bubble-blur: 0.95px;
+  --preview-bubble-highlight-size: 54%;
+  --preview-bubble-highlight-top: 8%;
+  --preview-bubble-highlight-left: 10%;
+  --preview-bubble-highlight-opacity: 0.66;
+  --preview-bubble-highlight-duration: 5.4s;
+  --preview-bubble-glimmer-opacity: 0.3;
+  --preview-bubble-glimmer-duration: 6.4s;
+  --preview-bubble-glimmer-width: 136%;
+  --preview-bubble-glimmer-height: 48%;
+  --preview-bubble-specular-angle: -7deg;
+}
+
+.theme-card.theme-id-winter .theme-live-preview {
+  --preview-bubble-blur: 0.08px;
+  --preview-bubble-shape-radius: 34% 60% 42% 58%;
+  --preview-bubble-highlight-size: 26%;
+  --preview-bubble-highlight-top: 6%;
+  --preview-bubble-highlight-left: 24%;
+  --preview-bubble-highlight-opacity: 1;
+  --preview-bubble-highlight-duration: 1.9s;
+  --preview-bubble-glimmer-opacity: 0.92;
+  --preview-bubble-glimmer-duration: 2.3s;
+  --preview-bubble-glimmer-width: 104%;
+  --preview-bubble-glimmer-height: 22%;
+  --preview-bubble-specular-angle: -28deg;
+}
+
+.theme-card.theme-id-premiumAurora .theme-live-preview {
+  --preview-bubble-blur: 0.8px;
+  --preview-bubble-shape-radius: 999px;
+  --preview-bubble-highlight-size: 48%;
+  --preview-bubble-highlight-top: 10%;
+  --preview-bubble-highlight-left: 12%;
+  --preview-bubble-highlight-opacity: 0.72;
+  --preview-bubble-highlight-duration: 4.8s;
+  --preview-bubble-glimmer-opacity: 0.3;
+  --preview-bubble-glimmer-duration: 5.8s;
+  --preview-bubble-glimmer-width: 142%;
+  --preview-bubble-glimmer-height: 42%;
+  --preview-bubble-specular-angle: -9deg;
+}
+
+.theme-card.theme-id-winter .theme-preview-pattern {
+  animation-duration: 6.2s;
+  filter: none;
+}
+
+.theme-card.theme-id-premiumAurora .theme-preview-pattern {
+  animation-duration: 10.2s;
+  filter: blur(0.35px);
 }
 
 .theme-card.unlocked:hover .theme-live-preview {
@@ -5741,9 +5966,9 @@
 .theme-preview-orb,
 .theme-preview-mote {
   position: absolute;
-  border-radius: 999px;
+  border-radius: var(--preview-bubble-shape-radius);
   background: color-mix(in srgb, var(--preview-accent, #00f0f0) 75%, white);
-  filter: blur(0.4px);
+  filter: blur(var(--preview-bubble-blur));
   box-shadow: 0 0 15px currentColor;
   overflow: hidden;
 }
@@ -5760,25 +5985,25 @@
 
 .theme-preview-orb::before,
 .theme-preview-mote::before {
-  width: 42%;
-  height: 42%;
-  top: 12%;
-  left: 16%;
+  width: var(--preview-bubble-highlight-size);
+  height: var(--preview-bubble-highlight-size);
+  top: var(--preview-bubble-highlight-top);
+  left: var(--preview-bubble-highlight-left);
   background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.12) 60%, transparent 100%);
   mix-blend-mode: screen;
-  animation: previewBubbleHighlightDrift 3.8s ease-in-out infinite;
+  animation: previewBubbleHighlightDrift var(--preview-bubble-highlight-duration) ease-in-out infinite;
 }
 
 .theme-preview-orb::after,
 .theme-preview-mote::after {
-  width: 126%;
-  height: 38%;
+  width: var(--preview-bubble-glimmer-width);
+  height: var(--preview-bubble-glimmer-height);
   left: -26%;
   top: -12%;
   background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.52) 48%, rgba(255, 255, 255, 0.08) 68%, transparent 100%);
-  transform: rotate(-12deg);
-  opacity: 0.48;
-  animation: previewBubbleGlimmer 4.6s linear infinite;
+  transform: rotate(var(--preview-bubble-specular-angle));
+  opacity: var(--preview-bubble-glimmer-opacity);
+  animation: previewBubbleGlimmer var(--preview-bubble-glimmer-duration) linear infinite;
 }
 
 .theme-preview-orb {
@@ -5926,29 +6151,29 @@
 @keyframes previewBubbleHighlightDrift {
   0%, 100% {
     transform: translate(0, 0) scale(1);
-    opacity: 0.9;
+    opacity: var(--preview-bubble-highlight-opacity);
   }
   50% {
     transform: translate(22%, 18%) scale(0.82);
-    opacity: 0.48;
+    opacity: calc(var(--preview-bubble-highlight-opacity) * 0.54);
   }
 }
 
 @keyframes previewBubbleGlimmer {
   0% {
-    transform: translateX(-22%) rotate(-12deg);
-    opacity: 0.2;
+    transform: translateX(-22%) rotate(var(--preview-bubble-specular-angle));
+    opacity: calc(var(--preview-bubble-glimmer-opacity) * 0.34);
   }
   25% {
-    opacity: 0.58;
+    opacity: var(--preview-bubble-glimmer-opacity);
   }
   60% {
-    transform: translateX(30%) rotate(-9deg);
-    opacity: 0.16;
+    transform: translateX(30%) rotate(calc(var(--preview-bubble-specular-angle) + 3deg));
+    opacity: calc(var(--preview-bubble-glimmer-opacity) * 0.3);
   }
   100% {
-    transform: translateX(58%) rotate(-7deg);
-    opacity: 0.08;
+    transform: translateX(58%) rotate(calc(var(--preview-bubble-specular-angle) + 5deg));
+    opacity: calc(var(--preview-bubble-glimmer-opacity) * 0.14);
   }
 }
 
