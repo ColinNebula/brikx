@@ -3969,6 +3969,7 @@ const Brikx = () => {
   const shellVisual = shellTheme.visual || getThemeVisualProfile(currentTheme, shellTheme.category);
   const shellClasses = [
     'drift-racer',
+    !gameStarted ? 'menu-active' : 'game-active',
     lowPowerMode ? 'battery-saver' : '',
     `theme-pattern-${shellVisual?.pattern || 'wave-grid'}`,
     `theme-motif-${shellVisual?.motif || 'ribbons'}`

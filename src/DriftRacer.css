@@ -3503,6 +3503,10 @@
     padding-left: max(10px, env(safe-area-inset-left));
   }
 
+  .drift-racer.menu-active {
+    padding-bottom: max(20px, calc(20px + env(safe-area-inset-bottom)));
+  }
+
   .game-header {
     margin-bottom: 10px;
     padding-top: max(10px, calc(10px + env(safe-area-inset-top)));
@@ -3938,6 +3942,10 @@
     padding-bottom: 250px;
     padding-top: max(30px, calc(30px + env(safe-area-inset-top)));
     justify-content: flex-start; /* Ensure content starts from top */
+  }
+
+  .drift-racer.menu-active {
+    padding-bottom: max(24px, calc(24px + env(safe-area-inset-bottom)));
   }
 
   .game-header {
