@@ -4240,7 +4240,7 @@ const Brikx = () => {
       </div>
       )}
 
-      <div className="game-container">
+      <div className={`game-container${!gameStarted && !gameOver ? ' menu-stage' : ''}`}>
         {lowPowerMode && (
           <div className="battery-saver-badge" role="status" aria-live="polite">
             <span className="battery-saver-badge-icon">🔋</span>
