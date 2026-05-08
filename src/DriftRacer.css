@@ -902,15 +902,12 @@
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(10, 10, 46, 0.9) 100%);
 }
 
-/* Main menu only: remove canvas container constraints so immersive background fills full viewport */
+/* Main menu only: remove canvas container visual chrome so it doesn't show behind the fixed overlay */
 .menu-active .game-container.menu-stage {
-  width: 100dvw;
-  max-width: 100dvw;
   border: 0;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  overflow: visible;
 }
 
 .battery-saver-badge {
