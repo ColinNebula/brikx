@@ -903,11 +903,13 @@
 }
 
 /* Main menu only: remove canvas container visual chrome so it doesn't show behind the fixed overlay */
+/* Main menu only: remove canvas container visual chrome and transforms so the fixed overlay can cover the full viewport */
 .menu-active .game-container.menu-stage {
   border: 0;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+  transform: none !important; /* CSS transforms create a new stacking context that confines position:fixed children */
 }
 
 .battery-saver-badge {
