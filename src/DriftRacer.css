@@ -2084,16 +2084,16 @@
   position: relative;
   width: 100%;
   max-width: 280px;
-  padding: 12px 24px;
+  padding: 16px 28px;
   background: linear-gradient(135deg, 
     rgba(255, 0, 255, 0.8) 0%, 
     rgba(0, 255, 255, 0.8) 100%);
   border: 3px solid rgba(255, 255, 255, 0.5);
   border-radius: 50px;
-  font-family: 'Exo 2', 'Rajdhani', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 900;
-  letter-spacing: 1.5px;
+  font-family: 'Press Start 2P', 'Exo 2', 'Rajdhani', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: #fff;
   cursor: pointer;
@@ -3984,8 +3984,8 @@
   }
   
   .immersive-play-btn {
-    font-size: 1.1rem;
-    padding: 12px 24px;
+    font-size: 0.75rem;
+    padding: 14px 24px;
     max-width: 260px;
   }
   
@@ -4278,8 +4278,8 @@
   }
   
   .immersive-play-btn {
-    font-size: 0.95rem;
-    padding: 10px 20px;
+    font-size: 0.7rem;
+    padding: 12px 18px;
     max-width: 220px;
     /* Sticky positioning for mobile */
     position: sticky;
