@@ -2359,6 +2359,21 @@ const Brikx = () => {
     resetGame();
   }, [playSound, resetGame]);
 
+  const queueMenuClickSound = useCallback(() => {
+    if (!soundEnabled) return;
+
+    const playMenuClick = () => playSound('menuClick', 600, 0.1);
+
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(playMenuClick);
+      });
+      return;
+    }
+
+    setTimeout(playMenuClick, 0);
+  }, [soundEnabled, playSound]);
+
   // Main menu handler
   const handleMainMenu = useCallback(() => {
     stopMusic();
@@ -4902,7 +4917,7 @@ const Brikx = () => {
                       <span className="player-name-small">{playerName}</span>
                     </div>
                     
-                    <button className="immersive-play-btn" onClick={() => { playSound('menuClick', 600, 0.1); setShowModeSelect(true); }}>
+                    <button className="immersive-play-btn" onClick={() => { setShowModeSelect(true); queueMenuClickSound(); }}>
                       <span className="play-icon-large">▶</span>
                       <span className="play-text-large">START GAME</span>
                     </button>
@@ -4923,35 +4938,35 @@ const Brikx = () => {
                     <div className="immersive-menu-actions">
                       <button 
                         className="immersive-btn" 
-                        onClick={() => { playSound('menuClick', 600, 0.1); setShowProfile(true); }}
+                        onClick={() => { setShowProfile(true); queueMenuClickSound(); }}
                         aria-label="Open player profile"
                       >
                         👤 Profile
                       </button>
                       <button 
                         className="immersive-btn" 
-                        onClick={() => { playSound('menuClick', 600, 0.1); setShowStatistics(true); }}
+                        onClick={() => { setShowStatistics(true); queueMenuClickSound(); }}
                         aria-label="View game statistics"
                       >
                         📊 Statistics
                       </button>
                       <button 
                         className="immersive-btn" 
-                        onClick={() => { playSound('menuClick', 600, 0.1); setShowAchievements(true); }}
+                        onClick={() => { setShowAchievements(true); queueMenuClickSound(); }}
                         aria-label="View achievements"
                       >
                         🏆 Achievements
                       </button>
                       <button 
                         className="immersive-btn" 
-                        onClick={() => { playSound('menuClick', 600, 0.1); setShowTutorial(true); }}
+                        onClick={() => { setShowTutorial(true); queueMenuClickSound(); }}
                         aria-label="How to play tutorial"
                       >
                         📖 Tutorial
                       </button>
                       <button 
                         className="immersive-btn" 
-                        onClick={() => { playSound('menuClick', 600, 0.1); setShowSettings(true); }}
+                        onClick={() => { setShowSettings(true); queueMenuClickSound(); }}
                         aria-label="Open settings"
                       >
                         ⚙️ Settings

@@ -2189,8 +2189,8 @@
   max-width: 280px;
   padding: 16px 28px;
   background: linear-gradient(135deg, 
-    rgba(255, 0, 255, 0.8) 0%, 
-    rgba(0, 255, 255, 0.8) 100%);
+    rgba(255, 0, 255, 0.75) 0%, 
+    rgba(0, 255, 255, 0.75) 100%);
   border: 3px solid rgba(255, 255, 255, 0.5);
   border-radius: 50px;
   font-family: 'Press Start 2P', 'Exo 2', 'Rajdhani', sans-serif;
@@ -4113,6 +4113,14 @@
     padding: 12px 30px;
     font-size: 1rem;
   }
+
+  .immersive-play-btn,
+  .immersive-btn,
+  .menu-btn,
+  .start-mode-btn {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
   
   .neon-title {
     font-size: 3rem;
@@ -4394,8 +4402,8 @@
     z-index: 10;
     /* Add background so content doesn't show through */
     background: linear-gradient(135deg, 
-      rgba(255, 0, 255, 0.95) 0%, 
-      rgba(0, 255, 255, 0.95) 100%);
+      rgba(255, 0, 255, 0.75) 0%, 
+      rgba(0, 255, 255, 0.75) 100%);
     box-shadow: 
       0 10px 40px rgba(255, 0, 255, 0.5),
       0 0 60px rgba(0, 255, 255, 0.4),
@@ -4431,6 +4439,18 @@
   .immersive-btn {
     padding: 8px 16px;
     font-size: 0.8rem;
+  }
+
+  .immersive-play-btn,
+  .immersive-btn,
+  .menu-btn,
+  .start-mode-btn {
+    transition-duration: 0.18s;
+    box-shadow: none;
+  }
+
+  .start-mode-btn::before {
+    display: none;
   }
 
   .menu-content {
