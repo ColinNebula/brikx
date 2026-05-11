@@ -37,6 +37,64 @@ const hexToRgbArray = (hex, fallback = [0, 240, 240]) => {
 
 const rgbAlpha = (rgb, alpha) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 
+// Boost color saturation and brightness for theme enhancement
+const boostColorSaturation = (rgb, saturationMultiplier = 1.2, brightnessMultiplier = 1.1) => {
+  const [r, g, b] = rgb;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let s = 0;
+  let h = 0;
+
+  if (max !== min) {
+    s = l > 128 ? (max - min) / (510 - max - min) : (max - min) / (max + min);
+    switch (max) {
+      case r:
+        h = ((g - b) / (max - min) + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / (max - min) + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / (max - min) + 4) / 6;
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Boost saturation and lightness
+  s = Math.min(1, s * saturationMultiplier);
+  let newL = Math.min(1, l / 255 * brightnessMultiplier);
+
+  const c = (1 - Math.abs(2 * newL - 1)) * s;
+  const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+  let r2 = 0, g2 = 0, b2 = 0;
+
+  if (h < 1 / 6) { r2 = c; g2 = x; }
+  else if (h < 2 / 6) { r2 = x; g2 = c; }
+  else if (h < 3 / 6) { g2 = c; b2 = x; }
+  else if (h < 4 / 6) { g2 = x; b2 = c; }
+  else if (h < 5 / 6) { r2 = x; b2 = c; }
+  else { r2 = c; b2 = x; }
+
+  const m = newL - c / 2;
+  return [
+    Math.round((r2 + m) * 255),
+    Math.round((g2 + m) * 255),
+    Math.round((b2 + m) * 255)
+  ];
+};
+
+// Increase color brightness without changing hue
+const brightenColor = (rgb, factor = 1.2) => {
+  return [
+    Math.min(255, Math.round(rgb[0] * factor)),
+    Math.min(255, Math.round(rgb[1] * factor)),
+    Math.min(255, Math.round(rgb[2] * factor))
+  ];
+};
+
 const drawFlower = (ctx, x, y, radius, color, alpha, rotation = 0) => {
   ctx.save();
   ctx.translate(x, y);
@@ -453,6 +511,13 @@ const Brikx = () => {
       if (cinematicTimeoutRef.current) clearTimeout(cinematicTimeoutRef.current);
     };
   }, [gameStarted, gameOver, prefersReducedMotion]);
+
+  // Boost saturation during idle cinematic for enhanced visual pop
+  useEffect(() => {
+    if (isMenuIdle && !prefersReducedMotion) {
+      gameState.current.saturationBoost = 1.8;
+    }
+  }, [isMenuIdle]);
 
   // Touch swipe detection
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
@@ -1264,6 +1329,7 @@ const Brikx = () => {
     perfectClearFlash: 0,
     comboFlash: 0,
     chromaticAberration: 0,
+    saturationBoost: 0,
     scanlineFlash: [],
     lastMoveWasTSpin: false,
     gamepadState: {
@@ -1700,6 +1766,8 @@ const Brikx = () => {
         if (linesToClear.length >= 4 || isPerfectClear) {
           gameState.current.chromaticAberration = isPerfectClear ? 20 : 12;
         }
+        // Boost saturation for visual pop on line clears
+        gameState.current.saturationBoost = isPerfectClear ? 1.5 : Math.min(1.2, linesToClear.length * 0.35);
       }
       
       // Store lines for animation
@@ -2426,6 +2494,30 @@ const Brikx = () => {
     gpState.lastAxes[2] = upPressed ? -1 : 0;
   }, [gameStarted, gameOver, isPaused, moveHorizontal, moveDown, rotate, hardDrop, resetGame]);
 
+  // Map tetromino pieces to theme palette colors
+  const getThemeBlockColors = useCallback(() => {
+    const selectedTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
+    const saturationBoost = Math.max(0, (gameState.current.saturationBoost || 0));
+    const saturationMultiplier = 1 + saturationBoost * 0.4;
+    
+    const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
+    const themeSuccess = hexToRgbArray(selectedTheme?.colors?.success, [0, 240, 100]);
+    const themeWarning = hexToRgbArray(selectedTheme?.colors?.warning, [240, 150, 0]);
+    const themeError = hexToRgbArray(selectedTheme?.colors?.error, [240, 20, 20]);
+    const themeSecondary = hexToRgbArray(selectedTheme?.colors?.secondary, [30, 10, 60]);
+    
+    // Map each tetromino to theme colors with saturation boost
+    return {
+      I: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier, 1.2).join(',')})`,
+      O: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier, 1.2).join(',')})`,
+      T: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier * 0.8, 1.1).join(',')})`, // Purple-ish
+      S: `rgb(${boostColorSaturation(themeSuccess, saturationMultiplier, 1.2).join(',')})`,
+      Z: `rgb(${boostColorSaturation(themeError, saturationMultiplier, 1.2).join(',')})`,
+      J: `rgb(${boostColorSaturation([Math.min(255, themeSecondary[0] + themeAccent[0] * 0.5), Math.min(255, themeSecondary[1] + themeAccent[1] * 0.5), Math.min(255, themeSecondary[2] + themeAccent[2] * 0.8)], saturationMultiplier, 1.1).join(',')})`,
+      L: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier * 0.9, 1.15).join(',')})` // Orange variant
+    };
+  }, [currentTheme]);
+
   // Draw game
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -2441,6 +2533,10 @@ const Brikx = () => {
     }
     if (gameState.current.chromaticAberration > 0) {
       gameState.current.chromaticAberration--;
+    }
+    // Decay saturation boost over time
+    if (gameState.current.saturationBoost > 0) {
+      gameState.current.saturationBoost = Math.max(0, gameState.current.saturationBoost - 0.08);
     }
 
     // Init ambient bg particles if empty
@@ -2461,6 +2557,14 @@ const Brikx = () => {
     const themePrimary = hexToRgbArray(selectedTheme?.colors?.primary, [10, 5, 30]);
     const themeSecondary = hexToRgbArray(selectedTheme?.colors?.secondary, [30, 10, 60]);
     const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
+    
+    // Boost saturation for better visual pop (especially during events)
+    const saturationBoost = Math.max(0, (gameState.current.saturationBoost || 0));
+    const saturationMultiplier = 1 + saturationBoost * 0.4;
+    const boostedAccent = boostColorSaturation(themeAccent, saturationMultiplier, 1.15);
+    const boostedPrimary = brightenColor(themePrimary, 1 + saturationBoost * 0.2);
+    const boostedSecondary = brightenColor(themeSecondary, 1 + saturationBoost * 0.15);
+    
     const resolvedVisual = selectedTheme?.visual || getThemeVisualProfile(currentTheme, selectedTheme?.category);
     const visualMotif = resolvedVisual?.motif || null;
     const visualPattern = resolvedVisual?.pattern || null;
@@ -2471,28 +2575,29 @@ const Brikx = () => {
     const comboPulse = combo > 0 ? Math.sin(gridAnimation * 0.15) * (combo * 0.03) : 0;
     const comboIntensity = Math.min(combo * 0.1, 1);
     
-    // Animated gradient background with combo effects
+    // Animated gradient background with combo effects - INCREASED OPACITY for better visibility
     const gradient = ctx.createLinearGradient(
       0, 
       Math.sin(animOffset + comboPulse) * CANVAS_HEIGHT * 0.3,
       CANVAS_WIDTH,
       CANVAS_HEIGHT + Math.cos(animOffset + comboPulse) * CANVAS_HEIGHT * 0.3
     );
-    // Brighten colors during combos
-    const r1 = Math.min(255, themePrimary[0] + themeAccent[0] * comboIntensity * 0.25);
-    const g1 = Math.min(255, themePrimary[1] + themeAccent[1] * comboIntensity * 0.25);
-    const b1 = Math.min(255, themePrimary[2] + themeAccent[2] * comboIntensity * 0.25);
-    const r2 = Math.min(255, themeSecondary[0] + themeAccent[0] * comboIntensity * 0.18);
-    const g2 = Math.min(255, themeSecondary[1] + themeAccent[1] * comboIntensity * 0.18);
-    const b2 = Math.min(255, themeSecondary[2] + themeAccent[2] * comboIntensity * 0.18);
+    // Brighten colors during combos and boost periods
+    const r1 = Math.min(255, boostedPrimary[0] + boostedAccent[0] * comboIntensity * 0.35);
+    const g1 = Math.min(255, boostedPrimary[1] + boostedAccent[1] * comboIntensity * 0.35);
+    const b1 = Math.min(255, boostedPrimary[2] + boostedAccent[2] * comboIntensity * 0.35);
+    const r2 = Math.min(255, boostedSecondary[0] + boostedAccent[0] * comboIntensity * 0.25);
+    const g2 = Math.min(255, boostedSecondary[1] + boostedAccent[1] * comboIntensity * 0.25);
+    const b2 = Math.min(255, boostedSecondary[2] + boostedAccent[2] * comboIntensity * 0.25);
     gradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
     gradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-    // Draw floating geometric shapes in background
+    // Draw floating geometric shapes in background with boosted accent colors
     ctx.save();
-    ctx.globalAlpha = lowPowerMode ? 0.05 + comboIntensity * 0.08 : 0.1 + comboIntensity * 0.15;
+    // Increased opacity on background shapes
+    ctx.globalAlpha = lowPowerMode ? 0.08 + comboIntensity * 0.1 : 0.15 + comboIntensity * 0.2;
     const shapeCount = lowPowerMode ? 3 + Math.floor(combo * 0.2) : 8 + Math.floor(combo * 0.5);
     for (let i = 0; i < shapeCount; i++) {
       const shapeAnim = (gridAnimation + i * 60) * (0.02 + comboIntensity * 0.03); // Faster during combos
@@ -2504,8 +2609,8 @@ const Brikx = () => {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotation);
-      ctx.strokeStyle = `rgb(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]})`;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = `rgb(${boostedAccent[0]}, ${boostedAccent[1]}, ${boostedAccent[2]})`;
+      ctx.lineWidth = 3.5;
       
       if (i % 3 === 0) {
         // Triangle
@@ -2531,9 +2636,10 @@ const Brikx = () => {
     // Pattern overlay for premium and seasonal themes
     if (visualPattern) {
       ctx.save();
-      ctx.globalAlpha = lowPowerMode ? 0.05 : prefersReducedMotion ? 0.08 : 0.15;
-      ctx.strokeStyle = rgbAlpha(themeAccent, 0.8);
-      ctx.lineWidth = 1.2;
+      // Increased opacity for better theme visibility
+      ctx.globalAlpha = lowPowerMode ? 0.08 : prefersReducedMotion ? 0.12 : 0.22;
+      ctx.strokeStyle = `rgb(${boostedAccent[0]}, ${boostedAccent[1]}, ${boostedAccent[2]})`;
+      ctx.lineWidth = 1.5;
 
       if (visualPattern === 'wave-grid' || visualPattern === 'soft-orbit') {
         const spacing = 48;
@@ -3207,6 +3313,22 @@ const Brikx = () => {
       
       // Remove dead trails
       gameState.current.hardDropTrail = gameState.current.hardDropTrail.filter(t => t.life > 0);
+    }
+
+    // Apply theme colors to pieces for consistent visual theming
+    const themeBlockColors = getThemeBlockColors();
+    if (currentPiece) {
+      currentPiece.color = themeBlockColors[currentPiece.type] || currentPiece.color;
+    }
+    if (nextPieces && nextPieces.length > 0) {
+      nextPieces.forEach(piece => {
+        if (piece) {
+          piece.color = themeBlockColors[piece.type] || piece.color;
+        }
+      });
+    }
+    if (holdPiece) {
+      holdPiece.color = themeBlockColors[holdPiece.type] || holdPiece.color;
     }
 
     // Draw current piece
