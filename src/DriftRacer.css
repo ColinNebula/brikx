@@ -1706,41 +1706,59 @@
   z-index: 1;
   filter:
     drop-shadow(0 0 20px rgba(0, 240, 240, 0.85))
-    drop-shadow(0 0 40px rgba(0, 240, 240, 0.55))
-    drop-shadow(0 0 3px rgba(255, 80, 220, 0.4))
-    drop-shadow(2px 0   4px rgba(0, 220, 255, 0.35))
-    drop-shadow(-2px 0  4px rgba(255, 40, 200, 0.30));
+    drop-shadow(0 0 40px rgba(0, 240, 240, 0.55));
   animation: titleGlow 4s ease-in-out infinite, holoRgbPulse 7s ease-in-out infinite;
+  will-change: filter;
+  transform: translateZ(0); /* GPU acceleration */
 }
 
 @keyframes holoRgbPulse {
   0%, 100% {
     filter:
       drop-shadow(0 0 20px rgba(0, 240, 240, 0.85))
-      drop-shadow(0 0 40px rgba(0, 240, 240, 0.55))
-      drop-shadow( 2px 0 4px rgba(0, 220, 255, 0.35))
-      drop-shadow(-2px 0 4px rgba(255, 40, 200, 0.30));
+      drop-shadow(0 0 40px rgba(0, 240, 240, 0.55));
   }
   25% {
     filter:
-      drop-shadow(0 0 25px rgba(0, 200, 255, 0.9))
-      drop-shadow(0 0 50px rgba(80, 0, 255, 0.45))
-      drop-shadow( 3px 0 6px rgba(0, 255, 200, 0.5))
-      drop-shadow(-3px 0 6px rgba(255, 0, 180, 0.45));
+      drop-shadow(0 0 26px rgba(80, 0, 255, 0.75))
+      drop-shadow(0 0 50px rgba(0, 200, 255, 0.6));
   }
   50% {
     filter:
-      drop-shadow(0 0 22px rgba(180, 0, 255, 0.75))
-      drop-shadow(0 0 45px rgba(0, 240, 240, 0.6))
-      drop-shadow( 2px 0 5px rgba(255, 200, 0, 0.4))
-      drop-shadow(-2px 0 5px rgba(0, 80, 255, 0.40));
+      drop-shadow(0 0 24px rgba(180, 0, 255, 0.75))
+      drop-shadow(0 0 48px rgba(0, 240, 240, 0.65));
   }
   75% {
     filter:
-      drop-shadow(0 0 28px rgba(0, 255, 180, 0.8))
-      drop-shadow(0 0 55px rgba(0, 200, 255, 0.5))
-      drop-shadow( 3px 0 6px rgba(255, 0, 120, 0.45))
-      drop-shadow(-3px 0 6px rgba(0, 220, 255, 0.40));
+      drop-shadow(0 0 27px rgba(0, 255, 200, 0.7))
+      drop-shadow(0 0 52px rgba(0, 200, 255, 0.6));
+  }
+}
+
+/* Mobile: simplified logo animation to prevent jank */
+@media (max-width: 768px) {
+  .title-holo-wrap .immersive-title {
+    filter:
+      drop-shadow(0 0 16px rgba(0, 240, 240, 0.8))
+      drop-shadow(0 0 32px rgba(0, 240, 240, 0.5));
+    /* Disable expensive RGB pulse, keep only opacity glow */
+    animation: titleGlow 4s ease-in-out infinite;
+  }
+  /* Simplify cinematic idle on mobile */
+  .cinematic-idle .title-holo-wrap .immersive-title {
+    animation: titleGlow 4s ease-in-out infinite, mobileCinematicLogoPulse 3.5s ease-in-out forwards;
+  }
+  @keyframes mobileCinematicLogoPulse {
+    0%, 100% {
+      filter:
+        drop-shadow(0 0 16px rgba(0, 240, 240, 0.8))
+        drop-shadow(0 0 32px rgba(0, 240, 240, 0.5));
+    }
+    50% {
+      filter:
+        drop-shadow(0 0 28px rgba(0, 200, 255, 0.95))
+        drop-shadow(0 0 56px rgba(80, 0, 255, 0.65));
+    }
   }
 }
 
@@ -1755,6 +1773,50 @@
     animation: titleGlow 4s ease-in-out infinite;
     filter: drop-shadow(0 0 20px rgba(0, 240, 240, 0.8))
             drop-shadow(0 0 40px rgba(0, 240, 240, 0.5));
+  }
+}
+
+/* Mobile optimization: reduce animation overhead */
+@media (max-width: 768px) {
+  /* Disable god rays on mobile for performance */
+  .menu-god-rays { display: none; }
+  
+  /* Simplify cursor light on mobile */
+  .menu-cursor-light::after { display: none; }
+  
+  /* Reduce scanlines visibility on mobile */
+  .title-holo-wrap::before {
+    opacity: 0.5;
+  }
+  
+  /* Simplify cinematic particle boost on mobile */
+  .cinematic-idle .menu-background-particles .particle {
+    animation: simpleMobileCinematicParticles 3.5s ease-in-out forwards;
+  }
+  
+  @keyframes simpleMobileCinematicParticles {
+    0%, 100% {
+      opacity: calc(var(--particle-opacity, 0.6) * 1);
+    }
+    50% {
+      opacity: calc(var(--particle-opacity, 0.6) * 1.4);
+    }
+  }
+}
+
+/* Extra small devices: further optimize */
+@media (max-width: 480px) {
+  /* Disable shimmer sweep on very small screens */
+  .title-holo-wrap::after { display: none; }
+  
+  /* Disable cinematic scaling on small devices */
+  .main-menu.immersive.cinematic-idle {
+    animation: none;
+  }
+  
+  /* Static cursor light on small devices */
+  .menu-cursor-light {
+    animation: none !important;
   }
 }
 
@@ -1786,34 +1848,17 @@
              cinematicLogoPulse 3.5s ease-in-out forwards !important;
 }
 
+/* Cinematic idle logo pulse - simplified for mobile compat */
 @keyframes cinematicLogoPulse {
   0%, 100% {
     filter:
       drop-shadow(0 0 20px rgba(0, 240, 240, 0.85))
-      drop-shadow(0 0 40px rgba(0, 240, 240, 0.55))
-      drop-shadow( 2px 0 4px rgba(0, 220, 255, 0.35))
-      drop-shadow(-2px 0 4px rgba(255, 40, 200, 0.30));
-  }
-  25% {
-    filter:
-      drop-shadow(0 0 35px rgba(0, 200, 255, 1.0))
-      drop-shadow(0 0 70px rgba(80, 0, 255, 0.65))
-      drop-shadow( 4px 0 8px rgba(0, 255, 200, 0.7))
-      drop-shadow(-4px 0 8px rgba(255, 0, 180, 0.65));
+      drop-shadow(0 0 40px rgba(0, 240, 240, 0.55));
   }
   50% {
     filter:
-      drop-shadow(0 0 40px rgba(180, 0, 255, 0.95))
-      drop-shadow(0 0 80px rgba(0, 240, 240, 0.75))
-      drop-shadow( 4px 0 8px rgba(255, 200, 0, 0.6))
-      drop-shadow(-4px 0 8px rgba(0, 80, 255, 0.55));
-  }
-  75% {
-    filter:
-      drop-shadow(0 0 38px rgba(0, 255, 180, 1.0))
-      drop-shadow(0 0 75px rgba(0, 200, 255, 0.7))
-      drop-shadow( 4px 0 8px rgba(255, 0, 120, 0.65))
-      drop-shadow(-4px 0 8px rgba(0, 220, 255, 0.60));
+      drop-shadow(0 0 32px rgba(0, 200, 255, 1.0))
+      drop-shadow(0 0 64px rgba(80, 0, 255, 0.75));
   }
 }
 
