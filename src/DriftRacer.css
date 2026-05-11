@@ -1231,33 +1231,21 @@
 }
 
 .pause-overlay .menu-btn {
-  background: rgba(12, 18, 30, 0.3);
-  border-color: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(8px) saturate(1.15);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.32),
     inset 0 0 18px rgba(255, 255, 255, 0.08);
 }
 
-.pause-overlay .resume-btn {
-  background: linear-gradient(135deg, rgba(64, 210, 120, 0.3), rgba(37, 160, 95, 0.3));
-}
-
-.pause-overlay .restart-btn {
-  background: linear-gradient(135deg, rgba(45, 170, 255, 0.3), rgba(25, 108, 210, 0.3));
-}
-
-.pause-overlay .main-menu-btn {
-  background: linear-gradient(135deg, rgba(255, 165, 48, 0.3), rgba(245, 115, 24, 0.3));
-}
-
 .pause-overlay .menu-btn:hover {
   transform: translateY(-3px) scale(1.02);
-  border-color: rgba(255, 255, 255, 0.74);
+  border-color: rgba(255, 255, 255, 0.7);
   box-shadow:
     0 14px 30px rgba(0, 0, 0, 0.4),
-    0 0 22px rgba(0, 240, 240, 0.22),
-    inset 0 0 20px rgba(255, 255, 255, 0.16);
+    0 0 22px rgba(0, 240, 240, 0.2),
+    inset 0 0 20px rgba(255, 255, 255, 0.12);
+  background: rgba(12, 18, 30, 0.45);
 }
 
 @keyframes pauseOrbFloat {
@@ -3884,13 +3872,16 @@
   padding: 15px 35px;
   font-size: 1.2rem;
   font-weight: bold;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(12, 18, 30, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 30px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   font-family: Arial, sans-serif;
   animation: slideInUp 0.5s ease backwards;
+  backdrop-filter: blur(8px);
+  color: var(--color-textPrimary, white);
 }
 
 .menu-btn:nth-child(1) {
@@ -3917,8 +3908,9 @@
 }
 
 .menu-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.02);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .menu-btn:active {
@@ -3927,25 +3919,25 @@
 }
 
 .resume-btn {
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(69, 160, 73, 0.3));
   color: white;
 }
 
 .resume-btn:hover {
-  background: linear-gradient(135deg, #5cbf60 0%, #55b059 100%);
+  background: linear-gradient(135deg, rgba(92, 191, 96, 0.4), rgba(85, 176, 89, 0.4));
 }
 
 .restart-btn {
-  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.3), rgba(25, 118, 210, 0.3));
   color: white;
 }
 
 .restart-btn:hover {
-  background: linear-gradient(135deg, #42a5f5 0%, #2986e2 100%);
+  background: linear-gradient(135deg, rgba(66, 165, 245, 0.4), rgba(41, 134, 226, 0.4));
 }
 
 .main-menu-btn {
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.3), rgba(245, 124, 0, 0.3));
   color: white;
 }
 
