@@ -569,28 +569,6 @@ const Brikx = () => {
     }
   }, []);
 
-  // Initialize ambient background particles for atmospheric depth
-  const initBgParticles = useCallback((canvasWidth, canvasHeight) => {
-    if (lowPowerMode || prefersReducedMotion) return;
-    const count = 60;
-    const particles = [];
-    for (let i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * canvasWidth,
-        y: Math.random() * canvasHeight,
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: -0.3 - Math.random() * 0.4,
-        size: 0.8 + Math.random() * 1.6,
-        alpha: 0.08 + Math.random() * 0.18,
-        twinkleSpeed: 0.02 + Math.random() * 0.04,
-        twinkleOffset: Math.random() * Math.PI * 2,
-        depth: 0.3 + Math.random() * 0.7, // parallax depth
-        color: i % 3 === 0 ? 1 : i % 3 === 1 ? 2 : 0, // 0=white, 1=accent, 2=warm
-      });
-    }
-    gameState.current.bgParticles = particles;
-  }, [lowPowerMode, prefersReducedMotion]);
-
   // Sound System using Web Audio API
   const audioContext = useRef(null);
   
@@ -1159,6 +1137,28 @@ const Brikx = () => {
     : batterySaverMode === 'off'
       ? false
       : autoBatterySaverEnabled;
+
+  // Initialize ambient background particles for atmospheric depth
+  const initBgParticles = useCallback((canvasWidth, canvasHeight) => {
+    if (lowPowerMode || prefersReducedMotion) return;
+    const count = 60;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvasWidth,
+        y: Math.random() * canvasHeight,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: -0.3 - Math.random() * 0.4,
+        size: 0.8 + Math.random() * 1.6,
+        alpha: 0.08 + Math.random() * 0.18,
+        twinkleSpeed: 0.02 + Math.random() * 0.04,
+        twinkleOffset: Math.random() * Math.PI * 2,
+        depth: 0.3 + Math.random() * 0.7, // parallax depth
+        color: i % 3 === 0 ? 1 : i % 3 === 1 ? 2 : 0, // 0=white, 1=accent, 2=warm
+      });
+    }
+    gameState.current.bgParticles = particles;
+  }, [lowPowerMode, prefersReducedMotion]);
 
   // Save profile changes
   const saveProfile = useCallback((name, avatar) => {
