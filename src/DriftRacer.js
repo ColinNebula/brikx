@@ -2353,6 +2353,12 @@ const Brikx = () => {
     handleMainMenu();
   }, [gameStarted, gameOver]);
 
+  const handleRestartFromPause = useCallback(() => {
+    playSound('menuClick', 600, 0.1);
+    setIsPaused(false);
+    resetGame();
+  }, [playSound, resetGame]);
+
   // Main menu handler
   const handleMainMenu = useCallback(() => {
     stopMusic();
@@ -4974,18 +4980,28 @@ const Brikx = () => {
         )}
 
         {isPaused && gameStarted && (
-          <div className="start-overlay">
-            <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="pause-title" />
-            <h2>⏸️ Paused</h2>
-            <div className="menu-buttons">
-              <button className="menu-btn resume-btn" onClick={() => setIsPaused(false)}>
-                ▶️ Resume
-              </button>
-              <button className="menu-btn main-menu-btn" onClick={handleQuitToMenu}>
-                🏠 Main Menu
-              </button>
+          <div className="start-overlay pause-overlay">
+            <div className="pause-overlay-fx" aria-hidden="true">
+              <span className="pause-orb pause-orb-1" />
+              <span className="pause-orb pause-orb-2" />
+              <span className="pause-orb pause-orb-3" />
             </div>
-            <p style={{marginTop: '20px', fontSize: '0.9rem', color: '#aaa'}}>Press P or ESC to Resume</p>
+            <div className="pause-panel">
+              <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="pause-title" />
+              <h2>⏸️ Paused</h2>
+              <div className="menu-buttons">
+                <button className="menu-btn resume-btn" onClick={() => setIsPaused(false)}>
+                  ▶️ Resume
+                </button>
+                <button className="menu-btn restart-btn" onClick={handleRestartFromPause}>
+                  🔄 Restart
+                </button>
+                <button className="menu-btn main-menu-btn" onClick={handleQuitToMenu}>
+                  🏠 Main Menu
+                </button>
+              </div>
+              <p style={{marginTop: '20px', fontSize: '0.9rem', color: '#aaa'}}>Press P or ESC to Resume</p>
+            </div>
           </div>
         )}
         
