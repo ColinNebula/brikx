@@ -37,6 +37,32 @@ const hexToRgbArray = (hex, fallback = [0, 240, 240]) => {
 
 const rgbAlpha = (rgb, alpha) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 
+const colorWithAlpha = (color, alpha) => {
+  if (!color || typeof color !== 'string') return `rgba(255, 255, 255, ${alpha})`;
+  const value = color.trim();
+
+  if (value.startsWith('rgba(')) {
+    const channels = value.slice(5, -1).split(',').map(part => part.trim());
+    if (channels.length >= 3) {
+      return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${alpha})`;
+    }
+  }
+
+  if (value.startsWith('rgb(')) {
+    const channels = value.slice(4, -1).split(',').map(part => part.trim());
+    if (channels.length === 3) {
+      return `rgba(${channels[0]}, ${channels[1]}, ${channels[2]}, ${alpha})`;
+    }
+  }
+
+  const rgb = hexToRgbArray(value, null);
+  if (rgb) {
+    return rgbAlpha(rgb, alpha);
+  }
+
+  return `rgba(255, 255, 255, ${alpha})`;
+};
+
 // Boost color saturation and brightness for theme enhancement
 const boostColorSaturation = (rgb, saturationMultiplier = 1.2, brightnessMultiplier = 1.1) => {
   const [r, g, b] = rgb;
@@ -3390,6 +3416,7 @@ const Brikx = () => {
       }
       
       if (ghostY !== currentY) {
+        const ghostPulse = 0.65 + Math.sin(gridAnimation * 0.18) * 0.2;
         currentPiece.shape.forEach((row, y) => {
           row.forEach((value, x) => {
             if (value) {
@@ -3398,14 +3425,32 @@ const Brikx = () => {
               const size = BLOCK_SIZE - 2;
               
               // Ghost fill with transparency
-              ctx.fillStyle = currentPiece.color + '20';
+              ctx.fillStyle = colorWithAlpha(currentPiece.color, 0.2 + ghostPulse * 0.08);
               ctx.fillRect(blockX + 1, blockY + 1, size, size);
-              
-              // Ghost border
-              ctx.strokeStyle = currentPiece.color + '80';
-              ctx.lineWidth = 2;
-              ctx.setLineDash([4, 4]);
+
+              // Soft glow layer so the marker survives high-contrast backgrounds
+              ctx.shadowColor = colorWithAlpha(currentPiece.color, 0.9);
+              ctx.shadowBlur = 10;
+              ctx.strokeStyle = colorWithAlpha(currentPiece.color, 0.5 + ghostPulse * 0.15);
+              ctx.lineWidth = 1.6;
               ctx.strokeRect(blockX + 1, blockY + 1, size, size);
+              ctx.shadowBlur = 0;
+              
+              // Ghost marquee border
+              ctx.strokeStyle = colorWithAlpha(currentPiece.color, 0.75 + ghostPulse * 0.18);
+              ctx.lineWidth = 2.6;
+              ctx.setLineDash([6, 3]);
+              ctx.lineDashOffset = -gridAnimation * 0.6;
+              ctx.strokeRect(blockX + 1, blockY + 1, size, size);
+
+              // White contrast outline for readability on intense themes
+              ctx.strokeStyle = `rgba(255, 255, 255, ${0.32 + ghostPulse * 0.2})`;
+              ctx.lineWidth = 1.1;
+              ctx.setLineDash([2, 4]);
+              ctx.lineDashOffset = gridAnimation * 0.4;
+              ctx.strokeRect(blockX + 1.8, blockY + 1.8, size - 1.6, size - 1.6);
+
+              ctx.lineDashOffset = 0;
               ctx.setLineDash([]);
             }
           });
@@ -3433,14 +3478,16 @@ const Brikx = () => {
               const size = BLOCK_SIZE - 2;
               
               // Ultra-faint fill
-              ctx.fillStyle = nextPiece.color + '08';
+              ctx.fillStyle = colorWithAlpha(nextPiece.color, 0.07);
               ctx.fillRect(blockX + 1, blockY + 1, size, size);
               
               // Faint dotted border
-              ctx.strokeStyle = nextPiece.color + '30';
-              ctx.lineWidth = 1;
-              ctx.setLineDash([2, 6]);
+              ctx.strokeStyle = colorWithAlpha(nextPiece.color, 0.38);
+              ctx.lineWidth = 1.4;
+              ctx.setLineDash([3, 5]);
+              ctx.lineDashOffset = -gridAnimation * 0.35;
               ctx.strokeRect(blockX + 1, blockY + 1, size, size);
+              ctx.lineDashOffset = 0;
               ctx.setLineDash([]);
             }
           });
