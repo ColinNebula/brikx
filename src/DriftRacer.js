@@ -549,6 +549,28 @@ const Brikx = () => {
     }
   }, []);
 
+  // Initialize ambient background particles for atmospheric depth
+  const initBgParticles = useCallback((canvasWidth, canvasHeight) => {
+    if (lowPowerMode || prefersReducedMotion) return;
+    const count = 60;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvasWidth,
+        y: Math.random() * canvasHeight,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: -0.3 - Math.random() * 0.4,
+        size: 0.8 + Math.random() * 1.6,
+        alpha: 0.08 + Math.random() * 0.18,
+        twinkleSpeed: 0.02 + Math.random() * 0.04,
+        twinkleOffset: Math.random() * Math.PI * 2,
+        depth: 0.3 + Math.random() * 0.7, // parallax depth
+        color: i % 3 === 0 ? 1 : i % 3 === 1 ? 2 : 0, // 0=white, 1=accent, 2=warm
+      });
+    }
+    gameState.current.bgParticles = particles;
+  }, [lowPowerMode, prefersReducedMotion]);
+
   // Sound System using Web Audio API
   const audioContext = useRef(null);
   
@@ -1176,6 +1198,7 @@ const Brikx = () => {
     colorBonusDisplay: null,
     bag: [],
     particles: [],
+    bgParticles: [],
     clearingLines: [],
     clearAnimation: 0,
     scorePopups: [],
@@ -1186,6 +1209,8 @@ const Brikx = () => {
     hardDropTrail: [],
     perfectClearFlash: 0,
     comboFlash: 0,
+    chromaticAberration: 0,
+    scanlineFlash: [],
     lastMoveWasTSpin: false,
     gamepadState: {
       lastButtons: [],
@@ -1497,7 +1522,61 @@ const Brikx = () => {
     }
   }, [COLS, BLOCK_SIZE, getParticleFromPool, getComboColor, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode]);
 
-  // Clear completed lines with animation
+  // Spawn debris shards when a line is cleared (broken block fragments)
+  const addDebrisParticles = useCallback((y, boardOffsetX) => {
+    if (lowPowerMode) return;
+    const motionMultiplier = prefersReducedMotion ? 0.3 : 1;
+    for (let x = 0; x < COLS; x++) {
+      const blockColor = gameState.current.board[y][x];
+      if (!blockColor) continue;
+      const centerX = boardOffsetX + x * BLOCK_SIZE + BLOCK_SIZE / 2;
+      const centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
+      const shardCount = Math.floor(4 * motionMultiplier);
+      for (let i = 0; i < shardCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 5;
+        const shard = getParticleFromPool({
+          x: centerX + (Math.random() - 0.5) * BLOCK_SIZE * 0.6,
+          y: centerY + (Math.random() - 0.5) * BLOCK_SIZE * 0.6,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.5,
+          life: 45 + Math.random() * 30,
+          maxLife: 75,
+          color: blockColor,
+          size: 2 + Math.random() * 3,
+          type: 'debris',
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.35,
+          glow: true,
+          trail: false,
+          pulse: false,
+          ring: 0,
+          bounce: false,
+          scaleX: 0.4 + Math.random() * 0.8,
+          scaleY: 0.3 + Math.random() * 0.5,
+        });
+        if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+          gameState.current.particles.push(shard);
+        }
+      }
+      // Plasma burst at each block position for spectacular effect
+      if (Math.random() > 0.5) {
+        const plasma = getParticleFromPool({
+          x: centerX, y: centerY,
+          vx: (Math.random() - 0.5) * 2, vy: -2 - Math.random() * 2,
+          life: 35, maxLife: 35,
+          color: blockColor, size: 5 + Math.random() * 4,
+          type: 'plasma',
+          rotation: 0, rotationSpeed: 0.08,
+          glow: true, trail: false, pulse: true, ring: 0, bounce: false,
+          innerColor: '#ffffff',
+        });
+        if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+          gameState.current.particles.push(plasma);
+        }
+      }
+    }
+  }, [COLS, BLOCK_SIZE, getParticleFromPool, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode]);
   const clearLines = useCallback(() => {
     const { board } = gameState.current;
     const linesToClear = [];
@@ -1553,6 +1632,21 @@ const Brikx = () => {
       
       // Add particles for line clear effect
       linesToClear.forEach(y => addLineParticles(y, isCombo, isPerfectClear, combo));
+      
+      // Add debris shards flying from each cleared cell
+      const boardOffsetX = 130;
+      linesToClear.forEach(y => addDebrisParticles(y, boardOffsetX));
+
+      // Trigger scanline flash strips for each cleared row
+      if (!prefersReducedMotion) {
+        linesToClear.forEach(y => {
+          gameState.current.scanlineFlash.push({ y, life: 18, maxLife: 18 });
+        });
+        // Chromatic aberration on Tetris or Perfect Clear
+        if (linesToClear.length >= 4 || isPerfectClear) {
+          gameState.current.chromaticAberration = isPerfectClear ? 20 : 12;
+        }
+      }
       
       // Store lines for animation
       gameState.current.clearingLines = linesToClear;
@@ -1695,7 +1789,7 @@ const Brikx = () => {
         setLastClearWasCombo(false);
       }
     }
-  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, vibrate]);
+  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addDebrisParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, vibrate, prefersReducedMotion]);
 
   // Spawn new piece
   const spawnPiece = useCallback(() => {
@@ -2002,8 +2096,11 @@ const Brikx = () => {
     gameState.current.colorBonusDisplay = null;
     gameState.current.bag = [];
     gameState.current.particles = [];
+    gameState.current.bgParticles = [];
     gameState.current.clearingLines = [];
     gameState.current.clearAnimation = 0;
+    gameState.current.chromaticAberration = 0;
+    gameState.current.scanlineFlash = [];
     
     setScore(0);
     setLevel(1);
@@ -2126,8 +2223,11 @@ const Brikx = () => {
     gameState.current.nextPieces = [];
     gameState.current.holdPiece = null;
     gameState.current.particles = [];
+    gameState.current.bgParticles = [];
     gameState.current.clearingLines = [];
     gameState.current.clearAnimation = 0;
+    gameState.current.chromaticAberration = 0;
+    gameState.current.scanlineFlash = [];
   }, [ROWS, COLS, stopMusic]);
 
   // Keyboard controls
@@ -2284,6 +2384,14 @@ const Brikx = () => {
     gameState.current.gridAnimation = (gridAnimation + 1) % 360;
     if (screenShake > 0) {
       gameState.current.screenShake--;
+    }
+    if (gameState.current.chromaticAberration > 0) {
+      gameState.current.chromaticAberration--;
+    }
+
+    // Init ambient bg particles if empty
+    if (!lowPowerMode && !prefersReducedMotion && gameState.current.bgParticles.length === 0) {
+      initBgParticles(CANVAS_WIDTH, CANVAS_HEIGHT);
     }
 
     // Apply screen shake
@@ -2485,6 +2593,36 @@ const Brikx = () => {
       ctx.restore();
     }
     
+    // Draw ambient depth particles (star-field style depth layer)
+    if (!lowPowerMode && !prefersReducedMotion && gameState.current.bgParticles.length > 0) {
+      ctx.save();
+      const accentR = themeAccent[0], accentG = themeAccent[1], accentB = themeAccent[2];
+      gameState.current.bgParticles.forEach(bp => {
+        // Twinkle effect
+        const twinkle = 0.5 + 0.5 * Math.sin(now * bp.twinkleSpeed * 10 + bp.twinkleOffset);
+        const a = bp.alpha * twinkle;
+        // Color by type
+        if (bp.color === 1) {
+          ctx.fillStyle = `rgba(${accentR},${accentG},${accentB},${a})`;
+        } else if (bp.color === 2) {
+          ctx.fillStyle = `rgba(255,220,150,${a * 0.7})`;
+        } else {
+          ctx.fillStyle = `rgba(255,255,255,${a})`;
+        }
+        ctx.beginPath();
+        ctx.arc(bp.x, bp.y, bp.size, 0, Math.PI * 2);
+        ctx.fill();
+        // Move with depth-based parallax (slower = farther)
+        bp.x += bp.vx * bp.depth;
+        bp.y += bp.vy * bp.depth;
+        // Wrap around screen edges
+        if (bp.y < -10) bp.y = CANVAS_HEIGHT + 10;
+        if (bp.x < -10) bp.x = CANVAS_WIDTH + 10;
+        if (bp.x > CANVAS_WIDTH + 10) bp.x = -10;
+      });
+      ctx.restore();
+    }
+    
     // Add level-based overlay glow
     const overlayGradient = ctx.createRadialGradient(
       CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
@@ -2615,6 +2753,27 @@ const Brikx = () => {
         }
       });
     });
+
+    // Draw scanline flash effect (horizontal bright strips on cleared rows)
+    if (gameState.current.scanlineFlash.length > 0) {
+      gameState.current.scanlineFlash.forEach(sf => {
+        const sfAlpha = (sf.life / sf.maxLife);
+        const flashY = sf.y * BLOCK_SIZE;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const scanGrad = ctx.createLinearGradient(0, flashY, 0, flashY + BLOCK_SIZE);
+        scanGrad.addColorStop(0, `rgba(255,255,255,0)`);
+        scanGrad.addColorStop(0.3, `rgba(255,255,255,${sfAlpha * 0.9})`);
+        scanGrad.addColorStop(0.5, `rgba(200,240,255,${sfAlpha})`);
+        scanGrad.addColorStop(0.7, `rgba(255,255,255,${sfAlpha * 0.9})`);
+        scanGrad.addColorStop(1, `rgba(255,255,255,0)`);
+        ctx.fillStyle = scanGrad;
+        ctx.fillRect(0, flashY - 2, BOARD_WIDTH, BLOCK_SIZE + 4);
+        ctx.restore();
+        sf.life--;
+      });
+      gameState.current.scanlineFlash = gameState.current.scanlineFlash.filter(sf => sf.life > 0);
+    }
 
     // Draw particles
     particles.forEach(p => {
@@ -2786,6 +2945,84 @@ const Brikx = () => {
           }
           break;
         
+        case 'plasma': {
+          // Pulsing energy orb with layered glow rings
+          ctx.translate(p.x, p.y);
+          const plasmaPhase = (1 - alpha) * Math.PI * 6;
+          const plasmaSize = p.size * (1 + 0.25 * Math.sin(plasmaPhase));
+          // Outer halo (additive-friendly)
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = finalAlpha * 0.18;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(0, 0, plasmaSize * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          // Mid glow
+          ctx.globalAlpha = finalAlpha * 0.35;
+          ctx.beginPath();
+          ctx.arc(0, 0, plasmaSize * 1.3, 0, Math.PI * 2);
+          ctx.fill();
+          // Core
+          ctx.globalAlpha = finalAlpha;
+          ctx.globalCompositeOperation = 'source-over';
+          const plasmaGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, plasmaSize);
+          plasmaGrad.addColorStop(0, p.innerColor || '#ffffff');
+          plasmaGrad.addColorStop(0.4, p.color);
+          plasmaGrad.addColorStop(1, p.color + '00');
+          ctx.fillStyle = plasmaGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, plasmaSize, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        }
+
+        case 'prism': {
+          // Iridescent crystal triangle shard
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          const prismH = p.size * 2.2;
+          const prismW = p.size * 1.4;
+          const prismGrad = ctx.createLinearGradient(-prismW, -prismH, prismW, prismH);
+          prismGrad.addColorStop(0, '#ff88cc');
+          prismGrad.addColorStop(0.3, p.color);
+          prismGrad.addColorStop(0.6, '#88ccff');
+          prismGrad.addColorStop(1, '#ffffcc');
+          ctx.fillStyle = prismGrad;
+          ctx.beginPath();
+          ctx.moveTo(0, -prismH);
+          ctx.lineTo(prismW, prismH * 0.5);
+          ctx.lineTo(-prismW, prismH * 0.5);
+          ctx.closePath();
+          ctx.fill();
+          // Edge highlight
+          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          break;
+        }
+
+        case 'debris': {
+          // Mini block fragment (like a piece of the board)
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          const dw = p.size * (p.scaleX || 1);
+          const dh = p.size * (p.scaleY || 0.6);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-dw, -dh, dw * 2, dh * 2);
+          // Top-face gradient
+          const debrisGrad = ctx.createLinearGradient(-dw, -dh, -dw, dh);
+          debrisGrad.addColorStop(0, 'rgba(255,255,255,0.55)');
+          debrisGrad.addColorStop(0.3, 'rgba(255,255,255,0.15)');
+          debrisGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+          ctx.fillStyle = debrisGrad;
+          ctx.fillRect(-dw, -dh, dw * 2, dh * 2);
+          // Bright edge
+          ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+          ctx.lineWidth = 0.7;
+          ctx.strokeRect(-dw + 1, -dh + 1, dw * 2 - 2, dh * 2 - 2);
+          break;
+        }
+
         default:
           // Default particle rendering
           ctx.translate(p.x, p.y);
@@ -2835,6 +3072,50 @@ const Brikx = () => {
     const deadParticles = particles.filter(p => p.life <= 0);
     deadParticles.forEach(p => returnParticleToPool(p));
     gameState.current.particles = particles.filter(p => p.life > 0);
+
+    // Additive glow second pass for luminous particle bloom
+    if (!lowPowerMode) {
+      const glowParticles = gameState.current.particles.filter(p =>
+        p.glow && p.type !== 'wave' && p.type !== 'lightning' && p.type !== 'debris'
+      );
+      if (glowParticles.length > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        glowParticles.forEach(p => {
+          const alpha = p.life / p.maxLife;
+          const easeAlpha = alpha * alpha;
+          ctx.globalAlpha = easeAlpha * 0.25;
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = p.size * 3;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 1.4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+    }
+
+    // Chromatic aberration post-process (RGB channel split on intense events)
+    if (gameState.current.chromaticAberration > 0 && !lowPowerMode && !prefersReducedMotion) {
+      const ca = gameState.current.chromaticAberration;
+      const caStrength = Math.min(ca / 20, 1) * 4;
+      const boardLeft = boardOffsetX;
+      const boardW = BOARD_WIDTH;
+      const boardH = BOARD_HEIGHT;
+      // Save the current board region as image data, then redraw shifted with color channel tinting
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.15;
+      // Red channel offset (left)
+      ctx.fillStyle = `rgb(255,0,0)`;
+      ctx.drawImage(canvas, boardLeft, 0, boardW, boardH, boardLeft - caStrength, 0, boardW, boardH);
+      // Blue channel offset (right)
+      ctx.fillStyle = `rgb(0,0,255)`;
+      ctx.drawImage(canvas, boardLeft, 0, boardW, boardH, boardLeft + caStrength, 0, boardW, boardH);
+      ctx.restore();
+    }
 
     // Update line clear animation
     if (clearAnimation > 0) {
@@ -3370,7 +3651,7 @@ const Brikx = () => {
       ctx.restore();
       gameState.current.pieceLockAnimation--;
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles]);
 
   // Game loop
   useEffect(() => {
@@ -4307,6 +4588,38 @@ const Brikx = () => {
               </>
             ) : (
               <div className="main-menu immersive">
+                {/* Industry-Quality Animated Particles Background */}
+                <div className="menu-background-particles">
+                  {Array.from({ length: 50 }).map((_, i) => {
+                    const sizes = ['particle-xs', 'particle-sm', 'particle-md', 'particle-lg', 'particle-xl'];
+                    const colors = ['', 'particle-warm', 'particle-cool', 'particle-white', 'particle-magenta'];
+                    const shapes = ['', 'particle-star', 'particle-square', 'particle-diamond'];
+                    const motions = ['', 'particle-wave', 'particle-spiral', 'particle-orbit', 'particle-glow'];
+                    
+                    const sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
+                    const colorClass = colors[Math.floor(Math.random() * colors.length)];
+                    const shapeClass = shapes[Math.floor(Math.random() * shapes.length)];
+                    const motionClass = motions[Math.floor(Math.random() * motions.length)];
+                    const duration = 6 + Math.random() * 8;
+                    const delay = Math.random() * 2;
+                    const driftX = (Math.random() - 0.5) * 80;
+                    
+                    return (
+                      <div
+                        key={i}
+                        className={`particle ${sizeClass} ${colorClass} ${shapeClass} ${motionClass}`}
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          bottom: `-20px`,
+                          '--duration': `${duration}s`,
+                          '--delay': `${delay}s`,
+                          '--drift-x': `${driftX}px`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                
                 {/* Animated Falling Tetris Blocks Background */}
                 <div className="falling-blocks-container">
                   {Array.from({ length: 8 }).map((_, i) => {
