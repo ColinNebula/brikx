@@ -420,6 +420,40 @@ const Brikx = () => {
   });
   const [newAchievement, setNewAchievement] = useState(null);
 
+  // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
+  const [isMenuIdle, setIsMenuIdle] = useState(false);
+  const idleTimerRef = useRef(null);
+  const cinematicTimeoutRef = useRef(null);
+
+  // Menu idle detection: reset on interaction, trigger cinematic after 8s
+  useEffect(() => {
+    if (gameStarted || gameOver || prefersReducedMotion) return; // Only on main menu
+
+    const resetIdleTimer = () => {
+      setIsMenuIdle(false);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      if (cinematicTimeoutRef.current) clearTimeout(cinematicTimeoutRef.current);
+
+      // Start a new idle countdown
+      idleTimerRef.current = setTimeout(() => {
+        setIsMenuIdle(true);
+        // Return to baseline after 3.5 seconds
+        cinematicTimeoutRef.current = setTimeout(() => setIsMenuIdle(false), 3500);
+      }, 8000);
+    };
+
+    // Listen for any user interaction
+    const events = ['click', 'keydown', 'mousemove', 'touchstart', 'touchmove'];
+    events.forEach(evt => window.addEventListener(evt, resetIdleTimer, { passive: true }));
+    resetIdleTimer(); // Start initial timer
+
+    return () => {
+      events.forEach(evt => window.removeEventListener(evt, resetIdleTimer));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      if (cinematicTimeoutRef.current) clearTimeout(cinematicTimeoutRef.current);
+    };
+  }, [gameStarted, gameOver, prefersReducedMotion]);
+
   // Touch swipe detection
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
   const holdIntervalRef = useRef(null);
@@ -4607,7 +4641,7 @@ const Brikx = () => {
                 </div>
               </>
             ) : (
-              <div className="main-menu immersive" ref={menuContainerRef} style={{ '--mx': '50%', '--my': '40%' }}>
+              <div className={`main-menu immersive ${isMenuIdle ? 'cinematic-idle' : ''}`} ref={menuContainerRef} style={{ '--mx': '50%', '--my': '40%' }}>
                 {/* Industry-Quality Animated Particles Background */}
                 <div className="menu-background-particles">
                   {Array.from({ length: 50 }).map((_, i) => {
