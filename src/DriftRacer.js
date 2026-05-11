@@ -294,6 +294,7 @@ const Brikx = () => {
 
   const canvasRef = useRef(null);
   const touchButtonsRef = useRef([]);
+  const menuContainerRef = useRef(null);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const stored = safeGetItem('brikxHighScore', '0');
@@ -361,6 +362,25 @@ const Brikx = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
+
+  // Cursor-driven light field tracking (updates CSS vars directly — no re-render)
+  useEffect(() => {
+    const el = menuContainerRef.current;
+    if (!el) return;
+    const handleMove = (x, y) => {
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty('--mx', `${((x - rect.left) / rect.width) * 100}%`);
+      el.style.setProperty('--my', `${((y - rect.top) / rect.height) * 100}%`);
+    };
+    const onMouse = (e) => handleMove(e.clientX, e.clientY);
+    const onTouch = (e) => { if (e.touches[0]) handleMove(e.touches[0].clientX, e.touches[0].clientY); };
+    el.addEventListener('mousemove', onMouse, { passive: true });
+    el.addEventListener('touchmove', onTouch, { passive: true });
+    return () => {
+      el.removeEventListener('mousemove', onMouse);
+      el.removeEventListener('touchmove', onTouch);
+    };
+  }, [gameStarted, gameOver]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -4587,7 +4607,7 @@ const Brikx = () => {
                 </div>
               </>
             ) : (
-              <div className="main-menu immersive">
+              <div className="main-menu immersive" ref={menuContainerRef} style={{ '--mx': '50%', '--my': '40%' }}>
                 {/* Industry-Quality Animated Particles Background */}
                 <div className="menu-background-particles">
                   {Array.from({ length: 50 }).map((_, i) => {
@@ -4620,6 +4640,16 @@ const Brikx = () => {
                   })}
                 </div>
                 
+                {/* Cursor-driven light field */}
+                <div className="menu-cursor-light" aria-hidden="true" />
+
+                {/* Volumetric god rays */}
+                <div className="menu-god-rays" aria-hidden="true">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className={`god-ray god-ray-${i}`} />
+                  ))}
+                </div>
+
                 {/* Animated Falling Tetris Blocks Background */}
                 <div className="falling-blocks-container">
                   {Array.from({ length: 8 }).map((_, i) => {
@@ -4654,7 +4684,9 @@ const Brikx = () => {
                 {/* Glass Morphism Center Overlay */}
                 <div className="menu-glass-overlay">
                   <div className="menu-center-content">
-                    <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="immersive-title" />
+                    <div className="title-holo-wrap">
+                      <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="immersive-title" />
+                    </div>
                     
                     <div className="immersive-player-info">
                       <span className="player-avatar-small">{playerAvatar}</span>
