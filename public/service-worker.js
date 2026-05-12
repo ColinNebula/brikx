@@ -2,15 +2,13 @@
 
 // Security: Version cache name to prevent tampering
 // Update this version to force cache refresh on mobile
-const CACHE_NAME = 'brickx-v9-' + '2026-04-30c';
+const CACHE_NAME = 'brickx-v10-' + '2026-05-12a';
 const SECURITY_VERSION = '9.0.0';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/static/js/bundle.js',
-  '/static/js/main.chunk.js',
-  '/static/js/0.chunk.js',
   '/manifest.json',
+  '/brikx192.png',
   '/brikx512.png',
   '/nebulamedia.png',
   '/Brikx-Title.png'

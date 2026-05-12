@@ -35,9 +35,36 @@ root.render(
 // Register service worker for PWA with update detection
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const serviceWorkerUrl = `${process.env.PUBLIC_URL || ''}/service-worker.js`;
+    const SW_MIGRATION_VERSION = '2026-05-12-1';
+    const migrationKey = 'brikx-sw-migration-version';
+    const publicBasePath = (process.env.PUBLIC_URL || '').replace(/\/+$/, '');
+    const serviceWorkerUrl = `${publicBasePath}/service-worker.js`;
 
-    navigator.serviceWorker.register(serviceWorkerUrl)
+    const migrateServiceWorkerState = async () => {
+      const previousVersion = localStorage.getItem(migrationKey);
+
+      if (previousVersion === SW_MIGRATION_VERSION) {
+        return;
+      }
+
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+
+      const cacheKeys = await caches.keys();
+      await Promise.all(
+        cacheKeys
+          .filter((cacheKey) => cacheKey.startsWith('brickx-'))
+          .map((cacheKey) => caches.delete(cacheKey))
+      );
+
+      localStorage.setItem(migrationKey, SW_MIGRATION_VERSION);
+    };
+
+    migrateServiceWorkerState()
+      .catch((migrationError) => {
+        console.warn('SW migration skipped:', migrationError);
+      })
+      .finally(() => navigator.serviceWorker.register(serviceWorkerUrl))
       .then((registration) => {
         console.log('SW registered: ', registration);
         
