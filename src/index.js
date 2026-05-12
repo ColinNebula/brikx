@@ -35,7 +35,9 @@ root.render(
 // Register service worker for PWA with update detection
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
+    const serviceWorkerUrl = `${process.env.PUBLIC_URL || ''}/service-worker.js`;
+
+    navigator.serviceWorker.register(serviceWorkerUrl)
       .then((registration) => {
         console.log('SW registered: ', registration);
         
