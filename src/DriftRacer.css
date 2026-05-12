@@ -2211,6 +2211,7 @@
     inset 0 0 30px rgba(255, 255, 255, 0.2);
   animation: buttonBreath 4s ease-in-out infinite;
   will-change: transform, opacity;
+  touch-action: manipulation;
 }
 
 @keyframes buttonBreath {
@@ -2318,6 +2319,7 @@
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.3s ease;
+  touch-action: manipulation;
 }
 
 .immersive-btn:hover {
@@ -5287,6 +5289,7 @@
   margin-top: 20px;
   position: relative;
   overflow: hidden;
+  touch-action: manipulation;
 }
 
 .start-mode-btn::before {
@@ -5678,11 +5681,16 @@
     --mode-footer-height: 64px;
     --mode-footer-side: 20px;
     --mode-footer-bottom: max(4px, env(safe-area-inset-bottom));
+    animation: none;
   }
 
   .mode-select-scroll {
     max-height: none;
     padding-bottom: 8px;
+  }
+
+  .mode-select-hint {
+    animation: none;
   }
 
   .mode-select-footer {
@@ -5715,6 +5723,12 @@
   
   .mode-card {
     padding: 20px 15px;
+    animation: none;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  }
+
+  .mode-card::before {
+    display: none;
   }
   
   .mode-card h3 {
@@ -5733,6 +5747,7 @@
     margin-top: 20px;
     margin-bottom: 30px;
     width: 100%;
+    animation: none;
   }
   
   .achievements-grid {

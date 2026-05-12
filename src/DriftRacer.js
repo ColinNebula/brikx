@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './DriftRacer.css';
 import {
   initPWA,
@@ -4504,6 +4504,43 @@ const Brikx = () => {
     `theme-motif-${shellVisual?.motif || 'ribbons'}`
   ].filter(Boolean).join(' ');
 
+  const menuParticles = useMemo(() => {
+    const sizes = ['particle-xs', 'particle-sm', 'particle-md', 'particle-lg', 'particle-xl'];
+    const colors = ['', 'particle-warm', 'particle-cool', 'particle-white', 'particle-magenta'];
+    const shapes = ['', 'particle-star', 'particle-square', 'particle-diamond'];
+    const motions = ['', 'particle-wave', 'particle-spiral', 'particle-orbit', 'particle-glow'];
+
+    return Array.from({ length: 50 }, (_, index) => ({
+      key: index,
+      sizeClass: sizes[Math.floor(Math.random() * sizes.length)],
+      colorClass: colors[Math.floor(Math.random() * colors.length)],
+      shapeClass: shapes[Math.floor(Math.random() * shapes.length)],
+      motionClass: motions[Math.floor(Math.random() * motions.length)],
+      left: `${Math.random() * 100}%`,
+      duration: `${6 + Math.random() * 8}s`,
+      delay: `${Math.random() * 2}s`,
+      driftX: `${(Math.random() - 0.5) * 80}px`
+    }));
+  }, []);
+
+  const menuFallingBlocks = useMemo(() => {
+    const shapes = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+    const colors = ['#00f0f0', '#f0f000', '#a000f0', '#00f000', '#f00000', '#0000f0', '#f0a000'];
+
+    return Array.from({ length: 8 }, (_, index) => {
+      const shapeIndex = index % shapes.length;
+      return {
+        key: index,
+        shape: shapes[shapeIndex],
+        color: colors[shapeIndex],
+        left: `${(index * 7 + Math.random() * 5)}%`,
+        animationDelay: `${Math.random() * 5}s`,
+        animationDuration: `${8 + Math.random() * 6}s`,
+        opacity: 0.15 + Math.random() * 0.1
+      };
+    });
+  }, []);
+
   const renderShellMotifElements = (motif) => {
     if (motif === 'flowers') {
       return (
@@ -4834,30 +4871,17 @@ const Brikx = () => {
               <div className={`main-menu immersive ${isMenuIdle ? 'cinematic-idle' : ''}`} ref={menuContainerRef} style={{ '--mx': '50%', '--my': '40%' }}>
                 {/* Industry-Quality Animated Particles Background */}
                 <div className="menu-background-particles">
-                  {Array.from({ length: 50 }).map((_, i) => {
-                    const sizes = ['particle-xs', 'particle-sm', 'particle-md', 'particle-lg', 'particle-xl'];
-                    const colors = ['', 'particle-warm', 'particle-cool', 'particle-white', 'particle-magenta'];
-                    const shapes = ['', 'particle-star', 'particle-square', 'particle-diamond'];
-                    const motions = ['', 'particle-wave', 'particle-spiral', 'particle-orbit', 'particle-glow'];
-                    
-                    const sizeClass = sizes[Math.floor(Math.random() * sizes.length)];
-                    const colorClass = colors[Math.floor(Math.random() * colors.length)];
-                    const shapeClass = shapes[Math.floor(Math.random() * shapes.length)];
-                    const motionClass = motions[Math.floor(Math.random() * motions.length)];
-                    const duration = 6 + Math.random() * 8;
-                    const delay = Math.random() * 2;
-                    const driftX = (Math.random() - 0.5) * 80;
-                    
+                  {menuParticles.map((particle) => {
                     return (
                       <div
-                        key={i}
-                        className={`particle ${sizeClass} ${colorClass} ${shapeClass} ${motionClass}`}
+                        key={particle.key}
+                        className={`particle ${particle.sizeClass} ${particle.colorClass} ${particle.shapeClass} ${particle.motionClass}`}
                         style={{
-                          left: `${Math.random() * 100}%`,
+                          left: particle.left,
                           bottom: `-20px`,
-                          '--duration': `${duration}s`,
-                          '--delay': `${delay}s`,
-                          '--drift-x': `${driftX}px`,
+                          '--duration': particle.duration,
+                          '--delay': particle.delay,
+                          '--drift-x': particle.driftX,
                         }}
                       />
                     );
@@ -4876,29 +4900,26 @@ const Brikx = () => {
 
                 {/* Animated Falling Tetris Blocks Background */}
                 <div className="falling-blocks-container">
-                  {Array.from({ length: 8 }).map((_, i) => {
-                    const shapes = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
-                    const colors = ['#00f0f0', '#f0f000', '#a000f0', '#00f000', '#f00000', '#0000f0', '#f0a000'];
-                    const shapeIndex = i % shapes.length;
+                  {menuFallingBlocks.map((block) => {
                     return (
                       <div 
-                        key={i} 
+                        key={block.key} 
                         className="falling-block"
                         style={{
-                          left: `${(i * 7 + Math.random() * 5)}%`,
-                          animationDelay: `${Math.random() * 5}s`,
-                          animationDuration: `${8 + Math.random() * 6}s`,
-                          opacity: 0.15 + Math.random() * 0.1
+                          left: block.left,
+                          animationDelay: block.animationDelay,
+                          animationDuration: block.animationDuration,
+                          opacity: block.opacity
                         }}
                       >
-                        <div className="tetris-shape" style={{ color: colors[shapeIndex] }}>
-                          {shapes[shapeIndex] === 'I' && '█\n█\n█\n█'}
-                          {shapes[shapeIndex] === 'O' && '██\n██'}
-                          {shapes[shapeIndex] === 'T' && '███\n █'}
-                          {shapes[shapeIndex] === 'S' && ' ██\n██'}
-                          {shapes[shapeIndex] === 'Z' && '██\n ██'}
-                          {shapes[shapeIndex] === 'J' && '█\n█\n██'}
-                          {shapes[shapeIndex] === 'L' && ' █\n █\n██'}
+                        <div className="tetris-shape" style={{ color: block.color }}>
+                          {block.shape === 'I' && '█\n█\n█\n█'}
+                          {block.shape === 'O' && '██\n██'}
+                          {block.shape === 'T' && '███\n █'}
+                          {block.shape === 'S' && ' ██\n██'}
+                          {block.shape === 'Z' && '██\n ██'}
+                          {block.shape === 'J' && '█\n█\n██'}
+                          {block.shape === 'L' && ' █\n █\n██'}
                         </div>
                       </div>
                     );
