@@ -2,7 +2,7 @@
 
 // Security: Version cache name to prevent tampering
 // Update this version to force cache refresh on mobile
-const CACHE_NAME = 'brickx-v10-' + '2026-05-12a';
+const CACHE_NAME = 'brickx-v11-' + '2026-05-13a';
 const SECURITY_VERSION = '9.0.0';
 const urlsToCache = [
   '/',

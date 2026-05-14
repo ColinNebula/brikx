@@ -514,7 +514,7 @@ const Brikx = () => {
     if (gameStarted || gameOver || prefersReducedMotion) return; // Only on main menu
 
     const resetIdleTimer = () => {
-      setIsMenuIdle(false);
+      setIsMenuIdle(prev => (prev ? false : prev));
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (cinematicTimeoutRef.current) clearTimeout(cinematicTimeoutRef.current);
 
@@ -526,8 +526,8 @@ const Brikx = () => {
       }, 8000);
     };
 
-    // Listen for any user interaction
-    const events = ['click', 'keydown', 'mousemove', 'touchstart', 'touchmove'];
+    // Listen for meaningful interactions; avoid high-frequency move events that can flood re-renders.
+    const events = ['click', 'keydown', 'touchstart', 'pointerdown', 'wheel'];
     events.forEach(evt => window.addEventListener(evt, resetIdleTimer, { passive: true }));
     resetIdleTimer(); // Start initial timer
 
@@ -1077,8 +1077,16 @@ const Brikx = () => {
 
   const playRotateSuccessSound = useCallback(() => {
     if (!soundEnabled) return;
-    playSound('rotate', 350, 0.08, 0.1);
-  }, [soundEnabled, playSound]);
+    try {
+      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-quick-positive-video-game-notification-interface-265.wav`);
+      audio.volume = Math.min(1, sfxVolume * 0.5);
+      audio.play().catch(err => {
+        console.warn('Rotate sound blocked:', err.message);
+      });
+    } catch (err) {
+      console.error('Error loading rotate sound:', err);
+    }
+  }, [soundEnabled, sfxVolume]);
 
   const playHoldSound = useCallback(() => {
     if (!soundEnabled) return;
@@ -2226,11 +2234,21 @@ const Brikx = () => {
     
     gameState.current.currentY += dropDistance;
     setScore(prev => prev + dropDistance * 2);
-    playSound('drop', 100, 0.15, 0.2);
+    if (soundEnabled && sfxVolume > 0) {
+      try {
+        const hardDropAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-sci-fi-positive-notification-266.wav`);
+        hardDropAudio.volume = Math.min(1, sfxVolume * 0.8);
+        hardDropAudio.play().catch(err => {
+          console.warn('Hard-drop sound blocked:', err.message);
+        });
+      } catch (err) {
+        console.error('Error loading hard-drop sound:', err);
+      }
+    }
     mergePiece();
     clearLines();
     spawnPiece();
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, playSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, soundEnabled, sfxVolume]);
 
   // Reset game
   const resetGame = useCallback(() => {
@@ -4510,7 +4528,15 @@ const Brikx = () => {
     const shapes = ['', 'particle-star', 'particle-square', 'particle-diamond'];
     const motions = ['', 'particle-wave', 'particle-spiral', 'particle-orbit', 'particle-glow'];
 
-    return Array.from({ length: 50 }, (_, index) => ({
+    const particleCount = lowPowerMode
+      ? 8
+      : prefersReducedMotion
+        ? 12
+        : isMobile
+          ? 20
+          : 50;
+
+    return Array.from({ length: particleCount }, (_, index) => ({
       key: index,
       sizeClass: sizes[Math.floor(Math.random() * sizes.length)],
       colorClass: colors[Math.floor(Math.random() * colors.length)],
@@ -4521,7 +4547,7 @@ const Brikx = () => {
       delay: `${Math.random() * 2}s`,
       driftX: `${(Math.random() - 0.5) * 80}px`
     }));
-  }, []);
+  }, [isMobile, lowPowerMode, prefersReducedMotion]);
 
   const menuFallingBlocks = useMemo(() => {
     const shapes = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
@@ -4803,15 +4829,6 @@ const Brikx = () => {
       )}
 
       <div className={`game-container${!gameStarted && !gameOver ? ' menu-stage' : ''}`}>
-        {lowPowerMode && (
-          <div className="battery-saver-badge" role="status" aria-live="polite">
-            <span className="battery-saver-badge-icon">🔋</span>
-            <span className="battery-saver-badge-text">
-              {batterySaverMode === 'auto' ? 'Battery Saver: Auto' : 'Battery Saver: On'}
-            </span>
-          </div>
-        )}
-
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
