@@ -696,6 +696,7 @@ const Brikx = () => {
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
+  const sfxAudioCacheRef = useRef(new Map());
   
   // MP3 Music Player System
   const musicPlayerRef = useRef(null);
@@ -710,12 +711,58 @@ const Brikx = () => {
     if (!audioContext.current) {
       audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
     }
-    
+
     // Cleanup on unmount
     return () => {
       stopMusic();
     };
   }, []);
+
+  const ensureAudioContextActive = useCallback(() => {
+    if (!audioContext.current || audioContext.current.state === 'running') return;
+    audioContext.current.resume().catch((err) => {
+      console.warn('Audio context resume failed:', err?.message || err);
+    });
+  }, []);
+
+  useEffect(() => {
+    const unlockAudio = () => ensureAudioContextActive();
+
+    window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('touchstart', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio, { passive: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [ensureAudioContextActive]);
+
+  const playSfxFile = useCallback((fileName, volumeMultiplier = 1, label = 'SFX') => {
+    if (!soundEnabled || sfxVolume <= 0) return;
+
+    ensureAudioContextActive();
+
+    try {
+      const src = `${process.env.PUBLIC_URL}/${fileName}`;
+      let baseAudio = sfxAudioCacheRef.current.get(src);
+
+      if (!baseAudio) {
+        baseAudio = new Audio(src);
+        baseAudio.preload = 'auto';
+        sfxAudioCacheRef.current.set(src, baseAudio);
+      }
+
+      const audio = baseAudio.cloneNode(true);
+      audio.volume = Math.min(1, Math.max(0, sfxVolume * volumeMultiplier));
+      audio.play().catch(err => {
+        console.warn(`${label} blocked:`, err.message);
+      });
+    } catch (err) {
+      console.error(`Error playing ${label.toLowerCase()}:`, err);
+    }
+  }, [soundEnabled, sfxVolume, ensureAudioContextActive]);
 
   useEffect(() => {
     gameStartedRef.current = gameStarted;
@@ -727,6 +774,11 @@ const Brikx = () => {
 
   const playSound = useCallback((type, frequency = 440, duration = 0.1, volume = 0.3) => {
     if (!soundEnabled || !audioContext.current) return;
+
+    if (audioContext.current.state === 'suspended') {
+      audioContext.current.resume().catch(() => {});
+      return;
+    }
     
     const ctx = audioContext.current;
     const oscillator = ctx.createOscillator();
@@ -817,20 +869,12 @@ const Brikx = () => {
     oscillator.start(ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
     oscillator.stop(ctx.currentTime + duration);
-  }, [soundEnabled]);
+  }, [soundEnabled, sfxVolume]);
 
   const playExplosionSound = useCallback(() => {
     if (!soundEnabled) return;
-    try {
-      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-pixel-chiptune-explosion-1692.wav`);
-      audio.volume = sfxVolume * 0.6; // Apply SFX volume
-      audio.play().catch(err => {
-        console.warn('Explosion sound blocked:', err.message);
-      });
-    } catch (err) {
-      console.error('Error playing explosion sound:', err);
-    }
-  }, [soundEnabled, sfxVolume]);
+    playSfxFile('mixkit-pixel-chiptune-explosion-1692.wav', 0.6, 'Explosion sound');
+  }, [soundEnabled, playSfxFile]);
 
   const playLineClearSound = useCallback((linesCleared) => {
     if (!soundEnabled) return;
@@ -879,16 +923,8 @@ const Brikx = () => {
 
   const playLevelUpSound = useCallback(() => {
     if (!soundEnabled) return;
-    try {
-      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-video-game-treasure-2066.wav`);
-      audio.volume = sfxVolume * 0.6; // Apply SFX volume
-      audio.play().catch(err => {
-        console.warn('Level up sound blocked:', err.message);
-      });
-    } catch (err) {
-      console.error('Error playing level up sound:', err);
-    }
-  }, [soundEnabled, sfxVolume]);
+    playSfxFile('mixkit-video-game-treasure-2066.wav', 0.6, 'Level up sound');
+  }, [soundEnabled, playSfxFile]);
 
   const toggleSound = useCallback(() => {
     setSoundEnabled(prev => {
@@ -1077,16 +1113,8 @@ const Brikx = () => {
 
   const playRotateSuccessSound = useCallback(() => {
     if (!soundEnabled) return;
-    try {
-      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-quick-positive-video-game-notification-interface-265.wav`);
-      audio.volume = Math.min(1, sfxVolume * 0.5);
-      audio.play().catch(err => {
-        console.warn('Rotate sound blocked:', err.message);
-      });
-    } catch (err) {
-      console.error('Error loading rotate sound:', err);
-    }
-  }, [soundEnabled, sfxVolume]);
+    playSfxFile('mixkit-quick-positive-video-game-notification-interface-265.wav', 0.5, 'Rotate sound');
+  }, [soundEnabled, playSfxFile]);
 
   const playHoldSound = useCallback(() => {
     if (!soundEnabled) return;
@@ -1095,16 +1123,8 @@ const Brikx = () => {
 
   const playGameOverSound = useCallback(() => {
     if (!soundEnabled) return;
-    try {
-      const audio = new Audio(`${process.env.PUBLIC_URL}/mixkit-game-experience-level-increased-2062.wav`);
-      audio.volume = sfxVolume * 0.5; // Apply SFX volume
-      audio.play().catch(err => {
-        console.warn('Game over sound blocked:', err.message);
-      });
-    } catch (err) {
-      console.error('Error playing game over sound:', err);
-    }
-  }, [soundEnabled, sfxVolume]);
+    playSfxFile('mixkit-game-experience-level-increased-2062.wav', 0.5, 'Game over sound');
+  }, [soundEnabled, playSfxFile]);
 
   // Achievement definitions with avatar rewards
   const achievementsList = {
@@ -2234,21 +2254,11 @@ const Brikx = () => {
     
     gameState.current.currentY += dropDistance;
     setScore(prev => prev + dropDistance * 2);
-    if (soundEnabled && sfxVolume > 0) {
-      try {
-        const hardDropAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-sci-fi-positive-notification-266.wav`);
-        hardDropAudio.volume = Math.min(1, sfxVolume * 0.8);
-        hardDropAudio.play().catch(err => {
-          console.warn('Hard-drop sound blocked:', err.message);
-        });
-      } catch (err) {
-        console.error('Error loading hard-drop sound:', err);
-      }
-    }
+    playSfxFile('mixkit-sci-fi-positive-notification-266.wav', 0.8, 'Hard-drop sound');
     mergePiece();
     clearLines();
     spawnPiece();
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, soundEnabled, sfxVolume]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSfxFile]);
 
   // Reset game
   const resetGame = useCallback(() => {
@@ -2296,27 +2306,13 @@ const Brikx = () => {
     setCountdown(3);
     
     // Play countdown click sound
-    if (soundEnabled && sfxVolume > 0) {
-      try {
-        const clickAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-sci-fi-click-900.wav`);
-        clickAudio.volume = sfxVolume * 0.7;
-        clickAudio.play().catch(err => console.warn('Countdown sound blocked:', err.message));
-      } catch (err) {
-        console.error('Error loading countdown sound:', err);
-      }
+    if (soundEnabled) {
+      playSfxFile('mixkit-sci-fi-click-900.wav', 0.7, 'Countdown sound');
     }
     
     // Play start game audio
-    if (soundEnabled && sfxVolume > 0) {
-      try {
-        const startAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-fairy-magic-sparkle-871.mp3`);
-        startAudio.volume = Math.min(1.0, sfxVolume); // Full SFX volume
-        startAudio.play().catch(err => {
-          console.warn('Start game audio blocked:', err.message);
-        });
-      } catch (err) {
-        console.error('Error loading start game audio:', err);
-      }
+    if (soundEnabled) {
+      playSfxFile('mixkit-fairy-magic-sparkle-871.mp3', 1.0, 'Start game sound');
     }
     
     const countdownInterval = setInterval(() => {
@@ -2324,14 +2320,8 @@ const Brikx = () => {
         if (prev === 1) {
           clearInterval(countdownInterval);
           // Play "GO" alarm tone
-          if (soundEnabled && sfxVolume > 0) {
-            try {
-              const goAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-alarm-tone-996.wav`);
-              goAudio.volume = sfxVolume * 0.8;
-              goAudio.play().catch(err => console.warn('Go sound blocked:', err.message));
-            } catch (err) {
-              console.error('Error loading Go sound:', err);
-            }
+          if (soundEnabled) {
+            playSfxFile('mixkit-alarm-tone-996.wav', 0.8, 'Go sound');
           }
           setTimeout(() => {
             setCountdown(null);
@@ -2346,19 +2336,13 @@ const Brikx = () => {
           return 'GO';
         }
         // Play countdown click for each number
-        if (soundEnabled && sfxVolume > 0) {
-          try {
-            const clickAudio = new Audio(`${process.env.PUBLIC_URL}/mixkit-sci-fi-click-900.wav`);
-            clickAudio.volume = sfxVolume * 0.7;
-            clickAudio.play().catch(err => console.warn('Countdown sound blocked:', err.message));
-          } catch (err) {
-            console.error('Error loading countdown sound:', err);
-          }
+        if (soundEnabled) {
+          playSfxFile('mixkit-sci-fi-click-900.wav', 0.7, 'Countdown sound');
         }
         return prev - 1;
       });
     }, 1000);
-  }, [resetGame, startMusic, updateMusicIntensity, soundEnabled, sfxVolume]);
+  }, [resetGame, startMusic, updateMusicIntensity, soundEnabled, playSfxFile]);
 
   // Main menu handler with confirmation
   const handleQuitToMenu = useCallback(() => {
