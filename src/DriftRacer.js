@@ -706,6 +706,7 @@ const Brikx = () => {
   const musicIntensity = useRef(1);
   const gameStartedRef = useRef(gameStarted);
   const musicEnabledRef = useRef(musicEnabled);
+  const previousScoreRef = useRef(score);
   
   useEffect(() => {
     if (!audioContext.current) {
@@ -771,6 +772,20 @@ const Brikx = () => {
   useEffect(() => {
     musicEnabledRef.current = musicEnabled;
   }, [musicEnabled]);
+
+  useEffect(() => {
+    const scoreDelta = score - previousScoreRef.current;
+
+    if (gameStarted && scoreDelta > 0) {
+      if (scoreDelta < 100) {
+        playSfxFile('mixkit-quick-positive-video-game-notification-interface-265.wav', 0.2, 'Score tick sound');
+      } else {
+        playSfxFile('mixkit-ethereal-fairy-win-sound-2019.wav', 0.45, 'Score sound');
+      }
+    }
+
+    previousScoreRef.current = score;
+  }, [gameStarted, score, playSfxFile]);
 
   const playSound = useCallback((type, frequency = 440, duration = 0.1, volume = 0.3) => {
     if (!soundEnabled || !audioContext.current) return;
