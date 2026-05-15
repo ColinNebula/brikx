@@ -196,9 +196,16 @@
 .theme-shell-gradient {
   position: absolute;
   inset: -12%;
-  background: radial-gradient(circle at 20% 15%, color-mix(in srgb, var(--color-accent) 22%, transparent), transparent 35%),
-              radial-gradient(circle at 80% 85%, color-mix(in srgb, var(--color-accent) 16%, transparent), transparent 40%),
-              linear-gradient(120deg, var(--color-primary), var(--color-secondary), var(--color-tertiary));
+  background:
+    radial-gradient(circle at 18% 14%, color-mix(in srgb, var(--color-accent) 30%, transparent), transparent 38%),
+    radial-gradient(circle at 78% 82%, color-mix(in srgb, var(--color-success) 22%, transparent), transparent 44%),
+    radial-gradient(circle at 56% 48%, color-mix(in srgb, var(--color-warning) 16%, transparent), transparent 52%),
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--color-primary) 82%, var(--color-accent) 18%),
+      color-mix(in srgb, var(--color-secondary) 72%, var(--color-success) 28%),
+      color-mix(in srgb, var(--color-tertiary) 78%, var(--color-warning) 22%)
+    );
+  background-size: 140% 140%, 130% 130%, 125% 125%, 100% 100%;
   animation: shellGradientFlow 10s ease-in-out infinite;
 }
 
@@ -210,6 +217,54 @@
     linear-gradient(-45deg, color-mix(in srgb, var(--color-accent) 12%, transparent) 1px, transparent 1px);
   background-size: 28px 28px, 32px 32px;
   animation: shellPatternDrift 14s linear infinite;
+}
+
+.drift-racer.theme-category-base .theme-shell-gradient {
+  animation-duration: 12.5s;
+  filter: saturate(0.94) brightness(0.97);
+}
+
+.drift-racer.theme-category-base .theme-shell-pattern {
+  animation-duration: 18s;
+  opacity: 0.72;
+}
+
+.drift-racer.theme-category-premium .theme-shell-gradient {
+  background:
+    radial-gradient(circle at 14% 12%, color-mix(in srgb, var(--color-accent) 40%, transparent), transparent 42%),
+    radial-gradient(circle at 86% 78%, color-mix(in srgb, var(--color-success) 30%, transparent), transparent 46%),
+    radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--color-warning) 24%, transparent), transparent 58%),
+    linear-gradient(125deg,
+      color-mix(in srgb, var(--color-primary) 74%, var(--color-accent) 26%),
+      color-mix(in srgb, var(--color-secondary) 64%, var(--color-success) 36%),
+      color-mix(in srgb, var(--color-tertiary) 70%, var(--color-warning) 30%)
+    );
+  animation-duration: 8.2s;
+  filter: saturate(1.22) contrast(1.07) brightness(1.03);
+}
+
+.drift-racer.theme-category-premium .theme-shell-pattern {
+  opacity: 0.92;
+  animation-duration: 11s;
+}
+
+.drift-racer.theme-category-seasonal .theme-shell-gradient {
+  background:
+    radial-gradient(circle at 24% 16%, color-mix(in srgb, var(--color-warning) 28%, transparent), transparent 42%),
+    radial-gradient(circle at 76% 84%, color-mix(in srgb, var(--color-accent) 28%, transparent), transparent 44%),
+    radial-gradient(circle at 52% 44%, color-mix(in srgb, var(--color-success) 20%, transparent), transparent 56%),
+    linear-gradient(120deg,
+      color-mix(in srgb, var(--color-primary) 78%, var(--color-warning) 22%),
+      color-mix(in srgb, var(--color-secondary) 70%, var(--color-accent) 30%),
+      color-mix(in srgb, var(--color-tertiary) 74%, var(--color-success) 26%)
+    );
+  animation-duration: 9.6s;
+  filter: saturate(1.12) brightness(1.02);
+}
+
+.drift-racer.theme-category-seasonal .theme-shell-pattern {
+  opacity: 0.84;
+  animation-duration: 13s;
 }
 
 .theme-shell-orb,
@@ -1523,6 +1578,53 @@
     transform: translateY(-5px) scale(1.02);
   }
 }
+  .quick-support-panel {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 240, 0.26);
+    background: linear-gradient(145deg, rgba(10, 18, 34, 0.5), rgba(8, 26, 48, 0.45));
+    backdrop-filter: blur(6px);
+    max-width: 580px;
+  }
+  .quick-support-copy {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.82);
+    margin-bottom: 6px;
+  }
+  .quick-support-copy a {
+    color: #7efbff;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(126, 251, 255, 0.6);
+  }
+  .quick-support-links,
+  .pause-support-inline {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .quick-support-links a,
+  .pause-support-inline a {
+    text-decoration: none;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #e9fdff;
+    border: 1px solid rgba(0, 240, 240, 0.33);
+    border-radius: 999px;
+    padding: 4px 9px;
+    background: rgba(0, 240, 240, 0.08);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .quick-support-links a:hover,
+  .pause-support-inline a:hover {
+    transform: translateY(-1px);
+    border-color: rgba(0, 240, 240, 0.68);
+    background: rgba(0, 240, 240, 0.18);
+  }
+  .pause-support-inline {
+    margin-top: 14px;
+    justify-content: center;
+  }
 
 @keyframes statItemFadeIn {
   0% {
@@ -6172,6 +6274,66 @@
   margin: 8px 0;
 }
 
+.support-section-copy {
+  margin-bottom: 14px;
+}
+
+.support-email-link {
+  display: inline-block;
+  margin: 6px 0 8px;
+  color: #7efbff;
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(126, 251, 255, 0.6);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.support-email-link:hover {
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.85);
+}
+
+.support-links-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.support-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 240, 240, 0.28);
+  background: linear-gradient(135deg, rgba(0, 240, 240, 0.12), rgba(0, 120, 240, 0.12));
+  text-decoration: none;
+  color: #ffffff;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.support-link-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 240, 240, 0.65);
+  box-shadow: 0 8px 18px rgba(0, 240, 240, 0.2);
+}
+
+.support-link-icon {
+  font-size: 1.25rem;
+}
+
+.support-link-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.support-link-subtitle {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
 /* Responsive PWA Components */
 @media (max-width: 768px) {
   .daily-challenge-banner {
@@ -6231,6 +6393,21 @@
 
   .toggle-button {
     align-self: flex-end;
+  }
+  .quick-support-panel {
+    width: 100%;
+  }
+  .quick-support-copy {
+    font-size: 0.76rem;
+  }
+  .quick-support-links a,
+  .pause-support-inline a {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+  }
+
+  .support-links-grid {
+    grid-template-columns: 1fr;
   }
 
   .mode-segment {

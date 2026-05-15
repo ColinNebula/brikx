@@ -2621,11 +2621,15 @@ const Brikx = () => {
     const themePrimary = hexToRgbArray(selectedTheme?.colors?.primary, [10, 5, 30]);
     const themeSecondary = hexToRgbArray(selectedTheme?.colors?.secondary, [30, 10, 60]);
     const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
+    const themeSuccess = hexToRgbArray(selectedTheme?.colors?.success, [0, 240, 140]);
+    const themeWarning = hexToRgbArray(selectedTheme?.colors?.warning, [255, 190, 0]);
     
     // Boost saturation for better visual pop (especially during events)
     const saturationBoost = Math.max(0, (gameState.current.saturationBoost || 0));
     const saturationMultiplier = 1 + saturationBoost * 0.4;
     const boostedAccent = boostColorSaturation(themeAccent, saturationMultiplier, 1.15);
+    const boostedSuccess = boostColorSaturation(themeSuccess, saturationMultiplier * 0.95, 1.08);
+    const boostedWarning = boostColorSaturation(themeWarning, saturationMultiplier * 0.9, 1.05);
     const boostedPrimary = brightenColor(themePrimary, 1 + saturationBoost * 0.2);
     const boostedSecondary = brightenColor(themeSecondary, 1 + saturationBoost * 0.15);
     
@@ -2650,12 +2654,35 @@ const Brikx = () => {
     const r1 = Math.min(255, boostedPrimary[0] + boostedAccent[0] * comboIntensity * 0.35);
     const g1 = Math.min(255, boostedPrimary[1] + boostedAccent[1] * comboIntensity * 0.35);
     const b1 = Math.min(255, boostedPrimary[2] + boostedAccent[2] * comboIntensity * 0.35);
+    const rMid = Math.min(255, boostedSecondary[0] * 0.72 + boostedSuccess[0] * 0.28 + comboIntensity * 18);
+    const gMid = Math.min(255, boostedSecondary[1] * 0.72 + boostedSuccess[1] * 0.28 + comboIntensity * 18);
+    const bMid = Math.min(255, boostedSecondary[2] * 0.72 + boostedSuccess[2] * 0.28 + comboIntensity * 18);
+    const rWarm = Math.min(255, boostedSecondary[0] * 0.7 + boostedWarning[0] * 0.3 + comboIntensity * 14);
+    const gWarm = Math.min(255, boostedSecondary[1] * 0.7 + boostedWarning[1] * 0.3 + comboIntensity * 14);
+    const bWarm = Math.min(255, boostedSecondary[2] * 0.7 + boostedWarning[2] * 0.3 + comboIntensity * 14);
     const r2 = Math.min(255, boostedSecondary[0] + boostedAccent[0] * comboIntensity * 0.25);
     const g2 = Math.min(255, boostedSecondary[1] + boostedAccent[1] * comboIntensity * 0.25);
     const b2 = Math.min(255, boostedSecondary[2] + boostedAccent[2] * comboIntensity * 0.25);
     gradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
+    gradient.addColorStop(0.38, `rgb(${rMid}, ${gMid}, ${bMid})`);
+    gradient.addColorStop(0.72, `rgb(${rWarm}, ${gWarm}, ${bWarm})`);
     gradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
     ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Add soft color wash that shifts with gameplay intensity for richer animated themes.
+    const chromaVeil = ctx.createRadialGradient(
+      CANVAS_WIDTH * (0.2 + Math.sin(animOffset) * 0.08),
+      CANVAS_HEIGHT * (0.22 + Math.cos(animOffset * 1.1) * 0.05),
+      0,
+      CANVAS_WIDTH * 0.5,
+      CANVAS_HEIGHT * 0.5,
+      CANVAS_HEIGHT * 0.9
+    );
+    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, 0.1 + comboIntensity * 0.08));
+    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, 0.08 + comboIntensity * 0.06));
+    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, 0.06 + comboIntensity * 0.05));
+    ctx.fillStyle = chromaVeil;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
     // Draw floating geometric shapes in background with boosted accent colors
@@ -2766,25 +2793,25 @@ const Brikx = () => {
           ctx.save();
           ctx.translate(x, y);
           ctx.rotate(rotation);
-          ctx.fillStyle = i % 2 ? rgbAlpha([255, 160, 85], 0.5) : rgbAlpha([196, 120, 64], 0.45);
+          ctx.fillStyle = i % 2 ? rgbAlpha(boostedWarning, 0.5) : rgbAlpha(boostedSuccess, 0.45);
           ctx.beginPath();
           ctx.ellipse(0, 0, size * 1.1, size * 0.5, Math.PI / 4, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         } else if (visualMotif === 'flowers') {
-          drawFlower(ctx, x, y, size, rgbAlpha([255, 190, 220], 0.5), 0.45, rotation);
+          drawFlower(ctx, x, y, size, rgbAlpha(boostedAccent, 0.5), 0.45, rotation);
         } else if (visualMotif === 'petals') {
           ctx.save();
           ctx.translate(x, y);
           ctx.rotate(rotation);
-          ctx.fillStyle = rgbAlpha([255, 170, 205], 0.5);
+          ctx.fillStyle = rgbAlpha(boostedAccent, 0.5);
           ctx.beginPath();
           ctx.ellipse(0, 0, size * 1.2, size * 0.55, Math.PI / 3, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         } else if (visualMotif === 'snow') {
           ctx.save();
-          ctx.strokeStyle = rgbAlpha([210, 240, 255], 0.52);
+          ctx.strokeStyle = rgbAlpha(boostedAccent, 0.52);
           ctx.lineWidth = 1;
           ctx.translate(x, y);
           ctx.rotate(rotation);
@@ -2807,7 +2834,7 @@ const Brikx = () => {
           ctx.restore();
         } else if (visualMotif === 'embers') {
           ctx.save();
-          ctx.fillStyle = i % 2 ? rgbAlpha([255, 190, 80], 0.45) : rgbAlpha([255, 110, 50], 0.38);
+          ctx.fillStyle = i % 2 ? rgbAlpha(boostedWarning, 0.45) : rgbAlpha(boostedAccent, 0.38);
           ctx.beginPath();
           ctx.arc(x, CANVAS_HEIGHT - y * 0.5, size * 0.7, 0, Math.PI * 2);
           ctx.fill();
@@ -5009,6 +5036,15 @@ const Brikx = () => {
                         ⚙️ Settings
                       </button>
                     </div>
+
+                    <div className="quick-support-panel" role="group" aria-label="Support and donation links">
+                      <div className="quick-support-copy">Support: <a href="mailto:support@nebula3ddev.com" onClick={() => playSound('menuClick', 600, 0.1)}>support@nebula3ddev.com</a></div>
+                      <div className="quick-support-links">
+                        <a href="https://github.com/ColinNebula" target="_blank" rel="noopener noreferrer" onClick={() => playSound('menuClick', 600, 0.1)}>GitHub</a>
+                        <a href="https://ko-fi.com/ColinNebula" target="_blank" rel="noopener noreferrer" onClick={() => playSound('menuClick', 600, 0.1)}>Ko-fi</a>
+                        <a href="https://paypal.me/ColinNebula" target="_blank" rel="noopener noreferrer" onClick={() => playSound('menuClick', 600, 0.1)}>PayPal</a>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5051,6 +5087,12 @@ const Brikx = () => {
                 <button className="menu-btn main-menu-btn" onClick={handleQuitToMenu}>
                   🏠 Main Menu
                 </button>
+              </div>
+              <div className="pause-support-inline" role="group" aria-label="Support and donation links">
+                <a href="mailto:support@nebula3ddev.com" onClick={() => playSound('menuClick', 600, 0.1)}>Support</a>
+                <a href="https://github.com/ColinNebula" target="_blank" rel="noopener noreferrer" onClick={() => playSound('menuClick', 600, 0.1)}>GitHub</a>
+                <a href="https://ko-fi.com/ColinNebula" target="_blank" rel="noopener noreferrer" onClick={() => playSound('menuClick', 600, 0.1)}>Ko-fi</a>
+                <a href="https://paypal.me/ColinNebula" target="_blank" rel="noopener noreferrer" onClick={() => playSound('menuClick', 600, 0.1)}>PayPal</a>
               </div>
               <p style={{marginTop: '20px', fontSize: '0.9rem', color: '#aaa'}}>Press P or ESC to Resume</p>
             </div>
@@ -5444,6 +5486,56 @@ const Brikx = () => {
                   <p>✓ Screen reader compatible</p>
                   <p>✓ High contrast visual design</p>
                   <p>✓ Gamepad support</p>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3 className="settings-heading">Support & Donations</h3>
+                <div className="setting-info support-section-copy">
+                  <p>Need help or have questions about BRIKX? Reach us anytime.</p>
+                  <a
+                    className="support-email-link"
+                    href="mailto:support@nebula3ddev.com"
+                    onClick={() => playSound('menuClick', 600, 0.1)}
+                  >
+                    support@nebula3ddev.com
+                  </a>
+                  <p>If you enjoy the game, donations help cover server costs and fund better updates.</p>
+                </div>
+                <div className="support-links-grid" role="group" aria-label="Support and donation links">
+                  <a
+                    className="support-link-card"
+                    href="https://github.com/ColinNebula"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => playSound('menuClick', 600, 0.1)}
+                  >
+                    <span className="support-link-icon" aria-hidden="true">💻</span>
+                    <span className="support-link-title">GitHub</span>
+                    <span className="support-link-subtitle">@ColinNebula</span>
+                  </a>
+                  <a
+                    className="support-link-card"
+                    href="https://ko-fi.com/ColinNebula"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => playSound('menuClick', 600, 0.1)}
+                  >
+                    <span className="support-link-icon" aria-hidden="true">☕</span>
+                    <span className="support-link-title">Ko-fi</span>
+                    <span className="support-link-subtitle">@ColinNebula</span>
+                  </a>
+                  <a
+                    className="support-link-card"
+                    href="https://paypal.me/ColinNebula"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => playSound('menuClick', 600, 0.1)}
+                  >
+                    <span className="support-link-icon" aria-hidden="true">💙</span>
+                    <span className="support-link-title">PayPal</span>
+                    <span className="support-link-subtitle">@ColinNebula</span>
+                  </a>
                 </div>
               </div>
             </div>
