@@ -55,7 +55,7 @@
       "url": "/?action=newgame",
       "icons": [
         {
-          "src": "brikx512.png",
+          "src": "brikx192.png",
           "sizes": "192x192"
         }
       ]

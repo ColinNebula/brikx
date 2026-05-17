@@ -353,7 +353,8 @@ const formatTrackLabel = (trackName) => {
 };
 
 const LEADERBOARD_STORAGE_KEY = 'brikxLeaderboard';
-const MAX_LEADERBOARD_ENTRIES = 8;
+const MAX_LEADERBOARD_ENTRIES = 60;
+const MAX_LEADERBOARD_DISPLAY = 8;
 
 const normalizeLeaderboardEntries = (entries) => {
   if (!Array.isArray(entries)) return [];
@@ -375,6 +376,19 @@ const normalizeLeaderboardEntries = (entries) => {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     })
     .slice(0, MAX_LEADERBOARD_ENTRIES);
+};
+
+const getTopLeaderboardEntries = (entries, limit = MAX_LEADERBOARD_DISPLAY) => {
+  return normalizeLeaderboardEntries(entries).slice(0, limit);
+};
+
+const getPlayerBestRank = (entries, player, mode = 'all') => {
+  const normalized = normalizeLeaderboardEntries(entries);
+  const filtered = mode === 'all'
+    ? normalized
+    : normalized.filter((entry) => entry.mode === mode);
+  const rankIndex = filtered.findIndex((entry) => entry.name === player);
+  return rankIndex >= 0 ? rankIndex + 1 : null;
 };
 
 const formatModeLabel = (mode) => {
@@ -435,6 +449,11 @@ const Brikx = () => {
   const [countdown, setCountdown] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardView, setLeaderboardView] = useState('global');
+  const [leaderboardModeFilter, setLeaderboardModeFilter] = useState('classic');
+  const [showClearLeaderboardConfirm, setShowClearLeaderboardConfirm] = useState(false);
+  const [rankJump, setRankJump] = useState(null);
+  const [showLeaderboardClearedToast, setShowLeaderboardClearedToast] = useState(false);
   const [playerName, setPlayerName] = useState(() => {
     const name = safeGetItem('brickxPlayerName', 'Player');
     return name.slice(0, 15).replace(/[^a-zA-Z0-9\s]/g, '') || 'Player';
@@ -494,8 +513,20 @@ const Brikx = () => {
   });
 
   const topLeaderboardEntries = useMemo(
-    () => normalizeLeaderboardEntries(leaderboardEntries),
+    () => getTopLeaderboardEntries(leaderboardEntries),
     [leaderboardEntries]
+  );
+
+  const leaderboardModeEntries = useMemo(
+    () => getTopLeaderboardEntries(
+      leaderboardEntries.filter((entry) => entry.mode === leaderboardModeFilter)
+    ),
+    [leaderboardEntries, leaderboardModeFilter]
+  );
+
+  const visibleLeaderboardEntries = useMemo(
+    () => leaderboardView === 'global' ? topLeaderboardEntries : leaderboardModeEntries,
+    [leaderboardView, topLeaderboardEntries, leaderboardModeEntries]
   );
 
   // Cursor-driven light field tracking (updates CSS vars directly — no re-render)
@@ -4589,8 +4620,8 @@ const Brikx = () => {
 
   // Persist local leaderboard entries for quick in-app ranking.
   useEffect(() => {
-    safeSetItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(topLeaderboardEntries));
-  }, [topLeaderboardEntries]);
+    safeSetItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(normalizeLeaderboardEntries(leaderboardEntries)));
+  }, [leaderboardEntries]);
 
   // Track finished runs and add them to leaderboard once per game-over event.
   useEffect(() => {
@@ -4602,6 +4633,14 @@ const Brikx = () => {
     }
     lastLeaderboardRunRef.current = runSignature;
 
+    const previousPlayerBestScore = Math.max(
+      0,
+      ...normalizeLeaderboardEntries(leaderboardEntries)
+        .filter((entry) => entry.name === (playerName || 'Player'))
+        .map((entry) => entry.score)
+    );
+    const previousGlobalRank = getPlayerBestRank(leaderboardEntries, playerName || 'Player', 'all');
+
     const newEntry = {
       name: playerName || 'Player',
       avatar: playerAvatar || '🎮',
@@ -4612,14 +4651,44 @@ const Brikx = () => {
       date: new Date().toISOString()
     };
 
-    setLeaderboardEntries((prev) => normalizeLeaderboardEntries([...(prev || []), newEntry]));
-  }, [gameOver, score, lines, level, gameMode, startTime, playerName, playerAvatar]);
+    const nextEntries = normalizeLeaderboardEntries([...(leaderboardEntries || []), newEntry]);
+    const nextGlobalRank = getPlayerBestRank(nextEntries, playerName || 'Player', 'all');
+
+    if ((score || 0) > previousPlayerBestScore && nextGlobalRank && (previousGlobalRank === null || nextGlobalRank < previousGlobalRank)) {
+      setRankJump({
+        from: previousGlobalRank,
+        to: nextGlobalRank,
+        mode: gameMode || 'classic'
+      });
+    }
+
+    setLeaderboardEntries(nextEntries);
+  }, [gameOver, score, lines, level, gameMode, startTime, playerName, playerAvatar, leaderboardEntries]);
 
   useEffect(() => {
     if (!gameOver) {
       lastLeaderboardRunRef.current = '';
+      setRankJump(null);
     }
   }, [gameOver]);
+
+  const closeLeaderboardModal = useCallback(() => {
+    setShowLeaderboard(false);
+    setShowClearLeaderboardConfirm(false);
+  }, []);
+
+  const clearLeaderboard = useCallback(() => {
+    setLeaderboardEntries([]);
+    safeSetItem(LEADERBOARD_STORAGE_KEY, '[]');
+    setShowClearLeaderboardConfirm(false);
+    setShowLeaderboardClearedToast(true);
+  }, []);
+
+  useEffect(() => {
+    if (!showLeaderboardClearedToast) return;
+    const timer = setTimeout(() => setShowLeaderboardClearedToast(false), 2200);
+    return () => clearTimeout(timer);
+  }, [showLeaderboardClearedToast]);
 
   const shellTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
   const shellVisual = shellTheme.visual || getThemeVisualProfile(currentTheme, shellTheme.category);
@@ -4966,6 +5035,15 @@ const Brikx = () => {
                     <div className="score-label">FINAL SCORE</div>
                     <div className="score-number">{(score || 0).toLocaleString()}</div>
                   </div>
+
+                  {rankJump && (
+                    <div className="rank-jump-banner" role="status" aria-live="polite">
+                      <span className="rank-jump-title">🚀 New Personal Best Rank</span>
+                      <span className="rank-jump-detail">
+                        {rankJump.from ? `#${rankJump.from} → #${rankJump.to}` : `Entered leaderboard at #${rankJump.to}`} • {formatModeLabel(rankJump.mode)}
+                      </span>
+                    </div>
+                  )}
                   
                   <div className="game-over-stats">
                     <div className="stat-item">
@@ -5115,7 +5193,11 @@ const Brikx = () => {
                       </button>
                       <button 
                         className="immersive-btn" 
-                        onClick={() => { setShowLeaderboard(true); queueMenuClickSound(); }}
+                        onClick={() => {
+                          setLeaderboardModeFilter(gameMode || 'classic');
+                          setShowLeaderboard(true);
+                          queueMenuClickSound();
+                        }}
                         aria-label="View leaderboard"
                       >
                         🥇 Leaderboard
@@ -6039,21 +6121,56 @@ const Brikx = () => {
 
         {/* Leaderboard Modal */}
         {showLeaderboard && (
-          <div className="modal-overlay" onClick={() => setShowLeaderboard(false)}>
+          <div className="modal-overlay" onClick={closeLeaderboardModal}>
             <div className="modal-content leaderboard-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setShowLeaderboard(false)}>×</button>
+              <button className="modal-close" onClick={closeLeaderboardModal}>×</button>
               <h2 className="modal-title">🥇 Leaderboard</h2>
 
-              {topLeaderboardEntries.length === 0 ? (
+              <div className="leaderboard-tabs" role="tablist" aria-label="Leaderboard view">
+                <button
+                  className={`leaderboard-tab ${leaderboardView === 'global' ? 'active' : ''}`}
+                  onClick={() => setLeaderboardView('global')}
+                  role="tab"
+                  aria-selected={leaderboardView === 'global'}
+                >
+                  Global
+                </button>
+                <button
+                  className={`leaderboard-tab ${leaderboardView === 'mode' ? 'active' : ''}`}
+                  onClick={() => setLeaderboardView('mode')}
+                  role="tab"
+                  aria-selected={leaderboardView === 'mode'}
+                >
+                  By Mode
+                </button>
+              </div>
+
+              {leaderboardView === 'mode' && (
+                <div className="leaderboard-mode-tabs" role="tablist" aria-label="Leaderboard mode filter">
+                  {['classic', 'sprint', 'marathon'].map((mode) => (
+                    <button
+                      key={mode}
+                      className={`leaderboard-mode-tab ${leaderboardModeFilter === mode ? 'active' : ''}`}
+                      onClick={() => setLeaderboardModeFilter(mode)}
+                      role="tab"
+                      aria-selected={leaderboardModeFilter === mode}
+                    >
+                      {formatModeLabel(mode)}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {visibleLeaderboardEntries.length === 0 ? (
                 <div className="leaderboard-empty">
-                  <p>No ranked runs yet. Finish a game to claim the first spot.</p>
+                  <p>{leaderboardView === 'global' ? 'No ranked runs yet. Finish a game to claim the first spot.' : `No ${formatModeLabel(leaderboardModeFilter)} runs ranked yet.`}</p>
                 </div>
               ) : (
                 <div className="leaderboard-list" role="list" aria-label="Top leaderboard scores">
-                  {topLeaderboardEntries.map((entry, index) => (
+                  {visibleLeaderboardEntries.map((entry, index) => (
                     <div
                       key={`${entry.date}-${entry.score}-${index}`}
-                      className={`leaderboard-item ${entry.name === playerName ? 'is-current-player' : ''}`}
+                      className={`leaderboard-item ${entry.name === playerName ? 'is-current-player' : ''} ${rankJump && entry.name === playerName && index + 1 === rankJump.to ? 'rank-jump-highlight' : ''}`}
                       role="listitem"
                     >
                       <div className="leaderboard-rank">#{index + 1}</div>
@@ -6069,6 +6186,36 @@ const Brikx = () => {
                       <div className="leaderboard-score">{entry.score.toLocaleString()}</div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              <div className="leaderboard-actions">
+                <button
+                  className="leaderboard-clear-btn"
+                  onClick={() => setShowClearLeaderboardConfirm(true)}
+                  disabled={leaderboardEntries.length === 0}
+                >
+                  🗑️ Clear Leaderboard
+                </button>
+              </div>
+
+              {showClearLeaderboardConfirm && (
+                <div className="leaderboard-confirm-box" role="alertdialog" aria-label="Confirm clear leaderboard">
+                  <p>Clear all saved leaderboard scores? This cannot be undone.</p>
+                  <div className="leaderboard-confirm-actions">
+                    <button className="leaderboard-cancel-btn" onClick={() => setShowClearLeaderboardConfirm(false)}>
+                      Cancel
+                    </button>
+                    <button className="leaderboard-confirm-btn" onClick={clearLeaderboard}>
+                      Yes, Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {showLeaderboardClearedToast && (
+                <div className="leaderboard-toast" role="status" aria-live="polite">
+                  ✅ Leaderboard cleared successfully
                 </div>
               )}
             </div>
