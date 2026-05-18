@@ -5296,7 +5296,7 @@ const Brikx = () => {
                 <div className="menu-glass-overlay">
                   <div className="menu-center-content">
                     <div className="title-holo-wrap">
-                      <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="immersive-title" />
+                      <img src={`${process.env.PUBLIC_URL}/Brikx-Title1.png`} alt="BRICKX" className="immersive-title" onError={(e) => { e.currentTarget.src = `${process.env.PUBLIC_URL}/Brikx-Title.png`; }} />
                     </div>
                     
                     <div className="immersive-player-info">
@@ -5409,7 +5409,7 @@ const Brikx = () => {
               <span className="pause-orb pause-orb-3" />
             </div>
             <div className="pause-panel">
-              <img src={`${process.env.PUBLIC_URL}/Brikx-Title.png`} alt="BRICKX" className="pause-title" />
+              <img src={`${process.env.PUBLIC_URL}/Brikx-Title1.png`} alt="BRICKX" className="pause-title" onError={(e) => { e.currentTarget.src = `${process.env.PUBLIC_URL}/Brikx-Title.png`; }} />
               <h2>⏸️ Paused</h2>
               <div className="menu-buttons">
                 <button className="menu-btn resume-btn" onClick={() => setIsPaused(false)}>
