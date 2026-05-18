@@ -14,7 +14,11 @@ import {
   initSyncListener,
   isOffline,
   initNetworkListener,
-  showNotification
+  showNotification,
+  createLeaderboardSession,
+  submitScoreToLeaderboard,
+  fetchGlobalLeaderboard,
+  getPlayerLeaderboardStats
 } from './pwaUtils';
 import {
   THEME_DEFINITIONS,
@@ -451,6 +455,7 @@ const Brikx = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardView, setLeaderboardView] = useState('global');
   const [leaderboardModeFilter, setLeaderboardModeFilter] = useState('classic');
+  const [leaderboardScopeFilter, setLeaderboardScopeFilter] = useState('all');
   const [showClearLeaderboardConfirm, setShowClearLeaderboardConfirm] = useState(false);
   const [rankJump, setRankJump] = useState(null);
   const [showLeaderboardClearedToast, setShowLeaderboardClearedToast] = useState(false);
@@ -470,6 +475,12 @@ const Brikx = () => {
     }
   });
   const lastLeaderboardRunRef = useRef('');
+  const [globalLeaderboardEntries, setGlobalLeaderboardEntries] = useState([]);
+  const [globalLeaderboardLoading, setGlobalLeaderboardLoading] = useState(false);
+  const [globalLeaderboardError, setGlobalLeaderboardError] = useState(null);
+  const [playerGlobalRank, setPlayerGlobalRank] = useState(null);
+  const [lastScoreSubmitted, setLastScoreSubmitted] = useState(null);
+  const [leaderboardSessionToken, setLeaderboardSessionToken] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return safeGetItem('brickxSoundEnabled', 'true') !== 'false';
@@ -524,10 +535,15 @@ const Brikx = () => {
     [leaderboardEntries, leaderboardModeFilter]
   );
 
-  const visibleLeaderboardEntries = useMemo(
-    () => leaderboardView === 'global' ? topLeaderboardEntries : leaderboardModeEntries,
-    [leaderboardView, topLeaderboardEntries, leaderboardModeEntries]
-  );
+  const visibleLeaderboardEntries = useMemo(() => {
+    if (leaderboardView === 'global') {
+      return globalLeaderboardEntries;
+    } else if (leaderboardView === 'local') {
+      return topLeaderboardEntries;
+    } else {
+      return leaderboardModeEntries;
+    }
+  }, [leaderboardView, globalLeaderboardEntries, topLeaderboardEntries, leaderboardModeEntries]);
 
   // Cursor-driven light field tracking (updates CSS vars directly — no re-render)
   useEffect(() => {
@@ -654,6 +670,7 @@ const Brikx = () => {
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState(null);
+  const leaderboardSessionStartedRef = useRef(false);
 
   // Theme System
   const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme());
@@ -2440,6 +2457,35 @@ const Brikx = () => {
       });
     }, 1000);
   }, [resetGame, startMusic, updateMusicIntensity, soundEnabled, playSfxFile]);
+
+  // Create a signed leaderboard session when a run starts.
+  useEffect(() => {
+    if (!gameStarted && !gameOver) {
+      leaderboardSessionStartedRef.current = false;
+      setLeaderboardSessionToken('');
+      return;
+    }
+
+    if (gameOver) return;
+
+    if (leaderboardSessionStartedRef.current) return;
+    leaderboardSessionStartedRef.current = true;
+
+    const bootstrapSession = async () => {
+      try {
+        const result = await createLeaderboardSession(gameMode || 'classic');
+        if (result.success && result.sessionToken) {
+          setLeaderboardSessionToken(result.sessionToken);
+        } else {
+          console.warn('Leaderboard session setup failed:', result.error);
+        }
+      } catch (error) {
+        console.error('Error bootstrapping leaderboard session:', error);
+      }
+    };
+
+    bootstrapSession();
+  }, [gameStarted, gameOver, gameMode]);
 
   // Main menu handler with confirmation
   const handleQuitToMenu = useCallback(() => {
@@ -4404,6 +4450,14 @@ const Brikx = () => {
   useEffect(() => {
     initPWA();
     
+    // Load global leaderboard
+    loadGlobalLeaderboard();
+    
+    // Load player's global rank
+    if (playerName) {
+      loadPlayerGlobalStats();
+    }
+    
     // Check if app is installed
     setIsAppInstalled(isInstalled());
     
@@ -4665,10 +4719,49 @@ const Brikx = () => {
     setLeaderboardEntries(nextEntries);
   }, [gameOver, score, lines, level, gameMode, startTime, playerName, playerAvatar, leaderboardEntries]);
 
+  // Submit score to global leaderboard when game ends
+  useEffect(() => {
+    if (!gameOver || score <= 0 || !playerName) return;
+
+    // Check if we've already submitted this exact score
+    const scoreSignature = [score, lines, level, gameMode, startTime].join(':');
+    if (lastScoreSubmitted === scoreSignature) return;
+
+    setLastScoreSubmitted(scoreSignature);
+
+    const submitScore = async () => {
+      try {
+        const result = await submitScoreToLeaderboard({
+          name: playerName,
+          avatar: playerAvatar,
+          score: score,
+          lines: lines,
+          level: level,
+          mode: gameMode,
+          durationMs: elapsedTime,
+          sessionToken: leaderboardSessionToken
+        });
+
+        if (result.success) {
+          console.log('Score submitted to global leaderboard. Rank:', result.rank);
+          // Refresh global leaderboard to show updated rankings
+          setTimeout(() => loadGlobalLeaderboard(), 500);
+        } else {
+          console.warn('Failed to submit score to global leaderboard:', result.error);
+        }
+      } catch (error) {
+        console.error('Error submitting score to global leaderboard:', error);
+      }
+    };
+
+    submitScore();
+  }, [gameOver, score, lines, level, gameMode, startTime, playerName, playerAvatar, lastScoreSubmitted, elapsedTime, leaderboardSessionToken]);
+
   useEffect(() => {
     if (!gameOver) {
       lastLeaderboardRunRef.current = '';
       setRankJump(null);
+      setLastScoreSubmitted(null);
     }
   }, [gameOver]);
 
@@ -4684,11 +4777,57 @@ const Brikx = () => {
     setShowLeaderboardClearedToast(true);
   }, []);
 
+  // Load global leaderboard from server
+  const loadGlobalLeaderboard = useCallback(async () => {
+    setGlobalLeaderboardLoading(true);
+    setGlobalLeaderboardError(null);
+    try {
+      const requestedMode = leaderboardView === 'mode' ? leaderboardModeFilter : 'all';
+      const result = await fetchGlobalLeaderboard({
+        limit: MAX_LEADERBOARD_DISPLAY,
+        mode: requestedMode,
+        scope: leaderboardScopeFilter
+      });
+      if (result.success) {
+        setGlobalLeaderboardEntries(result.entries || []);
+      } else {
+        setGlobalLeaderboardError(result.error || 'Failed to load leaderboard');
+      }
+    } catch (error) {
+      console.error('Error loading global leaderboard:', error);
+      setGlobalLeaderboardError(error.message);
+    } finally {
+      setGlobalLeaderboardLoading(false);
+    }
+  }, [leaderboardView, leaderboardModeFilter, leaderboardScopeFilter]);
+
+  // Load player's global stats
+  const loadPlayerGlobalStats = useCallback(async () => {
+    if (!playerName) return;
+    try {
+      const requestedMode = leaderboardView === 'mode' ? leaderboardModeFilter : 'all';
+      const result = await getPlayerLeaderboardStats(playerName, requestedMode, leaderboardScopeFilter);
+      if (result.success) {
+        setPlayerGlobalRank(result.rank);
+      }
+    } catch (error) {
+      console.error('Error loading player global stats:', error);
+    }
+  }, [playerName, leaderboardView, leaderboardModeFilter, leaderboardScopeFilter]);
+
   useEffect(() => {
     if (!showLeaderboardClearedToast) return;
     const timer = setTimeout(() => setShowLeaderboardClearedToast(false), 2200);
     return () => clearTimeout(timer);
   }, [showLeaderboardClearedToast]);
+
+  // Reload global leaderboard when mode filter changes or leaderboard is opened
+  useEffect(() => {
+    if (showLeaderboard) {
+      loadGlobalLeaderboard();
+      loadPlayerGlobalStats();
+    }
+  }, [showLeaderboard, leaderboardModeFilter, leaderboardScopeFilter, leaderboardView, loadGlobalLeaderboard, loadPlayerGlobalStats]);
 
   const shellTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
   const shellVisual = shellTheme.visual || getThemeVisualProfile(currentTheme, shellTheme.category);
@@ -6133,7 +6272,15 @@ const Brikx = () => {
                   role="tab"
                   aria-selected={leaderboardView === 'global'}
                 >
-                  Global
+                  🌍 Global
+                </button>
+                <button
+                  className={`leaderboard-tab ${leaderboardView === 'local' ? 'active' : ''}`}
+                  onClick={() => setLeaderboardView('local')}
+                  role="tab"
+                  aria-selected={leaderboardView === 'local'}
+                >
+                  💻 Local
                 </button>
                 <button
                   className={`leaderboard-tab ${leaderboardView === 'mode' ? 'active' : ''}`}
@@ -6144,6 +6291,26 @@ const Brikx = () => {
                   By Mode
                 </button>
               </div>
+
+              {leaderboardView === 'global' && (
+                <div className="leaderboard-scope-tabs" role="tablist" aria-label="Leaderboard time scope">
+                  {[
+                    { id: 'all', label: 'All Time' },
+                    { id: 'weekly', label: 'Weekly' },
+                    { id: 'monthly', label: 'Monthly' }
+                  ].map((scope) => (
+                    <button
+                      key={scope.id}
+                      className={`leaderboard-scope-tab ${leaderboardScopeFilter === scope.id ? 'active' : ''}`}
+                      onClick={() => setLeaderboardScopeFilter(scope.id)}
+                      role="tab"
+                      aria-selected={leaderboardScopeFilter === scope.id}
+                    >
+                      {scope.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {leaderboardView === 'mode' && (
                 <div className="leaderboard-mode-tabs" role="tablist" aria-label="Leaderboard mode filter">
@@ -6163,7 +6330,21 @@ const Brikx = () => {
 
               {visibleLeaderboardEntries.length === 0 ? (
                 <div className="leaderboard-empty">
-                  <p>{leaderboardView === 'global' ? 'No ranked runs yet. Finish a game to claim the first spot.' : `No ${formatModeLabel(leaderboardModeFilter)} runs ranked yet.`}</p>
+                  {globalLeaderboardLoading && leaderboardView === 'global' && (
+                    <p>📡 Loading global leaderboard...</p>
+                  )}
+                  {globalLeaderboardError && leaderboardView === 'global' && (
+                    <p>⚠️ Could not load global leaderboard. {globalLeaderboardError}</p>
+                  )}
+                  {!globalLeaderboardLoading && !globalLeaderboardError && leaderboardView === 'global' && (
+                    <p>No global {leaderboardScopeFilter} scores yet. Be the first to rank!</p>
+                  )}
+                  {leaderboardView === 'local' && (
+                    <p>No local ranked runs yet. Finish a game to claim the first spot.</p>
+                  )}
+                  {leaderboardView === 'mode' && (
+                    <p>No {formatModeLabel(leaderboardModeFilter)} runs ranked yet.</p>
+                  )}
                 </div>
               ) : (
                 <div className="leaderboard-list" role="list" aria-label="Top leaderboard scores">
@@ -6190,13 +6371,20 @@ const Brikx = () => {
               )}
 
               <div className="leaderboard-actions">
-                <button
-                  className="leaderboard-clear-btn"
-                  onClick={() => setShowClearLeaderboardConfirm(true)}
-                  disabled={leaderboardEntries.length === 0}
-                >
-                  🗑️ Clear Leaderboard
-                </button>
+                {leaderboardView !== 'global' && (
+                  <button
+                    className="leaderboard-clear-btn"
+                    onClick={() => setShowClearLeaderboardConfirm(true)}
+                    disabled={leaderboardEntries.length === 0}
+                  >
+                    🗑️ Clear Leaderboard
+                  </button>
+                )}
+                {leaderboardView === 'global' && playerGlobalRank && (
+                  <div className="player-global-rank">
+                    <span>🌍 Your {leaderboardScopeFilter === 'all' ? 'All-Time' : leaderboardScopeFilter === 'weekly' ? 'Weekly' : 'Monthly'} Rank: <strong>#{playerGlobalRank}</strong></span>
+                  </div>
+                )}
               </div>
 
               {showClearLeaderboardConfirm && (

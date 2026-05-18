@@ -1,0 +1,74 @@
+{
+  "indexingMode": "consistent",
+  "automatic": true,
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/docType",
+        "order": "ascending"
+      },
+      {
+        "path": "/mode",
+        "order": "ascending"
+      },
+      {
+        "path": "/score",
+        "order": "descending"
+      },
+      {
+        "path": "/lines",
+        "order": "descending"
+      },
+      {
+        "path": "/submittedAt",
+        "order": "descending"
+      }
+    ],
+    [
+      {
+        "path": "/docType",
+        "order": "ascending"
+      },
+      {
+        "path": "/name",
+        "order": "ascending"
+      },
+      {
+        "path": "/mode",
+        "order": "ascending"
+      },
+      {
+        "path": "/score",
+        "order": "descending"
+      },
+      {
+        "path": "/lines",
+        "order": "descending"
+      },
+      {
+        "path": "/submittedAt",
+        "order": "descending"
+      }
+    ],
+    [
+      {
+        "path": "/docType",
+        "order": "ascending"
+      },
+      {
+        "path": "/submittedAt",
+        "order": "descending"
+      }
+    ]
+  ]
+}

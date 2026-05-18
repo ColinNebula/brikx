@@ -1,0 +1,9 @@
+{
+  "name": "brikx-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "leaderboard/index.js",
+  "dependencies": {
+    "@azure/cosmos": "^4.1.0"
+  }
+}

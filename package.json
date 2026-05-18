@@ -25,7 +25,8 @@
     "deploy-netlify": "npm run build && netlify deploy --prod --dir=build",
     "deploy-vercel": "npm run build && vercel --prod",
     "deploy-azure": "npm run build",
-    "validate-pwa": "echo Visit https://www.pwabuilder.com and enter your deployed URL"
+    "validate-pwa": "echo Visit https://www.pwabuilder.com and enter your deployed URL",
+    "provision:cosmos": "powershell -ExecutionPolicy Bypass -File ./scripts/provision-cosmos.ps1"
   },
   "eslintConfig": {
     "extends": [

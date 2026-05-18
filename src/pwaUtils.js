@@ -397,6 +397,270 @@ export function initNetworkListener(onOnline, onOffline) {
 
 
 // ============================================
+// GLOBAL LEADERBOARD
+// ============================================
+
+// API base URL - adjust based on deployment
+const LEADERBOARD_API_BASE = process.env.REACT_APP_API_URL || '/api/leaderboard';
+
+// Get a unique device ID for anonymous submissions
+function getDeviceId() {
+  let deviceId = localStorage.getItem('brikx_device_id');
+  if (!deviceId) {
+    deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('brikx_device_id', deviceId);
+  }
+  return deviceId;
+}
+
+async function sha256Hex(input) {
+  if (!window.crypto?.subtle) {
+    throw new Error('Web Crypto API is unavailable.');
+  }
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
+  const bytes = Array.from(new Uint8Array(digest));
+  return bytes.map((value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+function buildTelemetryPayload({
+  sessionId,
+  deviceId,
+  mode,
+  score,
+  lines,
+  level,
+  durationMs
+}) {
+  return [
+    sessionId || 'nosession',
+    deviceId,
+    mode,
+    score,
+    lines,
+    level,
+    durationMs
+  ].join('|');
+}
+
+function parseSessionToken(sessionToken) {
+  if (!sessionToken || typeof sessionToken !== 'string' || !sessionToken.includes('.')) return null;
+  const [payloadB64] = sessionToken.split('.');
+  if (!payloadB64) return null;
+
+  try {
+    const normalized = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const decoded = atob(padded);
+    return JSON.parse(decoded);
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function createLeaderboardSession(mode = 'classic') {
+  try {
+    const payload = {
+      mode: ['classic', 'sprint', 'marathon'].includes(mode) ? mode : 'classic',
+      deviceId: getDeviceId(),
+      clientStartedAt: new Date().toISOString()
+    };
+
+    const response = await fetch(`${LEADERBOARD_API_BASE}/session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (!data.success || !data.sessionToken) {
+      return { success: false, error: data.error || 'Unable to create leaderboard session.' };
+    }
+
+    return {
+      success: true,
+      sessionToken: data.sessionToken,
+      sessionId: data.sessionId,
+      expiresAt: data.expiresAt
+    };
+  } catch (error) {
+    console.error('Error creating leaderboard session:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Submit a score to the global leaderboard
+ * @param {Object} scoreData - Game score data
+ * @returns {Promise<Object>} - Response from server with rank
+ */
+export async function submitScoreToLeaderboard(scoreData) {
+  try {
+    const { name, avatar, score, lines, level, mode, durationMs, sessionToken } = scoreData;
+    
+    // Validate score
+    if (!name || score === undefined || score < 0) {
+      console.warn('Invalid score data:', scoreData);
+      return { success: false, error: 'Invalid score data' };
+    }
+    
+    const deviceId = getDeviceId();
+    const normalizedMode = mode || 'classic';
+    let effectiveSessionToken = sessionToken || '';
+    if (!effectiveSessionToken) {
+      const sessionResult = await createLeaderboardSession(normalizedMode);
+      if (sessionResult.success && sessionResult.sessionToken) {
+        effectiveSessionToken = sessionResult.sessionToken;
+      }
+    }
+
+    const parsedSession = parseSessionToken(effectiveSessionToken);
+    const telemetryPayload = buildTelemetryPayload({
+      sessionId: parsedSession?.sid || 'nosession',
+      deviceId,
+      mode: normalizedMode,
+      score: Math.max(0, parseInt(score) || 0),
+      lines: Math.max(0, parseInt(lines) || 0),
+      level: Math.max(1, parseInt(level) || 1),
+      durationMs: Math.max(0, parseInt(durationMs) || 0)
+    });
+    const telemetryHash = await sha256Hex(telemetryPayload);
+
+    const payload = {
+      name: name || 'Player',
+      avatar: avatar || '🎮',
+      score: Math.max(0, parseInt(score) || 0),
+      lines: Math.max(0, parseInt(lines) || 0),
+      level: Math.max(1, parseInt(level) || 1),
+      mode: normalizedMode,
+      durationMs: Math.max(0, parseInt(durationMs) || 0),
+      clientTimestamp: new Date().toISOString(),
+      deviceId,
+      sessionToken: effectiveSessionToken,
+      telemetryHash
+    };
+    
+    const response = await fetch(`${LEADERBOARD_API_BASE}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('Score submitted successfully. Rank:', data.rank);
+      return { 
+        success: true, 
+        rank: data.rank,
+        entry: data.entry,
+        message: data.message
+      };
+    } else {
+      console.error('Score submission failed:', data.error);
+      return { success: false, error: data.error };
+    }
+  } catch (error) {
+    console.error('Error submitting score to leaderboard:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Fetch global leaderboard entries
+ * @param {Object} options - Fetch options
+ * @returns {Promise<Object>} - Leaderboard entries and metadata
+ */
+export async function fetchGlobalLeaderboard(options = {}) {
+  try {
+    const { limit = 10, mode = 'all', scope = 'all' } = options;
+    
+    const params = new URLSearchParams({
+      limit: Math.min(limit, 100),
+      mode: ['classic', 'sprint', 'marathon'].includes(mode) ? mode : 'all',
+      scope: ['all', 'weekly', 'monthly'].includes(scope) ? scope : 'all'
+    });
+    
+    const response = await fetch(`${LEADERBOARD_API_BASE}/get?${params}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      return {
+        success: true,
+        entries: data.entries || [],
+        total: data.total || 0,
+        scope: data.scope || 'all',
+        timestamp: data.timestamp
+      };
+    } else {
+      console.error('Failed to fetch leaderboard:', data.error);
+      return { success: false, entries: [], error: data.error };
+    }
+  } catch (error) {
+    console.error('Error fetching global leaderboard:', error);
+    return { success: false, entries: [], error: error.message };
+  }
+}
+
+/**
+ * Get a player's rank and stats on the global leaderboard
+ * @param {string} playerName - Player name
+ * @param {string} mode - Game mode (optional)
+ * @returns {Promise<Object>} - Player's rank and stats
+ */
+export async function getPlayerLeaderboardStats(playerName, mode = 'all', scope = 'all') {
+  try {
+    const params = new URLSearchParams({
+      name: playerName,
+      mode: ['classic', 'sprint', 'marathon'].includes(mode) ? mode : 'all',
+      scope: ['all', 'weekly', 'monthly'].includes(scope) ? scope : 'all'
+    });
+    
+    const response = await fetch(`${LEADERBOARD_API_BASE}/player?${params}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      return {
+        success: true,
+        player: data.player,
+        bestEntry: data.bestEntry,
+        rank: data.rank,
+        totalSubmissions: data.totalSubmissions,
+        scope: data.scope || 'all',
+        allEntries: data.allEntries || []
+      };
+    } else {
+      console.error('Failed to fetch player stats:', data.error);
+      return { success: false, error: data.error };
+    }
+  } catch (error) {
+    console.error('Error fetching player leaderboard stats:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
