@@ -35,7 +35,7 @@ root.render(
 // Register service worker for PWA with update detection
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const SW_MIGRATION_VERSION = '2026-05-18-1';
+    const SW_MIGRATION_VERSION = '2026-05-18-2';
     const migrationKey = 'brikx-sw-migration-version';
     const publicBasePath = (process.env.PUBLIC_URL || '').replace(/\/+$/, '');
     const serviceWorkerUrl = `${publicBasePath}/service-worker.js`;
