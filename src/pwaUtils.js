@@ -403,6 +403,19 @@ export function initNetworkListener(onOnline, onOffline) {
 // API base URL - adjust based on deployment
 const LEADERBOARD_API_BASE = process.env.REACT_APP_API_URL || '/api/leaderboard';
 
+async function parseApiResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    success: response.ok,
+    error: text || `Request failed with status ${response.status}`
+  };
+}
+
 // Get a unique device ID for anonymous submissions
 function getDeviceId() {
   let deviceId = localStorage.getItem('brikx_device_id');
@@ -683,7 +696,13 @@ export async function fetchGlobalLeaderboard(options = {}) {
       }
     });
     
-    const data = await response.json();
+    const data = await parseApiResponse(response);
+
+    if (!response.ok || !data?.success) {
+      const fallbackError = data?.error || `Leaderboard request failed (${response.status})`;
+      console.error('Failed to fetch leaderboard:', fallbackError);
+      return { success: false, entries: [], error: fallbackError };
+    }
     
     if (data.success) {
       return {
@@ -723,8 +742,14 @@ export async function getPlayerLeaderboardStats(playerName, mode = 'all', scope 
         'Accept': 'application/json'
       }
     });
-    
-    const data = await response.json();
+
+    const data = await parseApiResponse(response);
+
+    if (!response.ok || !data?.success) {
+      const fallbackError = data?.error || `Player leaderboard request failed (${response.status})`;
+      console.error('Failed to fetch player stats:', fallbackError);
+      return { success: false, error: fallbackError };
+    }
     
     if (data.success) {
       return {

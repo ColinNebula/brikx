@@ -892,100 +892,112 @@ const Brikx = () => {
   const playSound = useCallback((type, frequency = 440, duration = 0.1, volume = 0.3) => {
     if (!soundEnabled || !audioContext.current) return;
 
-    if (audioContext.current.state === 'suspended') {
-      audioContext.current.resume().catch(() => {});
+    const ctx = audioContext.current;
+
+    const performPlay = () => {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      // Apply SFX volume once and clamp to keep WebAudio stable.
+      const finalVolume = Math.min(1, Math.max(0.001, volume * sfxVolume));
+      let gainMultiplier = 1;
+
+      switch(type) {
+        case 'move':
+          oscillator.frequency.value = 200;
+          gainMultiplier = 0.05;
+          oscillator.type = 'square';
+          break;
+        case 'rotate':
+          oscillator.frequency.value = 300;
+          gainMultiplier = 0.08;
+          oscillator.type = 'sine';
+          oscillator.frequency.linearRampToValueAtTime(450, ctx.currentTime + 0.05);
+          break;
+        case 'drop':
+          oscillator.frequency.value = 100;
+          gainMultiplier = 0.2;
+          oscillator.type = 'triangle';
+          oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
+          break;
+        case 'lineClear1':
+          oscillator.frequency.value = 400;
+          gainMultiplier = 0.15;
+          oscillator.type = 'sine';
+          oscillator.frequency.linearRampToValueAtTime(550, ctx.currentTime + 0.1);
+          break;
+        case 'lineClear2':
+          oscillator.frequency.value = 500;
+          gainMultiplier = 0.18;
+          oscillator.type = 'sine';
+          oscillator.frequency.linearRampToValueAtTime(700, ctx.currentTime + 0.12);
+          break;
+        case 'lineClear3':
+          oscillator.frequency.value = 600;
+          gainMultiplier = 0.2;
+          oscillator.type = 'sine';
+          oscillator.frequency.linearRampToValueAtTime(850, ctx.currentTime + 0.15);
+          break;
+        case 'tetris':
+          oscillator.frequency.value = 800;
+          gainMultiplier = 0.25;
+          oscillator.type = 'square';
+          oscillator.frequency.linearRampToValueAtTime(1000, ctx.currentTime + 0.2);
+          break;
+        case 'levelUp':
+          oscillator.frequency.value = 880;
+          gainMultiplier = 0.2;
+          oscillator.type = 'sine';
+          oscillator.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.15);
+          break;
+        case 'combo':
+          oscillator.frequency.value = frequency;
+          gainMultiplier = 0.65;
+          oscillator.type = 'sine';
+          break;
+        case 'perfectClear':
+          oscillator.frequency.value = 1200;
+          gainMultiplier = 0.3;
+          oscillator.type = 'square';
+          break;
+        case 'gameOver':
+          oscillator.frequency.value = 150;
+          gainMultiplier = 0.25;
+          oscillator.type = 'sawtooth';
+          break;
+        case 'menuClick':
+          oscillator.frequency.value = 600;
+          gainMultiplier = 0.1;
+          oscillator.type = 'sine';
+          break;
+        case 'achievement':
+          oscillator.frequency.value = frequency;
+          gainMultiplier = 0.22;
+          oscillator.type = 'triangle';
+          oscillator.frequency.linearRampToValueAtTime(frequency * 1.2, ctx.currentTime + Math.min(duration, 0.18));
+          break;
+        default:
+          oscillator.frequency.value = frequency;
+          gainMultiplier = 1;
+          oscillator.type = 'sine';
+      }
+
+      const startGain = Math.min(1, Math.max(0.001, finalVolume * gainMultiplier));
+      gainNode.gain.setValueAtTime(startGain, ctx.currentTime);
+      oscillator.start(ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      oscillator.stop(ctx.currentTime + duration);
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(performPlay).catch(() => {});
       return;
     }
-    
-    const ctx = audioContext.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    // Apply SFX volume multiplier
-    const finalVolume = volume * sfxVolume;
-    
-    switch(type) {
-      case 'move':
-        oscillator.frequency.value = 200;
-        gainNode.gain.value = 0.05 * finalVolume;
-        oscillator.type = 'square';
-        break;
-      case 'rotate':
-        oscillator.frequency.value = 300;
-        gainNode.gain.value = 0.08 * finalVolume;
-        oscillator.type = 'sine';
-        // Add frequency sweep for more interesting rotate sound
-        oscillator.frequency.linearRampToValueAtTime(450, ctx.currentTime + 0.05);
-        break;
-      case 'drop':
-        oscillator.frequency.value = 100;
-        gainNode.gain.value = 0.2 * finalVolume;
-        oscillator.type = 'triangle';
-        // Falling pitch for drop
-        oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
-        break;
-      case 'lineClear1':
-        oscillator.frequency.value = 400;
-        gainNode.gain.value = 0.15 * finalVolume;
-        oscillator.type = 'sine';
-        oscillator.frequency.linearRampToValueAtTime(550, ctx.currentTime + 0.1);
-        break;
-      case 'lineClear2':
-        oscillator.frequency.value = 500;
-        gainNode.gain.value = 0.18 * finalVolume;
-        oscillator.type = 'sine';
-        oscillator.frequency.linearRampToValueAtTime(700, ctx.currentTime + 0.12);
-        break;
-      case 'lineClear3':
-        oscillator.frequency.value = 600;
-        gainNode.gain.value = 0.2 * finalVolume;
-        oscillator.type = 'sine';
-        oscillator.frequency.linearRampToValueAtTime(850, ctx.currentTime + 0.15);
-        break;
-      case 'tetris':
-        oscillator.frequency.value = 800;
-        gainNode.gain.value = 0.25 * finalVolume;
-        oscillator.type = 'square';
-        oscillator.frequency.linearRampToValueAtTime(1000, ctx.currentTime + 0.2);
-        break;
-      case 'levelUp':
-        oscillator.frequency.value = 880;
-        gainNode.gain.value = 0.2 * finalVolume;
-        oscillator.type = 'sine';
-        oscillator.frequency.linearRampToValueAtTime(1320, ctx.currentTime + 0.15);
-        break;
-      case 'combo':
-        oscillator.frequency.value = frequency;
-        gainNode.gain.value = volume * finalVolume;
-        oscillator.type = 'sine';
-        break;
-      case 'perfectClear':
-        oscillator.frequency.value = 1200;
-        gainNode.gain.value = 0.3;
-        oscillator.type = 'square';
-        break;
-      case 'gameOver':
-        oscillator.frequency.value = 150;
-        gainNode.gain.value = 0.25;
-        oscillator.type = 'sawtooth';
-        break;
-      case 'menuClick':
-        oscillator.frequency.value = 600;
-        gainNode.gain.value = 0.1;
-        oscillator.type = 'sine';
-        break;
-      default:
-        oscillator.frequency.value = frequency;
-        gainNode.gain.value = volume;
-        oscillator.type = 'sine';
-    }
-    
-    oscillator.start(ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-    oscillator.stop(ctx.currentTime + duration);
+
+    performPlay();
   }, [soundEnabled, sfxVolume]);
 
   const playExplosionSound = useCallback(() => {
@@ -5138,15 +5150,27 @@ const Brikx = () => {
       if (result.success) {
         setGlobalLeaderboardEntries(result.entries || []);
       } else {
-        setGlobalLeaderboardError(result.error || 'Failed to load leaderboard');
+        const fallbackEntries = normalizeLeaderboardEntries(topLeaderboardEntries || []);
+        if (fallbackEntries.length > 0) {
+          setGlobalLeaderboardEntries(fallbackEntries);
+          setGlobalLeaderboardError(`Global leaderboard unavailable (${result.error || 'unknown error'}). Showing local entries.`);
+        } else {
+          setGlobalLeaderboardError(result.error || 'Failed to load leaderboard');
+        }
       }
     } catch (error) {
       console.error('Error loading global leaderboard:', error);
-      setGlobalLeaderboardError(error.message);
+      const fallbackEntries = normalizeLeaderboardEntries(topLeaderboardEntries || []);
+      if (fallbackEntries.length > 0) {
+        setGlobalLeaderboardEntries(fallbackEntries);
+        setGlobalLeaderboardError(`Global leaderboard unavailable (${error.message}). Showing local entries.`);
+      } else {
+        setGlobalLeaderboardError(error.message);
+      }
     } finally {
       setGlobalLeaderboardLoading(false);
     }
-  }, [leaderboardView, leaderboardModeFilter, leaderboardScopeFilter]);
+  }, [leaderboardView, leaderboardModeFilter, leaderboardScopeFilter, topLeaderboardEntries]);
 
   // Load player's global stats
   const loadPlayerGlobalStats = useCallback(async () => {
