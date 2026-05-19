@@ -15,6 +15,7 @@ const ALLOWED_MODES = new Set(['classic', 'sprint', 'marathon']);
 const ALLOWED_SCOPES = new Set(['all', 'weekly', 'monthly']);
 const MAX_LEADERBOARD_FETCH = 100;
 const PLAYER_HISTORY_LIMIT = 20;
+const MAX_PROFILE_SNAPSHOT_SIZE = 120000;
 
 // Anti-cheat hard limits.
 const MAX_SCORE = 100000000;
@@ -60,6 +61,33 @@ function parseBody(req) {
   }
   if (typeof req.body === 'object') return req.body;
   return {};
+}
+
+function sanitizeProfileKey(profileKey) {
+  const key = typeof profileKey === 'string' ? profileKey.trim().toLowerCase() : '';
+  if (!/^[a-f0-9]{32,64}$/.test(key)) {
+    return '';
+  }
+  return key;
+}
+
+function normalizeProfileSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    return null;
+  }
+
+  let encoded;
+  try {
+    encoded = JSON.stringify(snapshot);
+  } catch (error) {
+    return null;
+  }
+
+  if (!encoded || encoded.length > MAX_PROFILE_SNAPSHOT_SIZE) {
+    return null;
+  }
+
+  return JSON.parse(encoded);
 }
 
 function getScopeStartIso(scope, now = new Date()) {
@@ -433,6 +461,117 @@ async function handlePlayer(req, container) {
   };
 }
 
+async function handleProfileSave(req, container) {
+  const payload = parseBody(req);
+  const profileKey = sanitizeProfileKey(payload?.profileKey);
+  const snapshot = normalizeProfileSnapshot(payload?.snapshot);
+
+  if (!profileKey) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        error: 'A valid profile key is required.'
+      }
+    };
+  }
+
+  if (!snapshot) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        error: 'A valid profile snapshot is required.'
+      }
+    };
+  }
+
+  const id = `profile:${profileKey}`;
+  const nowIso = new Date().toISOString();
+
+  const nextDoc = {
+    id,
+    docType: 'profile',
+    profileKey,
+    snapshot,
+    updatedAt: nowIso,
+    createdAt: nowIso
+  };
+
+  try {
+    const { resource } = await container.item(id, 'profile').read();
+    await container.item(id, 'profile').replace({
+      ...resource,
+      profileKey,
+      snapshot,
+      updatedAt: nowIso
+    });
+  } catch (error) {
+    if (error.code !== 404) throw error;
+    await container.items.create(nextDoc);
+  }
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      updatedAt: nowIso
+    }
+  };
+}
+
+async function handleProfileLoad(req, container) {
+  const payload = parseBody(req);
+  const keyFromQuery = sanitizeProfileKey(req?.query?.profileKey);
+  const keyFromBody = sanitizeProfileKey(payload?.profileKey);
+  const profileKey = keyFromQuery || keyFromBody;
+
+  if (!profileKey) {
+    return {
+      status: 400,
+      body: {
+        success: false,
+        error: 'A valid profile key is required.'
+      }
+    };
+  }
+
+  const id = `profile:${profileKey}`;
+
+  try {
+    const { resource } = await container.item(id, 'profile').read();
+    if (!resource?.snapshot) {
+      return {
+        status: 404,
+        body: {
+          success: false,
+          error: 'Profile snapshot not found.'
+        }
+      };
+    }
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        snapshot: resource.snapshot,
+        updatedAt: resource.updatedAt || resource.createdAt || new Date().toISOString()
+      }
+    };
+  } catch (error) {
+    if (error.code === 404) {
+      return {
+        status: 404,
+        body: {
+          success: false,
+          error: 'Profile snapshot not found.'
+        }
+      };
+    }
+    throw error;
+  }
+}
+
 module.exports = async function (context, req) {
   context.res = context.res || { headers: {} };
   context.res.headers = context.res.headers || {};
@@ -458,6 +597,10 @@ module.exports = async function (context, req) {
       result = await handleSubmit(req, container);
     } else if (req.method === 'GET' && action === 'player') {
       result = await handlePlayer(req, container);
+    } else if (req.method === 'POST' && action === 'profile-save') {
+      result = await handleProfileSave(req, container);
+    } else if ((req.method === 'POST' || req.method === 'GET') && action === 'profile-load') {
+      result = await handleProfileLoad(req, container);
     } else {
       result = {
         status: 404,

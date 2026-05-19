@@ -18,7 +18,9 @@ import {
   createLeaderboardSession,
   submitScoreToLeaderboard,
   fetchGlobalLeaderboard,
-  getPlayerLeaderboardStats
+  getPlayerLeaderboardStats,
+  saveCloudProfileSnapshot,
+  loadCloudProfileSnapshot
 } from './pwaUtils';
 import {
   THEME_DEFINITIONS,
@@ -420,10 +422,8 @@ const Brikx = () => {
 
   const safeSetItem = (key, value) => {
     try {
-      if (typeof value === 'string' && value.length < 1000) {
-        localStorage.setItem(key, value);
-        return true;
-      }
+      localStorage.setItem(key, String(value));
+      return true;
     } catch (error) {
       console.error('localStorage write error:', error);
     }
@@ -671,6 +671,8 @@ const Brikx = () => {
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState(null);
   const leaderboardSessionStartedRef = useRef(false);
+  const cloudProfileRestoreAttemptedRef = useRef(false);
+  const cloudProfileSyncTimerRef = useRef(null);
 
   // Theme System
   const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme());
@@ -1438,6 +1440,173 @@ const Brikx = () => {
     safeSetItem('brickxPlayerName', sanitizedName);
     safeSetItem('brickxPlayerAvatar', sanitizedAvatar);
   }, [getUnlockedAvatars]);
+
+  const buildCloudProfileSnapshot = useCallback(() => {
+    return {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      playerName,
+      playerAvatar,
+      highScore,
+      leaderboardEntries: normalizeLeaderboardEntries(leaderboardEntries),
+      statistics,
+      achievements,
+      soundEnabled,
+      musicEnabled,
+      sfxVolume,
+      musicVolume,
+      batterySaverMode,
+      currentTheme,
+      themePreviewEnabled,
+      deviceId: safeGetItem('brikx_device_id', '')
+    };
+  }, [
+    playerName,
+    playerAvatar,
+    highScore,
+    leaderboardEntries,
+    statistics,
+    achievements,
+    soundEnabled,
+    musicEnabled,
+    sfxVolume,
+    musicVolume,
+    batterySaverMode,
+    currentTheme,
+    themePreviewEnabled
+  ]);
+
+  const applyCloudProfileSnapshot = useCallback((snapshot) => {
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    const normalizeVolume = (value, fallback) => {
+      const parsed = Number.parseFloat(value);
+      if (Number.isNaN(parsed)) return fallback;
+      return Math.min(1, Math.max(0, parsed));
+    };
+
+    const normalizedName = (snapshot.playerName || 'Player').toString().slice(0, 15).replace(/[^a-zA-Z0-9\s]/g, '') || 'Player';
+    const normalizedAvatar = typeof snapshot.playerAvatar === 'string' && snapshot.playerAvatar.trim()
+      ? snapshot.playerAvatar.trim().slice(0, 8)
+      : '🎮';
+
+    setPlayerName(normalizedName);
+    setPlayerAvatar(normalizedAvatar);
+    safeSetItem('brickxPlayerName', normalizedName);
+    safeSetItem('brickxPlayerAvatar', normalizedAvatar);
+
+    if (Number.isFinite(snapshot.highScore)) {
+      const normalizedHighScore = Math.max(0, Number.parseInt(snapshot.highScore, 10) || 0);
+      setHighScore(normalizedHighScore);
+      safeSetItem('brikxHighScore', normalizedHighScore.toString());
+    }
+
+    if (Array.isArray(snapshot.leaderboardEntries)) {
+      const normalizedEntries = normalizeLeaderboardEntries(snapshot.leaderboardEntries);
+      setLeaderboardEntries(normalizedEntries);
+      safeSetItem(LEADERBOARD_STORAGE_KEY, JSON.stringify(normalizedEntries));
+    }
+
+    if (snapshot.statistics && typeof snapshot.statistics === 'object' && !Array.isArray(snapshot.statistics)) {
+      setStatistics(snapshot.statistics);
+      safeSetItem('brikxStatistics', JSON.stringify(snapshot.statistics));
+    }
+
+    if (snapshot.achievements && typeof snapshot.achievements === 'object' && !Array.isArray(snapshot.achievements)) {
+      setAchievements(snapshot.achievements);
+      safeSetItem('brikxAchievements', JSON.stringify(snapshot.achievements));
+    }
+
+    if (typeof snapshot.soundEnabled === 'boolean') {
+      setSoundEnabled(snapshot.soundEnabled);
+      safeSetItem('brickxSoundEnabled', snapshot.soundEnabled.toString());
+    }
+
+    if (typeof snapshot.musicEnabled === 'boolean') {
+      setMusicEnabled(snapshot.musicEnabled);
+      safeSetItem('brickxMusicEnabled', snapshot.musicEnabled.toString());
+    }
+
+    if (snapshot.sfxVolume !== undefined) {
+      const nextSfxVolume = normalizeVolume(snapshot.sfxVolume, 0.7);
+      setSfxVolume(nextSfxVolume);
+      safeSetItem('brickxSfxVolume', nextSfxVolume.toString());
+    }
+
+    if (snapshot.musicVolume !== undefined) {
+      const nextMusicVolume = normalizeVolume(snapshot.musicVolume, 0.5);
+      setMusicVolume(nextMusicVolume);
+      safeSetItem('brickxMusicVolume', nextMusicVolume.toString());
+    }
+
+    if (snapshot.batterySaverMode === 'off' || snapshot.batterySaverMode === 'auto' || snapshot.batterySaverMode === 'on') {
+      setBatterySaverMode(snapshot.batterySaverMode);
+      safeSetItem('brickxBatterySaverMode', snapshot.batterySaverMode);
+    }
+
+    if (typeof snapshot.themePreviewEnabled === 'boolean') {
+      setThemePreviewEnabled(snapshot.themePreviewEnabled);
+      safeSetItem('brickxThemePreviewEnabled', snapshot.themePreviewEnabled.toString());
+    }
+
+    const themeId = typeof snapshot.currentTheme === 'string' ? snapshot.currentTheme : '';
+    if (themeId && THEME_DEFINITIONS[themeId]) {
+      setCurrentTheme(themeId);
+      safeSetItem('brikx_theme', themeId);
+    }
+
+    if (typeof snapshot.deviceId === 'string' && snapshot.deviceId.trim()) {
+      safeSetItem('brikx_device_id', snapshot.deviceId.trim().slice(0, 60));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cloudProfileRestoreAttemptedRef.current) return;
+    cloudProfileRestoreAttemptedRef.current = true;
+
+    const hasLocalProgress =
+      (Number.parseInt(safeGetItem('brikxHighScore', '0'), 10) || 0) > 0 ||
+      safeGetItem('brikxStatistics', '') !== '' ||
+      safeGetItem('brikxAchievements', '') !== '' ||
+      safeGetItem(LEADERBOARD_STORAGE_KEY, '[]') !== '[]';
+
+    if (hasLocalProgress) return;
+
+    let canceled = false;
+    (async () => {
+      const result = await loadCloudProfileSnapshot();
+      if (!canceled && result.success && result.snapshot) {
+        applyCloudProfileSnapshot(result.snapshot);
+        console.log('Restored cloud profile snapshot after fresh install.');
+      }
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, [applyCloudProfileSnapshot]);
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return undefined;
+
+    const snapshot = buildCloudProfileSnapshot();
+    if (cloudProfileSyncTimerRef.current) {
+      clearTimeout(cloudProfileSyncTimerRef.current);
+    }
+
+    cloudProfileSyncTimerRef.current = setTimeout(async () => {
+      const result = await saveCloudProfileSnapshot(snapshot);
+      if (!result.success) {
+        console.warn('Cloud profile sync skipped:', result.error);
+      }
+    }, 1400);
+
+    return () => {
+      if (cloudProfileSyncTimerRef.current) {
+        clearTimeout(cloudProfileSyncTimerRef.current);
+      }
+    };
+  }, [buildCloudProfileSnapshot]);
 
   // Game constants
   const COLS = 10;

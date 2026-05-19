@@ -425,6 +425,93 @@ async function sha256Hex(input) {
   return bytes.map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
+async function getStableProfileKey() {
+  const cached = localStorage.getItem('brikx_profile_key');
+  if (cached && /^[a-f0-9]{32,64}$/i.test(cached)) {
+    return cached.toLowerCase();
+  }
+
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown-tz';
+  const fingerprintParts = [
+    navigator.userAgent || 'ua',
+    navigator.language || 'lang',
+    navigator.platform || 'platform',
+    `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+    `${navigator.hardwareConcurrency || 0}`,
+    `${navigator.deviceMemory || 0}`,
+    timezone
+  ];
+
+  const fingerprint = fingerprintParts.join('|');
+  const profileKey = (await sha256Hex(fingerprint)).slice(0, 48);
+  localStorage.setItem('brikx_profile_key', profileKey);
+  return profileKey;
+}
+
+export async function saveCloudProfileSnapshot(snapshot) {
+  try {
+    if (!snapshot || typeof snapshot !== 'object') {
+      return { success: false, error: 'Invalid profile snapshot.' };
+    }
+
+    const profileKey = await getStableProfileKey();
+    const response = await fetch(`${LEADERBOARD_API_BASE}/profile-save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        profileKey,
+        snapshot
+      })
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      return { success: false, error: data.error || 'Failed to save profile.' };
+    }
+
+    return {
+      success: true,
+      updatedAt: data.updatedAt,
+      profileKey
+    };
+  } catch (error) {
+    console.error('Failed to save cloud profile snapshot:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function loadCloudProfileSnapshot() {
+  try {
+    const profileKey = await getStableProfileKey();
+    const response = await fetch(`${LEADERBOARD_API_BASE}/profile-load`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ profileKey })
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      return { success: false, error: data.error || 'No cloud profile found.' };
+    }
+
+    return {
+      success: true,
+      snapshot: data.snapshot || null,
+      updatedAt: data.updatedAt,
+      profileKey
+    };
+  } catch (error) {
+    console.error('Failed to load cloud profile snapshot:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 function buildTelemetryPayload({
   sessionId,
   deviceId,
