@@ -431,6 +431,7 @@ const Brikx = () => {
   };
 
   const canvasRef = useRef(null);
+  const canvasCtxRef = useRef(null);
   const touchButtonsRef = useRef([]);
   const menuContainerRef = useRef(null);
   const [score, setScore] = useState(0);
@@ -1651,6 +1652,7 @@ const Brikx = () => {
     dropInterval: 1000,
     lastTime: 0,
     lastRenderTime: 0,
+    avgFrameMs: 16.67,
     colorBonusDisplay: null,
     bag: [],
     particles: [],
@@ -2884,8 +2886,16 @@ const Brikx = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    let ctx = canvasCtxRef.current;
+    if (!ctx) {
+      ctx = canvas.getContext('2d');
+      canvasCtxRef.current = ctx;
+    }
+    if (!ctx) return;
     const { board, currentPiece, currentX, currentY, holdPiece, nextPieces, clearingLines, clearAnimation, particles, scorePopups, screenShake, gridAnimation } = gameState.current;
+    const avgFrameMs = gameState.current.avgFrameMs || 16.67;
+    const frameStressed = avgFrameMs > (lowPowerMode ? 28 : 22);
+    const severelyStressed = avgFrameMs > (lowPowerMode ? 36 : 30);
 
     // Update animations
     gameState.current.gridAnimation = (gridAnimation + 1) % 360;
@@ -2986,7 +2996,11 @@ const Brikx = () => {
     ctx.save();
     // Increased opacity on background shapes
     ctx.globalAlpha = lowPowerMode ? 0.08 + comboIntensity * 0.1 : 0.15 + comboIntensity * 0.2;
-    const shapeCount = lowPowerMode ? 3 + Math.floor(combo * 0.2) : 8 + Math.floor(combo * 0.5);
+    const shapeCount = severelyStressed
+      ? (lowPowerMode ? 2 : 3)
+      : frameStressed
+        ? (lowPowerMode ? 2 : 5)
+        : (lowPowerMode ? 3 + Math.floor(combo * 0.2) : 8 + Math.floor(combo * 0.5));
     for (let i = 0; i < shapeCount; i++) {
       const shapeAnim = (gridAnimation + i * 60) * (0.02 + comboIntensity * 0.03); // Faster during combos
       const x = (i * CANVAS_WIDTH / shapeCount + Math.sin(shapeAnim) * (50 + combo * 5)) % CANVAS_WIDTH;
@@ -3022,7 +3036,7 @@ const Brikx = () => {
     ctx.restore();
 
     // Pattern overlay for premium and seasonal themes
-    if (visualPattern) {
+    if (visualPattern && !severelyStressed) {
       ctx.save();
       // Increased opacity for better theme visibility
       ctx.globalAlpha = lowPowerMode ? 0.08 : prefersReducedMotion ? 0.12 : 0.22;
@@ -3075,9 +3089,11 @@ const Brikx = () => {
     }
 
     // Animated seasonal and premium motifs
-    if (visualMotif) {
+    if (visualMotif && !severelyStressed) {
       ctx.save();
-      const motifCount = lowPowerMode ? 6 : prefersReducedMotion ? 8 : 22;
+      const motifCount = frameStressed
+        ? (lowPowerMode ? 4 : 6)
+        : (lowPowerMode ? 6 : prefersReducedMotion ? 8 : 22);
       for (let i = 0; i < motifCount; i++) {
         const speed = 16 + (i % 5) * 6;
         const baseX = ((i * 73) % CANVAS_WIDTH);
@@ -3142,7 +3158,7 @@ const Brikx = () => {
     }
     
     // Draw ambient depth particles (star-field style depth layer)
-    if (!lowPowerMode && !prefersReducedMotion && gameState.current.bgParticles.length > 0) {
+    if (!lowPowerMode && !prefersReducedMotion && !severelyStressed && gameState.current.bgParticles.length > 0) {
       ctx.save();
       const accentR = themeAccent[0], accentG = themeAccent[1], accentB = themeAccent[2];
       gameState.current.bgParticles.forEach(bp => {
@@ -3172,14 +3188,16 @@ const Brikx = () => {
     }
     
     // Add level-based overlay glow
-    const overlayGradient = ctx.createRadialGradient(
-      CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
-      CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_HEIGHT * 0.8
-    );
-    overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, 0.05)`);
-    overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-    ctx.fillStyle = overlayGradient;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    if (!severelyStressed) {
+      const overlayGradient = ctx.createRadialGradient(
+        CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
+        CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_HEIGHT * 0.8
+      );
+      overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, 0.05)`);
+      overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+      ctx.fillStyle = overlayGradient;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
     
     // Set up translation for main board (centered with left panel space)
     const boardOffsetX = 130; // Space for hold piece panel
@@ -3324,6 +3342,15 @@ const Brikx = () => {
     }
 
     // Draw particles
+    const frameParticleCap = severelyStressed ? 140 : frameStressed ? 240 : MAX_ACTIVE_PARTICLES;
+    if (particles.length > frameParticleCap) {
+      const overflow = particles.splice(0, particles.length - frameParticleCap);
+      overflow.forEach(p => returnParticleToPool(p));
+    }
+
+    const nextAliveParticles = [];
+    const glowParticles = [];
+
     particles.forEach(p => {
       const alpha = p.life / p.maxLife;
       const easeAlpha = alpha * alpha; // Ease out
@@ -3612,20 +3639,23 @@ const Brikx = () => {
           }
         }
       }
-      p.rotation += p.rotationSpeed;
+      p.rotation += p.rotationSpeed || 0;
       p.life--;
+
+      if (p.life > 0) {
+        nextAliveParticles.push(p);
+        if (!lowPowerMode && p.glow && p.type !== 'wave' && p.type !== 'lightning' && p.type !== 'debris') {
+          glowParticles.push(p);
+        }
+      } else {
+        returnParticleToPool(p);
+      }
     });
-    
-    // Remove dead particles and return to pool
-    const deadParticles = particles.filter(p => p.life <= 0);
-    deadParticles.forEach(p => returnParticleToPool(p));
-    gameState.current.particles = particles.filter(p => p.life > 0);
+
+    gameState.current.particles = nextAliveParticles;
 
     // Additive glow second pass for luminous particle bloom
-    if (!lowPowerMode) {
-      const glowParticles = gameState.current.particles.filter(p =>
-        p.glow && p.type !== 'wave' && p.type !== 'lightning' && p.type !== 'debris'
-      );
+    if (!lowPowerMode && !frameStressed) {
       if (glowParticles.length > 0) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
@@ -3646,7 +3676,7 @@ const Brikx = () => {
     }
 
     // Chromatic aberration post-process (RGB channel split on intense events)
-    if (gameState.current.chromaticAberration > 0 && !lowPowerMode && !prefersReducedMotion) {
+    if (gameState.current.chromaticAberration > 0 && !lowPowerMode && !prefersReducedMotion && !frameStressed) {
       const ca = gameState.current.chromaticAberration;
       const caStrength = Math.min(ca / 20, 1) * 4;
       const boardLeft = boardOffsetX;
@@ -4236,7 +4266,7 @@ const Brikx = () => {
       ctx.restore();
       gameState.current.pieceLockAnimation--;
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES]);
 
   // Game loop
   useEffect(() => {
@@ -4250,8 +4280,14 @@ const Brikx = () => {
       gameState.current.lastTime = time;
       gameState.current.dropCounter += deltaTime;
 
-      // Handle gamepad input
-      handleGamepadInput();
+      // Handle gamepad input only when a controller is connected.
+      if (gamepadConnected) {
+        handleGamepadInput();
+      }
+
+      // Track smoothed frame cost so draw can adapt visual complexity.
+      const frameCost = deltaTime > 0 ? deltaTime : 16.67;
+      gameState.current.avgFrameMs = (gameState.current.avgFrameMs * 0.9) + (frameCost * 0.1);
 
       if (gameState.current.dropCounter > gameState.current.dropInterval) {
         moveDown();
@@ -4272,7 +4308,7 @@ const Brikx = () => {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [gameStarted, gameOver, isPaused, moveDown, draw, handleGamepadInput, lowPowerMode]);
+  }, [gameStarted, gameOver, isPaused, moveDown, draw, handleGamepadInput, lowPowerMode, gamepadConnected]);
 
   // Draw when paused
   useEffect(() => {
