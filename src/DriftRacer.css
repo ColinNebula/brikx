@@ -2361,9 +2361,10 @@
 /* Immersive Player Info */
 .immersive-player-info {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 8px 20px;
+  gap: 4px;
+  padding: 10px 18px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 25px;
   border: 1px solid rgba(0, 240, 240, 0.2);
@@ -2386,10 +2387,8 @@
   width: 100%;
   max-width: 280px;
   padding: 16px 28px;
-  background: linear-gradient(135deg, 
-    rgba(255, 0, 255, 0.75) 0%, 
-    rgba(0, 255, 255, 0.75) 100%);
-  border: 3px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 50px;
   font-family: 'Press Start 2P', 'Exo 2', 'Rajdhani', sans-serif;
   font-size: 0.8rem;
@@ -2401,12 +2400,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 0;
   transition: all 0.3s ease;
   box-shadow: 
-    0 10px 40px rgba(255, 0, 255, 0.4),
-    0 0 60px rgba(0, 255, 255, 0.3),
-    inset 0 0 30px rgba(255, 255, 255, 0.2);
+    0 0 26px rgba(0, 255, 255, 0.35),
+    0 0 12px rgba(255, 255, 255, 0.25);
   animation: buttonBreath 4s ease-in-out infinite;
   will-change: transform, opacity;
   touch-action: manipulation;
@@ -2426,22 +2424,22 @@
 .immersive-play-btn:hover {
   transform: scale(1.05) translateY(-2px);
   box-shadow: 
-    0 20px 60px rgba(255, 0, 255, 0.6),
-    0 0 100px rgba(0, 255, 255, 0.6),
-    inset 0 0 50px rgba(255, 255, 255, 0.3);
+    0 0 34px rgba(0, 255, 255, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.3);
 }
 
 .immersive-play-btn:active {
   transform: scale(0.98);
 }
 
-.play-icon-large {
-  font-size: 1.6rem;
-}
-
 .play-text-large {
-  letter-spacing: 2.5px;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  font-size: clamp(1.15rem, 2.6vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: 3.2px;
+  line-height: 1.1;
+  text-shadow:
+    0 0 10px rgba(0, 255, 255, 0.6),
+    0 2px 10px rgba(0, 0, 0, 0.75);
 }
 
 /* Immersive Stats */
@@ -4600,17 +4598,17 @@
     position: sticky;
     bottom: 0;
     z-index: 10;
-    /* Add background so content doesn't show through */
-    background: linear-gradient(135deg, 
-      rgba(255, 0, 255, 0.75) 0%, 
-      rgba(0, 255, 255, 0.75) 100%);
+    background: transparent;
     box-shadow: 
-      0 10px 40px rgba(255, 0, 255, 0.5),
-      0 0 60px rgba(0, 255, 255, 0.4),
-      0 -20px 40px rgba(10, 10, 46, 0.9), /* Shadow above to mask content */
-      inset 0 0 30px rgba(255, 255, 255, 0.2);
+      0 0 20px rgba(0, 255, 255, 0.38),
+      0 0 10px rgba(255, 255, 255, 0.25);
     /* Safe area for mobile devices */
     margin-bottom: max(15px, env(safe-area-inset-bottom));
+  }
+
+  .play-text-large {
+    font-size: clamp(1.3rem, 5.2vw, 1.85rem);
+    letter-spacing: 2.6px;
   }
   
   .play-icon-large {

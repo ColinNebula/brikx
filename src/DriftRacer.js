@@ -1030,6 +1030,32 @@ const Brikx = () => {
     playSound('combo', freq, 0.15, Math.min(0.3, 0.15 + comboCount * 0.02));
   }, [soundEnabled, playSound]);
 
+  const playComboTierStinger = useCallback((tier) => {
+    if (!soundEnabled) return;
+
+    if (tier === 5) {
+      playSound('combo', 720, 0.1, 0.2);
+      setTimeout(() => playSound('combo', 910, 0.12, 0.22), 90);
+      return;
+    }
+
+    if (tier === 10) {
+      playSound('combo', 760, 0.1, 0.22);
+      setTimeout(() => playSound('combo', 980, 0.12, 0.24), 85);
+      setTimeout(() => playSound('combo', 1220, 0.16, 0.26), 175);
+      setTimeout(() => playSfxFile('mixkit-sci-fi-positive-notification-266.wav', 0.45, 'Mega combo stinger'), 130);
+      return;
+    }
+
+    if (tier === 15) {
+      playSound('combo', 900, 0.12, 0.26);
+      setTimeout(() => playSound('combo', 1200, 0.14, 0.28), 80);
+      setTimeout(() => playSound('combo', 1500, 0.16, 0.3), 160);
+      setTimeout(() => playSound('combo', 1900, 0.22, 0.34), 250);
+      setTimeout(() => playSfxFile('mixkit-fairy-magic-sparkle-871.mp3', 0.65, 'Legendary combo stinger'), 180);
+    }
+  }, [soundEnabled, playSound, playSfxFile]);
+
   const playPerfectClearSound = useCallback(() => {
     if (!soundEnabled) return;
     playSound('perfectClear', 1200, 0.2);
@@ -1667,6 +1693,7 @@ const Brikx = () => {
     hardDropTrail: [],
     perfectClearFlash: 0,
     comboFlash: 0,
+    comboBannerBurst: null,
     chromaticAberration: 0,
     saturationBoost: 0,
     scanlineFlash: [],
@@ -1762,16 +1789,19 @@ const Brikx = () => {
 
   // Add score popup
   const addScorePopup = useCallback((points, text, x, y) => {
+    const isHypePopup = typeof text === 'string' && (text.includes('COMBO') || text.includes('PERFECT'));
+    const mobileScale = isMobile ? (isHypePopup ? 1.65 : 1.35) : (isHypePopup ? 1.2 : 1);
     gameState.current.scorePopups.push({
       points,
       text,
       x,
       y,
-      life: 60,
-      maxLife: 60,
-      vy: -2
+      life: isHypePopup ? 72 : 60,
+      maxLife: isHypePopup ? 72 : 60,
+      vy: isHypePopup ? -2.6 : -2,
+      scale: mobileScale
     });
-  }, []);
+  }, [isMobile]);
 
   // Get color for combo tier
   const getComboColor = useCallback((combo) => {
@@ -1787,6 +1817,7 @@ const Brikx = () => {
     const boardOffsetX = 130;
     const isHighCombo = comboCount >= 5;
     const isMegaCombo = comboCount >= 10;
+    const mobileParticleScale = isMobile ? (lowPowerMode ? 1.25 : 1.55) : 1;
     
     // Reduce particle count for reduced motion preference
     const motionMultiplier = lowPowerMode ? 0.2 : prefersReducedMotion ? 0.3 : 1;
@@ -1809,7 +1840,7 @@ const Brikx = () => {
         for (let i = 0; i < particlesInRing; i++) {
           const angle = (Math.PI * 2 * i) / particlesInRing + (ring * Math.PI / particlesInRing);
           const speed = ringSpeed + Math.random() * 2;
-          const size = (isPerfect ? 5 : isCombo ? 4 : 3) + Math.random() * 2 - ring * 0.5;
+          const size = ((isPerfect ? 5 : isCombo ? 4 : 3) + Math.random() * 2 - ring * 0.5) * mobileParticleScale;
           
           const particle = getParticleFromPool({
             x: centerX,
@@ -1878,7 +1909,7 @@ const Brikx = () => {
             life: 80 + Math.random() * 40,
             maxLife: 120,
             color: Math.random() > 0.3 ? comboColors.color : blockColor,
-            size: 2 + Math.random() * 3,
+            size: (2 + Math.random() * 3) * mobileParticleScale,
             type: 'confetti',
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.5,
@@ -1909,7 +1940,7 @@ const Brikx = () => {
             life: 60 + Math.random() * 40,
             maxLife: 100,
             color: Math.random() > 0.5 ? '#ffffff' : blockColor,
-            size: 1 + Math.random() * 2,
+            size: (1 + Math.random() * 2) * mobileParticleScale,
             type: Math.random() > 0.5 ? 'circle' : 'star',
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.4,
@@ -1937,7 +1968,7 @@ const Brikx = () => {
           life: 20,
           maxLife: 20,
           color: getComboColor(comboCount).color,
-          size: 2,
+          size: 2 * mobileParticleScale,
           type: 'lightning',
           rotation: 0,
           rotationSpeed: 0,
@@ -1963,7 +1994,7 @@ const Brikx = () => {
             life: 70,
             maxLife: 70,
             color: '#ffffff',
-            size: 2 + Math.random() * 2,
+            size: (2 + Math.random() * 2) * mobileParticleScale,
             type: 'star',
             rotation: 0,
             rotationSpeed: 0.4,
@@ -1979,12 +2010,13 @@ const Brikx = () => {
         }
       }
     }
-  }, [COLS, BLOCK_SIZE, getParticleFromPool, getComboColor, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode]);
+  }, [COLS, BLOCK_SIZE, getParticleFromPool, getComboColor, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode, isMobile]);
 
   // Spawn debris shards when a line is cleared (broken block fragments)
   const addDebrisParticles = useCallback((y, boardOffsetX) => {
     if (lowPowerMode) return;
     const motionMultiplier = prefersReducedMotion ? 0.3 : 1;
+    const mobileParticleScale = isMobile ? 1.4 : 1;
     for (let x = 0; x < COLS; x++) {
       const blockColor = gameState.current.board[y][x];
       if (!blockColor) continue;
@@ -2002,7 +2034,7 @@ const Brikx = () => {
           life: 45 + Math.random() * 30,
           maxLife: 75,
           color: blockColor,
-          size: 2 + Math.random() * 3,
+          size: (2 + Math.random() * 3) * mobileParticleScale,
           type: 'debris',
           rotation: Math.random() * Math.PI * 2,
           rotationSpeed: (Math.random() - 0.5) * 0.35,
@@ -2024,7 +2056,7 @@ const Brikx = () => {
           x: centerX, y: centerY,
           vx: (Math.random() - 0.5) * 2, vy: -2 - Math.random() * 2,
           life: 35, maxLife: 35,
-          color: blockColor, size: 5 + Math.random() * 4,
+          color: blockColor, size: (5 + Math.random() * 4) * mobileParticleScale,
           type: 'plasma',
           rotation: 0, rotationSpeed: 0.08,
           glow: true, trail: false, pulse: true, ring: 0, bounce: false,
@@ -2035,7 +2067,7 @@ const Brikx = () => {
         }
       }
     }
-  }, [COLS, BLOCK_SIZE, getParticleFromPool, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode]);
+  }, [COLS, BLOCK_SIZE, getParticleFromPool, MAX_ACTIVE_PARTICLES, prefersReducedMotion, lowPowerMode, isMobile]);
   const clearLines = useCallback(() => {
     const { board } = gameState.current;
     const linesToClear = [];
@@ -2065,6 +2097,7 @@ const Brikx = () => {
     }
     
     if (linesToClear.length > 0) {
+      const comboChain = lastClearWasCombo ? combo + 1 : 1;
       // Check for perfect clear
       const isPerfectClear = board.every(row => row.every(cell => cell === 0));
       const isCombo = combo > 0;
@@ -2166,6 +2199,15 @@ const Brikx = () => {
         setCombo(1);
         setLastClearWasCombo(true);
       }
+
+      // Play tier stinger only when crossing a new combo milestone.
+      if (comboChain >= 15 && combo < 15) {
+        playComboTierStinger(15);
+      } else if (comboChain >= 10 && combo < 10) {
+        playComboTierStinger(10);
+      } else if (comboChain >= 5 && combo < 5) {
+        playComboTierStinger(5);
+      }
       
       // Perfect clear bonus
       let perfectClearBonus = 0;
@@ -2187,12 +2229,20 @@ const Brikx = () => {
       if (isPerfectClear) {
         gameState.current.screenShake = 25;
         gameState.current.perfectClearFlash = 30; // Full-screen flash for perfect clear
-      } else if (combo >= 10) {
-        gameState.current.screenShake = 22;
-        gameState.current.comboFlash = 18; // Strong flash for mega combo
-      } else if (combo >= 5) {
-        gameState.current.screenShake = 18;
-        gameState.current.comboFlash = 14; // Flash for high combo
+      } else if (comboChain >= 15) {
+        gameState.current.screenShake = isMobile ? 32 : 28;
+        gameState.current.comboFlash = isMobile ? 28 : 24;
+        gameState.current.comboBannerBurst = {
+          life: isMobile ? 52 : 46,
+          maxLife: isMobile ? 52 : 46,
+          combo: comboChain
+        };
+      } else if (comboChain >= 10) {
+        gameState.current.screenShake = isMobile ? 28 : 24;
+        gameState.current.comboFlash = isMobile ? 24 : 20; // Strong flash for mega combo
+      } else if (comboChain >= 5) {
+        gameState.current.screenShake = isMobile ? 24 : 20;
+        gameState.current.comboFlash = isMobile ? 20 : 16; // Super combo shake for 5x+
       } else if (linesCleared >= 4) {
         gameState.current.screenShake = 16; // TETRIS gets intense shake!
         gameState.current.flashEffect = 15; // White flash for Tetris
@@ -2207,7 +2257,7 @@ const Brikx = () => {
       // Add score popup
       const popupX = 130 + (COLS * BLOCK_SIZE) / 2;
       const popupY = linesToClear[0] * BLOCK_SIZE + BLOCK_SIZE / 2;
-      addScorePopup(totalPoints, isPerfectClear ? 'PERFECT!' : isCombo ? `${combo}x COMBO!` : '', popupX, popupY);
+      addScorePopup(totalPoints, isPerfectClear ? 'PERFECT!' : isCombo ? `${comboChain}x COMBO!` : '', popupX, popupY);
       
       setScore(prev => {
         const newScore = prev + totalPoints;
@@ -2222,7 +2272,7 @@ const Brikx = () => {
       if (colorBonusPoints > 0 && !isPerfectClear) {
         gameState.current.colorBonusDisplay = {
           points: colorBonusPoints + comboBonus,
-          text: combo > 0 ? `${combo}x COMBO!` : 'COLOR MATCH!',
+          text: combo > 0 ? `${comboChain}x COMBO!` : 'COLOR MATCH!',
           time: 60
         };
       }
@@ -2250,7 +2300,7 @@ const Brikx = () => {
         setLastClearWasCombo(false);
       }
     }
-  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addDebrisParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, vibrate, prefersReducedMotion]);
+  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addDebrisParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, playComboTierStinger, vibrate, prefersReducedMotion, isMobile]);
 
   // Spawn new piece
   const spawnPiece = useCallback(() => {
@@ -3890,13 +3940,18 @@ const Brikx = () => {
     // Draw score popups
     scorePopups.forEach(popup => {
       const alpha = popup.life / popup.maxLife;
+      const popupScale = popup.scale || 1;
+      const pulseBoost = 1 + Math.sin((1 - alpha) * Math.PI * 5) * 0.08;
+      const effectiveScale = popupScale * pulseBoost;
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.font = 'bold 24px Arial';
+      ctx.font = `bold ${Math.round(24 * effectiveScale)}px Arial`;
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FFD700';
       ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = Math.max(3, Math.round(4 * popupScale));
+      ctx.shadowColor = '#ffb347';
+      ctx.shadowBlur = Math.max(8, 14 * popupScale);
       
       // Draw points
       const pointsText = `+${popup.points.toLocaleString()}`;
@@ -3905,15 +3960,16 @@ const Brikx = () => {
       
       // Draw additional text
       if (popup.text) {
-        ctx.font = 'bold 16px Arial';
-        ctx.strokeText(popup.text, popup.x, popup.y + 25);
-        ctx.fillText(popup.text, popup.x, popup.y + 25);
+        ctx.font = `bold ${Math.round(16 * effectiveScale)}px Arial`;
+        const secondaryYOffset = Math.round(25 * popupScale);
+        ctx.strokeText(popup.text, popup.x, popup.y + secondaryYOffset);
+        ctx.fillText(popup.text, popup.x, popup.y + secondaryYOffset);
       }
       
       ctx.restore();
       
       // Update popup
-      popup.y += popup.vy;
+      popup.y += popup.vy * (popup.scale > 1.3 ? 1.05 : 1);
       popup.life--;
     });
     
@@ -3941,11 +3997,15 @@ const Brikx = () => {
     // Draw Combo Meter Visual
     if (combo > 0) {
       const meterX = boardOffsetX;
-      const meterY = CANVAS_HEIGHT - 50;
+      const meterHeight = isMobile ? 30 : 20;
+      const meterY = CANVAS_HEIGHT - (isMobile ? 62 : 50);
       const meterWidth = BOARD_WIDTH;
-      const meterHeight = 20;
       const fillWidth = Math.min(1, combo / 15) * meterWidth;
       const comboInfo = getComboColor(combo);
+      const comboTextScale = isMobile ? 1.55 : 1;
+      const comboTextPulse = 1 + Math.sin(gridAnimation * 0.22) * (isMobile ? 0.2 : 0.08);
+      const comboFontPx = Math.round(18 * comboTextScale * comboTextPulse);
+      const rainbowCombo = combo >= 10;
       
       // Background with glow
       ctx.save();
@@ -3976,14 +4036,27 @@ const Brikx = () => {
       ctx.shadowBlur = 0;
       
       // Combo text
-      ctx.font = 'bold 18px Arial';
+      ctx.font = `bold ${comboFontPx}px Arial`;
       ctx.fillStyle = comboInfo.color;
       ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = isMobile ? 6 : 4;
       ctx.textAlign = 'center';
       const comboText = `${combo}x ${comboInfo.name}`;
-      ctx.strokeText(comboText, meterX + meterWidth / 2, meterY - 5);
-      ctx.fillText(comboText, meterX + meterWidth / 2, meterY - 5);
+      const comboTextY = meterY - (isMobile ? 10 : 5);
+      ctx.shadowColor = comboInfo.color;
+      ctx.shadowBlur = isMobile ? 22 : 12;
+      if (rainbowCombo) {
+        const rainbow = ctx.createLinearGradient(meterX, comboTextY - 10, meterX + meterWidth, comboTextY + 10);
+        rainbow.addColorStop(0, '#ff4d4d');
+        rainbow.addColorStop(0.2, '#ff9a3d');
+        rainbow.addColorStop(0.4, '#ffee4d');
+        rainbow.addColorStop(0.6, '#4dff93');
+        rainbow.addColorStop(0.8, '#4dc8ff');
+        rainbow.addColorStop(1, '#cc66ff');
+        ctx.fillStyle = rainbow;
+      }
+      ctx.strokeText(comboText, meterX + meterWidth / 2, comboTextY);
+      ctx.fillText(comboText, meterX + meterWidth / 2, comboTextY);
       ctx.restore();
     }
     
@@ -4125,16 +4198,85 @@ const Brikx = () => {
     // Draw combo display
     if (combo > 0 && lastClearWasCombo) {
       ctx.save();
-      ctx.font = 'bold 24px Arial';
+      const headlineScale = isMobile ? 1.8 : 1.15;
+      const headlinePulse = 1 + Math.sin(gridAnimation * 0.3) * (isMobile ? 0.24 : 0.12);
+      const headlineFontPx = Math.round(24 * headlineScale * headlinePulse);
+      ctx.font = `bold ${headlineFontPx}px Arial`;
       ctx.textAlign = 'right';
       ctx.fillStyle = '#f0a000';
       ctx.strokeStyle = '#000';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = isMobile ? 7 : 4;
+      ctx.shadowColor = '#ff8c00';
+      ctx.shadowBlur = isMobile ? 24 : 14;
+      if (combo >= 10) {
+        const rainbowHeadline = ctx.createLinearGradient(
+          boardOffsetX + BOARD_WIDTH - 280,
+          0,
+          boardOffsetX + BOARD_WIDTH,
+          0
+        );
+        rainbowHeadline.addColorStop(0, '#ff4d4d');
+        rainbowHeadline.addColorStop(0.22, '#ff9a3d');
+        rainbowHeadline.addColorStop(0.42, '#ffee4d');
+        rainbowHeadline.addColorStop(0.62, '#4dff93');
+        rainbowHeadline.addColorStop(0.82, '#4dc8ff');
+        rainbowHeadline.addColorStop(1, '#cc66ff');
+        ctx.fillStyle = rainbowHeadline;
+      }
       
       const comboText = `${combo}x COMBO`;
       const comboX = boardOffsetX + BOARD_WIDTH - 10;
-      ctx.strokeText(comboText, comboX, 30);
-      ctx.fillText(comboText, comboX, 30);
+      const comboY = isMobile ? 42 : 30;
+      ctx.strokeText(comboText, comboX, comboY);
+      ctx.fillText(comboText, comboX, comboY);
+      ctx.restore();
+    }
+
+    // Full-screen combo banner burst for legendary combos.
+    if (gameState.current.comboBannerBurst && gameState.current.comboBannerBurst.life > 0 && !prefersReducedMotion) {
+      const burst = gameState.current.comboBannerBurst;
+      const progress = 1 - (burst.life / burst.maxLife);
+      const alpha = Math.sin(Math.min(1, progress) * Math.PI) * 0.85;
+      const pulse = 1 + Math.sin(progress * Math.PI * 8) * 0.05;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      const bannerGrad = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      bannerGrad.addColorStop(0, 'rgba(255, 60, 120, 0.65)');
+      bannerGrad.addColorStop(0.22, 'rgba(255, 140, 40, 0.6)');
+      bannerGrad.addColorStop(0.46, 'rgba(255, 240, 60, 0.5)');
+      bannerGrad.addColorStop(0.7, 'rgba(80, 255, 160, 0.5)');
+      bannerGrad.addColorStop(1, 'rgba(110, 130, 255, 0.65)');
+      ctx.fillStyle = bannerGrad;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      const burstText = `LEGENDARY ${burst.combo}x COMBO!`;
+      const bannerFont = Math.round((isMobile ? 52 : 42) * pulse);
+      ctx.font = `900 ${bannerFont}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = isMobile ? 9 : 7;
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = isMobile ? 34 : 26;
+
+      const textGrad = ctx.createLinearGradient(0, CANVAS_HEIGHT * 0.5 - 20, 0, CANVAS_HEIGHT * 0.5 + 20);
+      textGrad.addColorStop(0, '#ffffff');
+      textGrad.addColorStop(0.45, '#fff176');
+      textGrad.addColorStop(0.75, '#ff8a65');
+      textGrad.addColorStop(1, '#ef5350');
+      ctx.fillStyle = textGrad;
+
+      const centerX = CANVAS_WIDTH / 2;
+      const centerY = CANVAS_HEIGHT * 0.5;
+      ctx.strokeText(burstText, centerX, centerY);
+      ctx.fillText(burstText, centerX, centerY);
+
+      burst.life -= 1;
+      if (burst.life <= 0) {
+        gameState.current.comboBannerBurst = null;
+      }
       ctx.restore();
     }
 
@@ -4266,7 +4408,7 @@ const Brikx = () => {
       ctx.restore();
       gameState.current.pieceLockAnimation--;
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES]);
+  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES, isMobile]);
 
   // Game loop
   useEffect(() => {
@@ -5510,7 +5652,6 @@ const Brikx = () => {
                     </div>
                     
                     <button className="immersive-play-btn" onClick={() => { setShowModeSelect(true); queueMenuClickSound(); }}>
-                      <span className="play-icon-large">▶</span>
                       <span className="play-text-large">START GAME</span>
                     </button>
                     
