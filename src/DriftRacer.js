@@ -1731,6 +1731,7 @@ const Brikx = () => {
     pieceLockAnimation: 0,
     flashEffect: 0,
     hardDropTrail: [],
+    connectedMatchFlashes: [],
     perfectClearFlash: 0,
     comboFlash: 0,
     comboBannerDropFrames: 0,
@@ -2228,6 +2229,7 @@ const Brikx = () => {
     const { board } = gameState.current;
     const linesToClear = [];
     let colorBonusPoints = 0;
+    const connectedMatchHighlights = [];
     
     // Find all complete lines
     for (let y = ROWS - 1; y >= 0; y--) {
@@ -2241,9 +2243,15 @@ const Brikx = () => {
         });
         
         // eslint-disable-next-line no-loop-func
-        Object.values(colorGroups).forEach(count => {
+        Object.entries(colorGroups).forEach(([groupColor, count]) => {
           if (count >= 3) {
             colorBonusPoints += count * 50;
+
+            board[y].forEach((cellColor, x) => {
+              if (cellColor === groupColor) {
+                connectedMatchHighlights.push({ x, y, color: groupColor, matchSize: count });
+              }
+            });
           }
           if (count === COLS) {
             colorBonusPoints += 500;
@@ -2280,6 +2288,15 @@ const Brikx = () => {
       
       // Add particles for line clear effect
       linesToClear.forEach(y => addLineParticles(y, isCombo, isPerfectClear, combo));
+
+      // Highlight connected color matches with a fast green pulse.
+      if (!prefersReducedMotion && connectedMatchHighlights.length > 0) {
+        gameState.current.connectedMatchFlashes = connectedMatchHighlights.map((match) => ({
+          ...match,
+          life: isMobile ? 9 : 8,
+          maxLife: isMobile ? 9 : 8
+        }));
+      }
       
       // Add debris shards flying from each cleared cell
       const boardOffsetX = 130;
@@ -2774,6 +2791,7 @@ const Brikx = () => {
     gameState.current.clearAnimation = 0;
     gameState.current.chromaticAberration = 0;
     gameState.current.scanlineFlash = [];
+    gameState.current.connectedMatchFlashes = [];
     gameState.current.comboBannerDropFrames = 0;
     
     setScore(0);
@@ -3746,6 +3764,98 @@ const Brikx = () => {
         }
       });
     });
+
+    // Draw connected block flash highlights for color-match groups.
+    if (gameState.current.connectedMatchFlashes.length > 0) {
+      const flashByCell = new Map();
+      gameState.current.connectedMatchFlashes.forEach((flash) => {
+        flashByCell.set(`${flash.x},${flash.y}`, flash);
+      });
+
+      // Draw tiny link beams between neighboring connected blocks.
+      flashByCell.forEach((flash, key) => {
+        const [x, y] = key.split(',').map(Number);
+        const neighbors = [
+          { x: x + 1, y },
+          { x, y: y + 1 }
+        ];
+
+        neighbors.forEach((neighbor) => {
+          const neighborFlash = flashByCell.get(`${neighbor.x},${neighbor.y}`);
+          if (!neighborFlash) return;
+
+          const intensityA = flash.life / flash.maxLife;
+          const intensityB = neighborFlash.life / neighborFlash.maxLife;
+          const intensity = (intensityA + intensityB) * 0.5;
+          const avgMatchSize = ((flash.matchSize || 3) + (neighborFlash.matchSize || 3)) * 0.5;
+          const thicknessBoost = Math.min(1.6, Math.max(0, (avgMatchSize - 3) * 0.22));
+
+          const centerAX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
+          const centerAY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
+          const centerBX = neighbor.x * BLOCK_SIZE + BLOCK_SIZE / 2;
+          const centerBY = neighbor.y * BLOCK_SIZE + BLOCK_SIZE / 2;
+
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = 0.45 * intensity;
+          const linkGrad = ctx.createLinearGradient(centerAX, centerAY, centerBX, centerBY);
+          linkGrad.addColorStop(0, 'rgba(70, 255, 120, 0.15)');
+          linkGrad.addColorStop(0.5, 'rgba(165, 255, 185, 0.95)');
+          linkGrad.addColorStop(1, 'rgba(70, 255, 120, 0.15)');
+          ctx.strokeStyle = linkGrad;
+          ctx.lineWidth = 3.2 + thicknessBoost;
+          ctx.beginPath();
+          ctx.moveTo(centerAX, centerAY);
+          ctx.lineTo(centerBX, centerBY);
+          ctx.stroke();
+
+          ctx.globalAlpha = 0.32 * intensity;
+          ctx.strokeStyle = 'rgba(230, 255, 238, 0.9)';
+          ctx.lineWidth = 1.2 + thicknessBoost * 0.45;
+          ctx.beginPath();
+          ctx.moveTo(centerAX, centerAY);
+          ctx.lineTo(centerBX, centerBY);
+          ctx.stroke();
+          ctx.restore();
+        });
+      });
+
+      gameState.current.connectedMatchFlashes.forEach((flash) => {
+        const intensity = flash.life / flash.maxLife;
+        const pulse = 0.6 + Math.sin((1 - intensity) * Math.PI * 3.5) * 0.4;
+        const blockX = flash.x * BLOCK_SIZE;
+        const blockY = flash.y * BLOCK_SIZE;
+        const size = BLOCK_SIZE - 2;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.35 * intensity * pulse;
+
+        const flashGrad = ctx.createRadialGradient(
+          blockX + BLOCK_SIZE / 2,
+          blockY + BLOCK_SIZE / 2,
+          0,
+          blockX + BLOCK_SIZE / 2,
+          blockY + BLOCK_SIZE / 2,
+          BLOCK_SIZE * 0.85
+        );
+        flashGrad.addColorStop(0, 'rgba(160, 255, 170, 0.95)');
+        flashGrad.addColorStop(0.5, 'rgba(70, 255, 120, 0.6)');
+        flashGrad.addColorStop(1, 'rgba(0, 255, 100, 0)');
+        ctx.fillStyle = flashGrad;
+        ctx.fillRect(blockX - 4, blockY - 4, BLOCK_SIZE + 8, BLOCK_SIZE + 8);
+
+        ctx.globalAlpha = 0.55 * intensity;
+        ctx.strokeStyle = `rgba(120, 255, 145, ${0.65 * intensity})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(blockX + 1.5, blockY + 1.5, size - 1, size - 1);
+
+        ctx.restore();
+        flash.life -= 1;
+      });
+
+      gameState.current.connectedMatchFlashes = gameState.current.connectedMatchFlashes.filter((flash) => flash.life > 0);
+    }
 
     // Draw scanline flash effect (horizontal bright strips on cleared rows)
     if (gameState.current.scanlineFlash.length > 0) {
