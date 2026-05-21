@@ -4214,35 +4214,77 @@ const Brikx = () => {
     // Draw combo display
     if (combo > 0 && lastClearWasCombo) {
       ctx.save();
-      const headlineScale = isMobile ? 1.8 : 1.15;
-      const headlinePulse = 1 + Math.sin(gridAnimation * 0.3) * (isMobile ? 0.24 : 0.12);
-      const headlineFontPx = Math.round(24 * headlineScale * headlinePulse);
-      ctx.font = `bold ${headlineFontPx}px Arial`;
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#f0a000';
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = isMobile ? 7 : 4;
-      ctx.shadowColor = '#ff8c00';
-      ctx.shadowBlur = isMobile ? 24 : 14;
-      if (combo >= 10) {
-        const rainbowHeadline = ctx.createLinearGradient(
-          boardOffsetX + BOARD_WIDTH - 280,
-          0,
-          boardOffsetX + BOARD_WIDTH,
-          0
-        );
-        rainbowHeadline.addColorStop(0, '#ff4d4d');
-        rainbowHeadline.addColorStop(0.22, '#ff9a3d');
-        rainbowHeadline.addColorStop(0.42, '#ffee4d');
-        rainbowHeadline.addColorStop(0.62, '#4dff93');
-        rainbowHeadline.addColorStop(0.82, '#4dc8ff');
-        rainbowHeadline.addColorStop(1, '#cc66ff');
-        ctx.fillStyle = rainbowHeadline;
-      }
-      
-      const comboText = `${combo}x COMBO`;
+      const comboTier = combo >= 15 ? 'legendary' : combo >= 10 ? 'mega' : combo >= 5 ? 'super' : 'base';
+      const baseFontSize = isMobile ? 30 : 22;
+      const pulseAmount = isMobile ? 0.2 : 0.12;
+      const pulse = 1 + Math.sin(gridAnimation * 0.28) * pulseAmount;
+      const sway = Math.sin(gridAnimation * 0.2) * (isMobile ? 3 : 2);
+      const headlineFontPx = Math.round(baseFontSize * pulse);
       const comboX = boardOffsetX + BOARD_WIDTH - 10;
-      const comboY = isMobile ? 42 : 30;
+      const comboY = (isMobile ? 42 : 30) + sway;
+      const comboText = `${combo}x COMBO`;
+      ctx.font = `900 ${headlineFontPx}px Arial`;
+
+      // Draw a subtle tiered capsule background so the text reads clearly over effects.
+      const textWidth = ctx.measureText(comboText).width;
+      const capsulePaddingX = isMobile ? 16 : 12;
+      const capsulePaddingY = isMobile ? 13 : 10;
+      const capsuleWidth = textWidth + capsulePaddingX * 2;
+      const capsuleHeight = headlineFontPx + capsulePaddingY;
+      const capsuleX = comboX - capsuleWidth;
+      const capsuleY = comboY - capsuleHeight + (isMobile ? 6 : 4);
+      const capsuleRadius = isMobile ? 14 : 11;
+
+      const capsuleGrad = ctx.createLinearGradient(capsuleX, capsuleY, capsuleX, capsuleY + capsuleHeight);
+      if (comboTier === 'legendary') {
+        capsuleGrad.addColorStop(0, 'rgba(255, 210, 90, 0.92)');
+        capsuleGrad.addColorStop(1, 'rgba(255, 140, 40, 0.78)');
+      } else if (comboTier === 'mega') {
+        capsuleGrad.addColorStop(0, 'rgba(255, 130, 170, 0.9)');
+        capsuleGrad.addColorStop(1, 'rgba(255, 85, 120, 0.75)');
+      } else if (comboTier === 'super') {
+        capsuleGrad.addColorStop(0, 'rgba(120, 220, 255, 0.9)');
+        capsuleGrad.addColorStop(1, 'rgba(65, 165, 255, 0.72)');
+      } else {
+        capsuleGrad.addColorStop(0, 'rgba(155, 155, 155, 0.88)');
+        capsuleGrad.addColorStop(1, 'rgba(95, 95, 95, 0.72)');
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(capsuleX + capsuleRadius, capsuleY);
+      ctx.lineTo(capsuleX + capsuleWidth - capsuleRadius, capsuleY);
+      ctx.quadraticCurveTo(capsuleX + capsuleWidth, capsuleY, capsuleX + capsuleWidth, capsuleY + capsuleRadius);
+      ctx.lineTo(capsuleX + capsuleWidth, capsuleY + capsuleHeight - capsuleRadius);
+      ctx.quadraticCurveTo(capsuleX + capsuleWidth, capsuleY + capsuleHeight, capsuleX + capsuleWidth - capsuleRadius, capsuleY + capsuleHeight);
+      ctx.lineTo(capsuleX + capsuleRadius, capsuleY + capsuleHeight);
+      ctx.quadraticCurveTo(capsuleX, capsuleY + capsuleHeight, capsuleX, capsuleY + capsuleHeight - capsuleRadius);
+      ctx.lineTo(capsuleX, capsuleY + capsuleRadius);
+      ctx.quadraticCurveTo(capsuleX, capsuleY, capsuleX + capsuleRadius, capsuleY);
+      ctx.closePath();
+      ctx.fillStyle = capsuleGrad;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+      ctx.shadowBlur = isMobile ? 14 : 9;
+      ctx.fill();
+
+      const shine = ctx.createLinearGradient(capsuleX, capsuleY, capsuleX, capsuleY + capsuleHeight * 0.9);
+      shine.addColorStop(0, 'rgba(255,255,255,0.42)');
+      shine.addColorStop(0.36, 'rgba(255,255,255,0.1)');
+      shine.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = shine;
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.font = `900 ${headlineFontPx}px Arial`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = isMobile ? 2.2 : 1.8;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+      ctx.shadowBlur = isMobile ? 6 : 4;
       ctx.strokeText(comboText, comboX, comboY);
       ctx.fillText(comboText, comboX, comboY);
       ctx.restore();
