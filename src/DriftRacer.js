@@ -693,6 +693,10 @@ const Brikx = () => {
   const [themePreviewEnabled, setThemePreviewEnabled] = useState(() => {
     return safeGetItem('brickxThemePreviewEnabled', 'true') !== 'false';
   });
+  const [ghostHintMode, setGhostHintMode] = useState(() => {
+    const savedMode = safeGetItem('brickxGhostHintMode', 'smart');
+    return ['classic', 'smart', 'off'].includes(savedMode) ? savedMode : 'smart';
+  });
 
   const renderThemeMiniPreview = (theme) => {
     if (!themePreviewEnabled) return null;
@@ -1226,6 +1230,12 @@ const Brikx = () => {
       return newValue;
     });
   }, [gameStarted, gameOver, isPaused, startMusic]);
+
+  const setGhostHintModePreference = useCallback((mode) => {
+    if (!['classic', 'smart', 'off'].includes(mode)) return;
+    setGhostHintMode(mode);
+    safeSetItem('brickxGhostHintMode', mode);
+  }, []);
   
   // Update music player volume when musicVolume changes
   useEffect(() => {
@@ -1508,6 +1518,7 @@ const Brikx = () => {
       batterySaverMode,
       currentTheme,
       themePreviewEnabled,
+      ghostHintMode,
       deviceId: safeGetItem('brikx_device_id', '')
     };
   }, [
@@ -1523,7 +1534,8 @@ const Brikx = () => {
     musicVolume,
     batterySaverMode,
     currentTheme,
-    themePreviewEnabled
+    themePreviewEnabled,
+    ghostHintMode
   ]);
 
   const applyCloudProfileSnapshot = useCallback((snapshot) => {
@@ -1597,6 +1609,11 @@ const Brikx = () => {
     if (typeof snapshot.themePreviewEnabled === 'boolean') {
       setThemePreviewEnabled(snapshot.themePreviewEnabled);
       safeSetItem('brickxThemePreviewEnabled', snapshot.themePreviewEnabled.toString());
+    }
+
+    if (snapshot.ghostHintMode === 'classic' || snapshot.ghostHintMode === 'smart' || snapshot.ghostHintMode === 'off') {
+      setGhostHintMode(snapshot.ghostHintMode);
+      safeSetItem('brickxGhostHintMode', snapshot.ghostHintMode);
     }
 
     const themeId = typeof snapshot.currentTheme === 'string' ? snapshot.currentTheme : '';
@@ -1785,6 +1802,121 @@ const Brikx = () => {
     }
     return ghostY;
   }, [checkCollision]);
+
+  const calculateSmartGhostPlacements = useCallback((board, piece, currentX) => {
+    if (!piece || !piece.shape) return [];
+
+    const rotateShape = (shape) => shape[0].map((_, i) => shape.map(row => row[i]).reverse());
+
+    const shapeKey = (shape) => shape.map(row => row.join('')).join('|');
+    const baseHoles = (() => {
+      let holes = 0;
+      for (let x = 0; x < COLS; x++) {
+        let foundBlock = false;
+        for (let y = 0; y < ROWS; y++) {
+          if (board[y][x]) {
+            foundBlock = true;
+          } else if (foundBlock) {
+            holes++;
+          }
+        }
+      }
+      return holes;
+    })();
+
+    const seenShapes = new Set();
+    const rotations = [];
+    let rotatedPiece = piece;
+
+    for (let i = 0; i < 4; i++) {
+      const key = shapeKey(rotatedPiece.shape);
+      if (!seenShapes.has(key)) {
+        seenShapes.add(key);
+        rotations.push({ piece: rotatedPiece, rotationSteps: i });
+      }
+      rotatedPiece = { ...rotatedPiece, shape: rotateShape(rotatedPiece.shape) };
+    }
+
+    const placements = [];
+
+    rotations.forEach(({ piece: rotated, rotationSteps }) => {
+      const width = rotated.shape[0].length;
+      for (let x = -2; x <= COLS - width + 2; x++) {
+        let y = -4;
+
+        if (checkCollision(board, rotated, x, y)) {
+          continue;
+        }
+
+        while (!checkCollision(board, rotated, x, y + 1)) {
+          y++;
+        }
+
+        if (y < -1 || checkCollision(board, rotated, x, y)) {
+          continue;
+        }
+
+        const sim = board.map(row => [...row]);
+        let supportCount = 0;
+        let sideContactCount = 0;
+
+        rotated.shape.forEach((row, py) => {
+          row.forEach((cell, px) => {
+            if (!cell) return;
+            const bx = x + px;
+            const by = y + py;
+            if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
+              sim[by][bx] = piece.color;
+
+              if (by === ROWS - 1 || (by + 1 < ROWS && board[by + 1][bx])) {
+                supportCount++;
+              }
+              if ((bx > 0 && board[by][bx - 1]) || (bx < COLS - 1 && board[by][bx + 1])) {
+                sideContactCount++;
+              }
+            }
+          });
+        });
+
+        const completedLines = sim.reduce((count, row) => count + (row.every(cell => cell !== 0) ? 1 : 0), 0);
+
+        let holesAfter = 0;
+        for (let col = 0; col < COLS; col++) {
+          let foundBlock = false;
+          for (let row = 0; row < ROWS; row++) {
+            if (sim[row][col]) {
+              foundBlock = true;
+            } else if (foundBlock) {
+              holesAfter++;
+            }
+          }
+        }
+
+        const holeDelta = holesAfter - baseHoles;
+        const centerX = x + width / 2;
+        const horizontalTravel = Math.abs(centerX - (currentX + piece.shape[0].length / 2));
+
+        const score =
+          (completedLines * 140) +
+          (supportCount * 10) +
+          (sideContactCount * 6) +
+          (Math.max(0, y) * 0.35) -
+          (Math.max(0, holeDelta) * 55) -
+          (horizontalTravel * 2.2);
+
+        placements.push({
+          x,
+          y,
+          piece: rotated,
+          rotationSteps,
+          score
+        });
+      }
+    });
+
+    placements.sort((a, b) => b.score - a.score);
+    return placements.slice(0, 3);
+  }, [checkCollision, COLS, ROWS]);
 
   // Rotate piece
   const rotatePiece = useCallback((piece) => {
@@ -4096,56 +4228,95 @@ const Brikx = () => {
         });
       });
 
-      // Draw ghost piece
-      let ghostY = currentY;
-      while (!checkCollision(board, currentPiece, currentX, ghostY + 1)) {
-        ghostY++;
-      }
-      
-      if (ghostY !== currentY) {
+      // Draw ghost hints based on selected mode.
+      if (ghostHintMode === 'smart') {
+        const smartGhostPlacements = calculateSmartGhostPlacements(board, currentPiece, currentX);
+        if (smartGhostPlacements.length > 0) {
+          const ghostPulse = 0.65 + Math.sin(gridAnimation * 0.18) * 0.2;
+
+          smartGhostPlacements.forEach((placement, index) => {
+            const emphasis = index === 0 ? 1 : index === 1 ? 0.72 : 0.5;
+            const baseAlpha = (0.13 + ghostPulse * 0.07) * emphasis;
+            const borderAlpha = (0.52 + ghostPulse * 0.12) * emphasis;
+
+            placement.piece.shape.forEach((row, y) => {
+              row.forEach((value, x) => {
+                if (value) {
+                  const blockX = (placement.x + x) * BLOCK_SIZE;
+                  const blockY = (placement.y + y) * BLOCK_SIZE;
+                  const size = BLOCK_SIZE - 2;
+
+                  // Filled translucent ghost body.
+                  ctx.fillStyle = colorWithAlpha(currentPiece.color, baseAlpha);
+                  ctx.fillRect(blockX + 1, blockY + 1, size, size);
+
+                  // Glowing edge for readability.
+                  ctx.shadowColor = colorWithAlpha(currentPiece.color, 0.85 * emphasis + 0.1);
+                  ctx.shadowBlur = index === 0 ? 10 : 6;
+                  ctx.strokeStyle = colorWithAlpha(currentPiece.color, borderAlpha);
+                  ctx.lineWidth = index === 0 ? 2.2 : 1.5;
+                  ctx.strokeRect(blockX + 1, blockY + 1, size, size);
+                  ctx.shadowBlur = 0;
+
+                  // Dashed intelligence ring for alternatives.
+                  ctx.strokeStyle = `rgba(255, 255, 255, ${0.18 + 0.28 * emphasis})`;
+                  ctx.lineWidth = index === 0 ? 1.2 : 1;
+                  ctx.setLineDash(index === 0 ? [5, 3] : [3, 4]);
+                  ctx.lineDashOffset = (index === 0 ? -1 : 1) * gridAnimation * 0.35;
+                  ctx.strokeRect(blockX + 1.8, blockY + 1.8, size - 1.6, size - 1.6);
+                  ctx.lineDashOffset = 0;
+                  ctx.setLineDash([]);
+                }
+              });
+            });
+          });
+        }
+      } else if (ghostHintMode === 'classic') {
         const ghostPulse = 0.65 + Math.sin(gridAnimation * 0.18) * 0.2;
-        currentPiece.shape.forEach((row, y) => {
-          row.forEach((value, x) => {
-            if (value) {
+        let ghostY = currentY;
+        while (!checkCollision(board, currentPiece, currentX, ghostY + 1)) {
+          ghostY++;
+        }
+
+        if (ghostY !== currentY) {
+          currentPiece.shape.forEach((row, y) => {
+            row.forEach((value, x) => {
+              if (!value) return;
               const blockX = (currentX + x) * BLOCK_SIZE;
               const blockY = (ghostY + y) * BLOCK_SIZE;
               const size = BLOCK_SIZE - 2;
-              
-              // Ghost fill with transparency
-              ctx.fillStyle = colorWithAlpha(currentPiece.color, 0.2 + ghostPulse * 0.08);
+
+              ctx.fillStyle = colorWithAlpha(currentPiece.color, 0.22 + ghostPulse * 0.08);
               ctx.fillRect(blockX + 1, blockY + 1, size, size);
 
-              // Soft glow layer so the marker survives high-contrast backgrounds
-              ctx.shadowColor = colorWithAlpha(currentPiece.color, 0.9);
+              ctx.shadowColor = colorWithAlpha(currentPiece.color, 0.92);
               ctx.shadowBlur = 10;
-              ctx.strokeStyle = colorWithAlpha(currentPiece.color, 0.5 + ghostPulse * 0.15);
-              ctx.lineWidth = 1.6;
+              ctx.strokeStyle = colorWithAlpha(currentPiece.color, 0.56 + ghostPulse * 0.15);
+              ctx.lineWidth = 1.8;
               ctx.strokeRect(blockX + 1, blockY + 1, size, size);
               ctx.shadowBlur = 0;
-              
-              // Ghost marquee border
-              ctx.strokeStyle = colorWithAlpha(currentPiece.color, 0.75 + ghostPulse * 0.18);
-              ctx.lineWidth = 2.6;
+
+              ctx.strokeStyle = colorWithAlpha(currentPiece.color, 0.76 + ghostPulse * 0.16);
+              ctx.lineWidth = 2.2;
               ctx.setLineDash([6, 3]);
               ctx.lineDashOffset = -gridAnimation * 0.6;
               ctx.strokeRect(blockX + 1, blockY + 1, size, size);
 
-              // White contrast outline for readability on intense themes
-              ctx.strokeStyle = `rgba(255, 255, 255, ${0.32 + ghostPulse * 0.2})`;
-              ctx.lineWidth = 1.1;
+              ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + ghostPulse * 0.18})`;
+              ctx.lineWidth = 1.05;
               ctx.setLineDash([2, 4]);
               ctx.lineDashOffset = gridAnimation * 0.4;
               ctx.strokeRect(blockX + 1.8, blockY + 1.8, size - 1.6, size - 1.6);
 
               ctx.lineDashOffset = 0;
               ctx.setLineDash([]);
-            }
+            });
           });
-        });
+        }
       }
       
       // Draw subtle preview ghost for next piece
-      if (nextPieces.length > 0) {
+      if (ghostHintMode !== 'off' && nextPieces.length > 0) {
         const nextPiece = nextPieces[0];
         const nextSpawnX = Math.floor((COLS - nextPiece.shape[0].length) / 2);
         const nextSpawnY = 0;
@@ -4656,7 +4827,7 @@ const Brikx = () => {
       ctx.restore();
       gameState.current.pieceLockAnimation--;
     }
-  }, [checkCollision, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES, isMobile]);
+  }, [checkCollision, ghostHintMode, calculateSmartGhostPlacements, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES, isMobile]);
 
   // Game loop
   useEffect(() => {
@@ -6105,6 +6276,28 @@ const Brikx = () => {
               </div>
               
               <div className="settings-section">
+                <h3 className="settings-heading">👻 Ghost Style</h3>
+                <div className="mode-segment" role="radiogroup" aria-label="Ghost hint style">
+                  {[
+                    { id: 'classic', label: 'Classic', icon: '⬇️' },
+                    { id: 'smart', label: 'Smart Hints', icon: '🧠' },
+                    { id: 'off', label: 'Off', icon: '🚫' }
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      className={`mode-segment-btn ${ghostHintMode === mode.id ? 'active' : ''}`}
+                      onClick={() => setGhostHintModePreference(mode.id)}
+                      aria-pressed={ghostHintMode === mode.id}
+                      aria-label={`Set ghost style to ${mode.label}`}
+                    >
+                      <span className="toggle-icon">{mode.icon}</span>
+                      <span className="toggle-text">{mode.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="settings-section">
                 <h3 className="settings-heading">⌨️ Keyboard Controls</h3>
                 <div className="controls-grid">
                   <div className="control-item">
@@ -6388,6 +6581,35 @@ const Brikx = () => {
                   >
                     🎨 Change Theme
                   </button>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3 className="settings-heading">Gameplay</h3>
+                <div className="setting-item" style={{ marginBottom: '12px' }}>
+                  <label htmlFor="ghost-style-smart" className="setting-label">
+                    Ghost Block Hints
+                    <span className="setting-description">Choose straight drop preview, smart fit suggestions, or hide ghost hints.</span>
+                  </label>
+                  <div className="mode-segment" role="radiogroup" aria-label="Ghost hint style">
+                    {[
+                      { id: 'classic', label: 'Classic Ghost', icon: '⬇️' },
+                      { id: 'smart', label: 'Smart Hints', icon: '🧠' },
+                      { id: 'off', label: 'Off', icon: '🚫' }
+                    ].map((mode) => (
+                      <button
+                        key={mode.id}
+                        id={`ghost-style-${mode.id}`}
+                        className={`mode-segment-btn ${ghostHintMode === mode.id ? 'active' : ''}`}
+                        onClick={() => setGhostHintModePreference(mode.id)}
+                        aria-pressed={ghostHintMode === mode.id}
+                        aria-label={`Set ghost style to ${mode.label}`}
+                      >
+                        <span className="toggle-icon">{mode.icon}</span>
+                        <span className="toggle-text">{mode.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
