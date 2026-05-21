@@ -66,16 +66,24 @@ if ('serviceWorker' in navigator) {
       })
       .finally(() => navigator.serviceWorker.register(serviceWorkerUrl))
       .then((registration) => {
+        if (!registration || typeof registration.update !== 'function') {
+          console.warn('SW registration unavailable for update checks:', registration);
+          return;
+        }
+
         console.log('SW registered: ', registration);
         
         // Check for updates every 60 seconds
         setInterval(() => {
-          registration.update();
+          if (typeof registration.update === 'function') {
+            registration.update();
+          }
         }, 60000);
         
         // Listen for updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
+          if (!newWorker) return;
           console.log('SW update found!');
           
           newWorker.addEventListener('statechange', () => {

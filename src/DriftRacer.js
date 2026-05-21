@@ -1707,6 +1707,7 @@ const Brikx = () => {
     hardDropTrail: [],
     perfectClearFlash: 0,
     comboFlash: 0,
+    comboBannerDropFrames: 0,
     comboBannerBurst: null,
     chromaticAberration: 0,
     saturationBoost: 0,
@@ -2214,6 +2215,9 @@ const Brikx = () => {
         setLastClearWasCombo(true);
       }
 
+      // Drop the centered combo banner in from above on each chain advance.
+      gameState.current.comboBannerDropFrames = prefersReducedMotion ? 0 : (isMobile ? 18 : 14);
+
       // Play tier stinger only when crossing a new combo milestone.
       if (comboChain >= 15 && combo < 15) {
         playComboTierStinger(15);
@@ -2313,6 +2317,7 @@ const Brikx = () => {
         setCombo(0);
         setLastClearWasCombo(false);
       }
+      gameState.current.comboBannerDropFrames = 0;
     }
   }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addDebrisParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, playComboTierStinger, vibrate, prefersReducedMotion, isMobile]);
 
@@ -2628,6 +2633,7 @@ const Brikx = () => {
     gameState.current.clearAnimation = 0;
     gameState.current.chromaticAberration = 0;
     gameState.current.scanlineFlash = [];
+    gameState.current.comboBannerDropFrames = 0;
     
     setScore(0);
     setLevel(1);
@@ -3609,7 +3615,7 @@ const Brikx = () => {
           const plasmaGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, plasmaSize);
           plasmaGrad.addColorStop(0, p.innerColor || '#ffffff');
           plasmaGrad.addColorStop(0.4, p.color);
-          plasmaGrad.addColorStop(1, p.color + '00');
+          plasmaGrad.addColorStop(1, colorWithAlpha(p.color, 0));
           ctx.fillStyle = plasmaGrad;
           ctx.beginPath();
           ctx.arc(0, 0, plasmaSize, 0, Math.PI * 2);
@@ -4219,9 +4225,19 @@ const Brikx = () => {
       const pulseAmount = isMobile ? 0.2 : 0.12;
       const pulse = 1 + Math.sin(gridAnimation * 0.28) * pulseAmount;
       const sway = Math.sin(gridAnimation * 0.2) * (isMobile ? 3 : 2);
-      const headlineFontPx = Math.round(baseFontSize * pulse);
-      const comboX = boardOffsetX + BOARD_WIDTH - 10;
-      const comboY = (isMobile ? 42 : 30) + sway;
+      const dropFrames = Math.max(0, gameState.current.comboBannerDropFrames || 0);
+      const dropTotalFrames = isMobile ? 18 : 14;
+      const dropProgress = dropFrames > 0 ? Math.min(1, dropFrames / dropTotalFrames) : 0;
+      const enterProgress = dropFrames > 0 ? (1 - dropProgress) : 1;
+      const overshoot = isMobile ? 1.18 : 1.12;
+      const easedDrop = 1 + (overshoot + 1) * Math.pow(enterProgress - 1, 3) + overshoot * Math.pow(enterProgress - 1, 2);
+      const dropTravel = isMobile ? 54 : 40;
+      const dropYOffset = dropFrames > 0 ? (-dropTravel + (dropTravel * easedDrop)) : 0;
+      const impactPulse = dropFrames > 0 ? Math.sin(enterProgress * Math.PI) * 0.06 : 0;
+      const dropScaleBoost = 1 + impactPulse + (dropFrames > 0 ? 0.04 * (1 - enterProgress) : 0);
+      const headlineFontPx = Math.round(baseFontSize * pulse * dropScaleBoost);
+      const comboX = boardOffsetX + BOARD_WIDTH / 2;
+      const comboY = (isMobile ? 42 : 30) + sway + dropYOffset;
       const comboText = `${combo}x COMBO`;
       ctx.font = `900 ${headlineFontPx}px Arial`;
 
@@ -4231,7 +4247,7 @@ const Brikx = () => {
       const capsulePaddingY = isMobile ? 13 : 10;
       const capsuleWidth = textWidth + capsulePaddingX * 2;
       const capsuleHeight = headlineFontPx + capsulePaddingY;
-      const capsuleX = comboX - capsuleWidth;
+      const capsuleX = comboX - capsuleWidth / 2;
       const capsuleY = comboY - capsuleHeight + (isMobile ? 6 : 4);
       const capsuleRadius = isMobile ? 14 : 11;
 
@@ -4278,7 +4294,7 @@ const Brikx = () => {
       ctx.stroke();
 
       ctx.font = `900 ${headlineFontPx}px Arial`;
-      ctx.textAlign = 'right';
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#000000';
@@ -4287,6 +4303,10 @@ const Brikx = () => {
       ctx.shadowBlur = isMobile ? 6 : 4;
       ctx.strokeText(comboText, comboX, comboY);
       ctx.fillText(comboText, comboX, comboY);
+
+      if (dropFrames > 0) {
+        gameState.current.comboBannerDropFrames = dropFrames - 1;
+      }
       ctx.restore();
     }
 
