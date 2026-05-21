@@ -13,7 +13,17 @@ export const THEME_DEFINITIONS = {
     visual: {
       motif: 'ribbons',
       pattern: 'wave-grid',
-      animated: true
+      animated: true,
+      art: {
+        overlay: 'neon-pulse',
+        gradientStops: [
+          { stop: 0, color: '#0e0128' },
+          { stop: 0.22, color: '#310754' },
+          { stop: 0.5, color: '#5a128a' },
+          { stop: 0.78, color: '#241b70' },
+          { stop: 1, color: '#100a36' }
+        ]
+      }
     },
     colors: {
       // Backgrounds
@@ -144,7 +154,17 @@ export const THEME_DEFINITIONS = {
     visual: {
       motif: 'embers',
       pattern: 'diagonal-grid',
-      animated: true
+      animated: true,
+      art: {
+        overlay: 'retro-grid',
+        gradientStops: [
+          { stop: 0, color: '#0d102b' },
+          { stop: 0.2, color: '#1a2a57' },
+          { stop: 0.46, color: '#3d2f7d' },
+          { stop: 0.72, color: '#a43a7e' },
+          { stop: 1, color: '#ff6d66' }
+        ]
+      }
     },
     colors: {
       primary: '#1a1a2e',
@@ -187,7 +207,17 @@ export const THEME_DEFINITIONS = {
     visual: {
       motif: 'ribbons',
       pattern: 'soft-orbit',
-      animated: true
+      animated: true,
+      art: {
+        overlay: 'synthwave-drive',
+        gradientStops: [
+          { stop: 0, color: '#1a0735' },
+          { stop: 0.24, color: '#3a1261' },
+          { stop: 0.5, color: '#6a1f7a' },
+          { stop: 0.76, color: '#d54a73' },
+          { stop: 1, color: '#ff9447' }
+        ]
+      }
     },
     colors: {
       primary: '#2b0845',
@@ -230,7 +260,17 @@ export const THEME_DEFINITIONS = {
     visual: {
       motif: 'embers',
       pattern: 'circuit',
-      animated: true
+      animated: true,
+      art: {
+        overlay: 'matrix-rain',
+        gradientStops: [
+          { stop: 0, color: '#020703' },
+          { stop: 0.28, color: '#04140a' },
+          { stop: 0.55, color: '#072010' },
+          { stop: 0.82, color: '#0a2b14' },
+          { stop: 1, color: '#031109' }
+        ]
+      }
     },
     colors: {
       primary: '#000000',
@@ -273,7 +313,17 @@ export const THEME_DEFINITIONS = {
     visual: {
       motif: 'ribbons',
       pattern: 'wave-grid',
-      animated: true
+      animated: true,
+      art: {
+        overlay: 'ocean-caustics',
+        gradientStops: [
+          { stop: 0, color: '#00112b' },
+          { stop: 0.24, color: '#00345b' },
+          { stop: 0.52, color: '#00668a' },
+          { stop: 0.8, color: '#0b88a8' },
+          { stop: 1, color: '#1ec2d6' }
+        ]
+      }
     },
     colors: {
       primary: '#001f3f',
@@ -316,7 +366,17 @@ export const THEME_DEFINITIONS = {
     visual: {
       motif: 'embers',
       pattern: 'sun-rings',
-      animated: true
+      animated: true,
+      art: {
+        overlay: 'sunset-horizon',
+        gradientStops: [
+          { stop: 0, color: '#1a1538' },
+          { stop: 0.22, color: '#3a1d59' },
+          { stop: 0.48, color: '#8a2f5f' },
+          { stop: 0.74, color: '#d45a3f' },
+          { stop: 1, color: '#f6a036' }
+        ]
+      }
     },
     colors: {
       primary: '#1a0a0a',

@@ -127,6 +127,15 @@ const brightenColor = (rgb, factor = 1.2) => {
   ];
 };
 
+const blendRgb = (from, to, t = 0.5) => {
+  const ratio = Math.max(0, Math.min(1, t));
+  return [
+    Math.round(from[0] + (to[0] - from[0]) * ratio),
+    Math.round(from[1] + (to[1] - from[1]) * ratio),
+    Math.round(from[2] + (to[2] - from[2]) * ratio)
+  ];
+};
+
 const drawFlower = (ctx, x, y, radius, color, alpha, rotation = 0) => {
   ctx.save();
   ctx.translate(x, y);
@@ -3013,6 +3022,7 @@ const Brikx = () => {
     const boostedSecondary = brightenColor(themeSecondary, 1 + saturationBoost * 0.15);
     
     const resolvedVisual = selectedTheme?.visual || getThemeVisualProfile(currentTheme, selectedTheme?.category);
+    const phaseOneArt = resolvedVisual?.art || null;
     const visualMotif = resolvedVisual?.motif || null;
     const visualPattern = resolvedVisual?.pattern || null;
     const now = Date.now() * 0.001;
@@ -3029,23 +3039,37 @@ const Brikx = () => {
       CANVAS_WIDTH,
       CANVAS_HEIGHT + Math.cos(animOffset + comboPulse) * CANVAS_HEIGHT * 0.3
     );
-    // Brighten colors during combos and boost periods
-    const r1 = Math.min(255, boostedPrimary[0] + boostedAccent[0] * comboIntensity * 0.35);
-    const g1 = Math.min(255, boostedPrimary[1] + boostedAccent[1] * comboIntensity * 0.35);
-    const b1 = Math.min(255, boostedPrimary[2] + boostedAccent[2] * comboIntensity * 0.35);
-    const rMid = Math.min(255, boostedSecondary[0] * 0.72 + boostedSuccess[0] * 0.28 + comboIntensity * 18);
-    const gMid = Math.min(255, boostedSecondary[1] * 0.72 + boostedSuccess[1] * 0.28 + comboIntensity * 18);
-    const bMid = Math.min(255, boostedSecondary[2] * 0.72 + boostedSuccess[2] * 0.28 + comboIntensity * 18);
-    const rWarm = Math.min(255, boostedSecondary[0] * 0.7 + boostedWarning[0] * 0.3 + comboIntensity * 14);
-    const gWarm = Math.min(255, boostedSecondary[1] * 0.7 + boostedWarning[1] * 0.3 + comboIntensity * 14);
-    const bWarm = Math.min(255, boostedSecondary[2] * 0.7 + boostedWarning[2] * 0.3 + comboIntensity * 14);
-    const r2 = Math.min(255, boostedSecondary[0] + boostedAccent[0] * comboIntensity * 0.25);
-    const g2 = Math.min(255, boostedSecondary[1] + boostedAccent[1] * comboIntensity * 0.25);
-    const b2 = Math.min(255, boostedSecondary[2] + boostedAccent[2] * comboIntensity * 0.25);
-    gradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
-    gradient.addColorStop(0.38, `rgb(${rMid}, ${gMid}, ${bMid})`);
-    gradient.addColorStop(0.72, `rgb(${rWarm}, ${gWarm}, ${bWarm})`);
-    gradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
+    if (Array.isArray(phaseOneArt?.gradientStops) && phaseOneArt.gradientStops.length >= 3) {
+      const comboTintA = blendRgb(boostedAccent, boostedSuccess, 0.35);
+      const comboTintB = blendRgb(boostedWarning, boostedAccent, 0.55);
+      const comboTint = blendRgb(comboTintA, comboTintB, 0.5);
+      phaseOneArt.gradientStops.forEach((entry, index) => {
+        const stop = typeof entry?.stop === 'number' ? Math.max(0, Math.min(1, entry.stop)) : index / (phaseOneArt.gradientStops.length - 1);
+        const base = hexToRgbArray(entry?.color, boostedPrimary);
+        const saturationTarget = 1 + saturationBoost * 0.55 + comboIntensity * 0.32;
+        const artColor = boostColorSaturation(base, saturationTarget, 1.05 + comboIntensity * 0.1);
+        const mixed = blendRgb(artColor, comboTint, 0.08 + comboIntensity * 0.12);
+        gradient.addColorStop(stop, `rgb(${mixed[0]}, ${mixed[1]}, ${mixed[2]})`);
+      });
+    } else {
+      // Brighten colors during combos and boost periods
+      const r1 = Math.min(255, boostedPrimary[0] + boostedAccent[0] * comboIntensity * 0.35);
+      const g1 = Math.min(255, boostedPrimary[1] + boostedAccent[1] * comboIntensity * 0.35);
+      const b1 = Math.min(255, boostedPrimary[2] + boostedAccent[2] * comboIntensity * 0.35);
+      const rMid = Math.min(255, boostedSecondary[0] * 0.72 + boostedSuccess[0] * 0.28 + comboIntensity * 18);
+      const gMid = Math.min(255, boostedSecondary[1] * 0.72 + boostedSuccess[1] * 0.28 + comboIntensity * 18);
+      const bMid = Math.min(255, boostedSecondary[2] * 0.72 + boostedSuccess[2] * 0.28 + comboIntensity * 18);
+      const rWarm = Math.min(255, boostedSecondary[0] * 0.7 + boostedWarning[0] * 0.3 + comboIntensity * 14);
+      const gWarm = Math.min(255, boostedSecondary[1] * 0.7 + boostedWarning[1] * 0.3 + comboIntensity * 14);
+      const bWarm = Math.min(255, boostedSecondary[2] * 0.7 + boostedWarning[2] * 0.3 + comboIntensity * 14);
+      const r2 = Math.min(255, boostedSecondary[0] + boostedAccent[0] * comboIntensity * 0.25);
+      const g2 = Math.min(255, boostedSecondary[1] + boostedAccent[1] * comboIntensity * 0.25);
+      const b2 = Math.min(255, boostedSecondary[2] + boostedAccent[2] * comboIntensity * 0.25);
+      gradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
+      gradient.addColorStop(0.38, `rgb(${rMid}, ${gMid}, ${bMid})`);
+      gradient.addColorStop(0.72, `rgb(${rWarm}, ${gWarm}, ${bWarm})`);
+      gradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
+    }
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -3063,6 +3087,205 @@ const Brikx = () => {
     chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, 0.06 + comboIntensity * 0.05));
     ctx.fillStyle = chromaVeil;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Phase 1 theme art overlays: bold visual identity for select themes.
+    if (!severelyStressed && phaseOneArt?.overlay) {
+      if (phaseOneArt.overlay === 'neon-pulse') {
+        ctx.save();
+        const beamCount = frameStressed ? 4 : 7;
+        ctx.globalAlpha = lowPowerMode ? 0.09 : 0.16 + comboIntensity * 0.08;
+        for (let i = 0; i < beamCount; i++) {
+          const wave = Math.sin(now * 0.8 + i * 0.9);
+          const x = (i * CANVAS_WIDTH / beamCount) + wave * 42;
+          ctx.lineWidth = i % 2 ? 7 : 5;
+          ctx.strokeStyle = i % 2 ? 'rgba(255, 90, 235, 0.8)' : 'rgba(90, 215, 255, 0.78)';
+          ctx.beginPath();
+          ctx.moveTo(x + 48, 0);
+          ctx.lineTo(x - 84, CANVAS_HEIGHT);
+          ctx.stroke();
+        }
+        const orbCount = frameStressed ? 3 : 6;
+        for (let i = 0; i < orbCount; i++) {
+          const ox = (CANVAS_WIDTH * ((i + 1) / (orbCount + 1))) + Math.sin(now * 0.7 + i) * 28;
+          const oy = CANVAS_HEIGHT * (0.18 + (i % 3) * 0.22) + Math.cos(now * 0.55 + i) * 18;
+          const radius = 52 + (i % 3) * 16;
+          const orbGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, radius);
+          orbGrad.addColorStop(0, i % 2 ? 'rgba(255, 130, 255, 0.28)' : 'rgba(120, 235, 255, 0.24)');
+          orbGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = orbGrad;
+          ctx.beginPath();
+          ctx.arc(ox, oy, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      } else if (phaseOneArt.overlay === 'matrix-rain') {
+        ctx.save();
+        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.2;
+        const stepX = frameStressed ? 52 : 38;
+        for (let x = 0; x < CANVAS_WIDTH + stepX; x += stepX) {
+          const speed = 42 + (x % 5) * 8;
+          const headY = ((now * speed) + x * 1.8) % (CANVAS_HEIGHT + 140) - 140;
+          const trailGrad = ctx.createLinearGradient(x, headY - 80, x, headY + 12);
+          trailGrad.addColorStop(0, 'rgba(0, 255, 110, 0)');
+          trailGrad.addColorStop(0.6, 'rgba(0, 255, 120, 0.34)');
+          trailGrad.addColorStop(1, 'rgba(180, 255, 215, 0.55)');
+          ctx.fillStyle = trailGrad;
+          ctx.fillRect(x, headY - 80, 3, 92);
+        }
+        ctx.globalAlpha = lowPowerMode ? 0.05 : 0.1;
+        const scanY = ((now * 120) % (CANVAS_HEIGHT + 30)) - 15;
+        const scanGrad = ctx.createLinearGradient(0, scanY - 20, 0, scanY + 20);
+        scanGrad.addColorStop(0, 'rgba(0,255,120,0)');
+        scanGrad.addColorStop(0.5, 'rgba(120,255,180,0.35)');
+        scanGrad.addColorStop(1, 'rgba(0,255,120,0)');
+        ctx.fillStyle = scanGrad;
+        ctx.fillRect(0, scanY - 20, CANVAS_WIDTH, 40);
+        ctx.restore();
+      } else if (phaseOneArt.overlay === 'sunset-horizon') {
+        ctx.save();
+        ctx.globalAlpha = lowPowerMode ? 0.13 : 0.24;
+        const sunX = CANVAS_WIDTH * 0.5;
+        const sunY = CANVAS_HEIGHT * 0.58;
+        const sunRadius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.22;
+        const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius);
+        sunGrad.addColorStop(0, 'rgba(255, 245, 200, 0.95)');
+        sunGrad.addColorStop(0.42, 'rgba(255, 190, 120, 0.72)');
+        sunGrad.addColorStop(1, 'rgba(255, 110, 80, 0)');
+        ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        const horizonY = CANVAS_HEIGHT * 0.68;
+        ctx.fillStyle = 'rgba(38, 14, 58, 0.52)';
+        ctx.beginPath();
+        ctx.moveTo(0, CANVAS_HEIGHT);
+        ctx.lineTo(0, horizonY);
+        for (let x = 0; x <= CANVAS_WIDTH; x += 40) {
+          const y = horizonY + Math.sin(x * 0.014 + now * 0.25) * 12 + Math.cos(x * 0.008) * 8;
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.globalAlpha = lowPowerMode ? 0.08 : 0.14;
+        ctx.strokeStyle = 'rgba(255, 175, 120, 0.85)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const y = CANVAS_HEIGHT * (0.2 + i * 0.08) + Math.sin(now * 0.8 + i) * 8;
+          ctx.beginPath();
+          ctx.moveTo(-10, y);
+          ctx.lineTo(CANVAS_WIDTH + 10, y + (i % 2 ? 6 : -6));
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (phaseOneArt.overlay === 'retro-grid') {
+        ctx.save();
+        const horizonY = CANVAS_HEIGHT * 0.64;
+        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.19;
+
+        const sunGrad = ctx.createRadialGradient(CANVAS_WIDTH * 0.5, horizonY - 34, 0, CANVAS_WIDTH * 0.5, horizonY - 34, 140);
+        sunGrad.addColorStop(0, 'rgba(255, 232, 165, 0.92)');
+        sunGrad.addColorStop(0.45, 'rgba(255, 128, 178, 0.6)');
+        sunGrad.addColorStop(1, 'rgba(255, 128, 178, 0)');
+        ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(CANVAS_WIDTH * 0.5, horizonY - 34, 140, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 120, 210, 0.75)';
+        ctx.lineWidth = 1.6;
+        const perspectiveLines = frameStressed ? 7 : 12;
+        for (let i = -perspectiveLines; i <= perspectiveLines; i++) {
+          ctx.beginPath();
+          ctx.moveTo(CANVAS_WIDTH * 0.5, horizonY);
+          ctx.lineTo(CANVAS_WIDTH * 0.5 + i * 96, CANVAS_HEIGHT + 12);
+          ctx.stroke();
+        }
+
+        const rowCount = frameStressed ? 7 : 12;
+        for (let i = 1; i <= rowCount; i++) {
+          const t = i / rowCount;
+          const y = horizonY + Math.pow(t, 1.45) * (CANVAS_HEIGHT - horizonY + 24);
+          ctx.beginPath();
+          ctx.moveTo(-20, y);
+          ctx.lineTo(CANVAS_WIDTH + 20, y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (phaseOneArt.overlay === 'synthwave-drive') {
+        ctx.save();
+        const horizonY = CANVAS_HEIGHT * 0.62;
+        ctx.globalAlpha = lowPowerMode ? 0.11 : 0.21;
+
+        const glow = ctx.createRadialGradient(CANVAS_WIDTH * 0.5, horizonY - 28, 0, CANVAS_WIDTH * 0.5, horizonY - 28, 210);
+        glow.addColorStop(0, 'rgba(255, 170, 135, 0.92)');
+        glow.addColorStop(0.5, 'rgba(255, 110, 170, 0.5)');
+        glow.addColorStop(1, 'rgba(255, 110, 170, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(CANVAS_WIDTH * 0.5, horizonY - 28, 210, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(120, 245, 255, 0.72)';
+        ctx.lineWidth = 1.4;
+        const roadLines = frameStressed ? 6 : 10;
+        for (let i = 0; i < roadLines; i++) {
+          const y = horizonY + i * ((CANVAS_HEIGHT - horizonY) / Math.max(1, roadLines - 1));
+          const offset = Math.sin(now * 1.4 + i * 0.45) * 7;
+          ctx.beginPath();
+          ctx.moveTo(CANVAS_WIDTH * 0.18 + offset, y);
+          ctx.lineTo(CANVAS_WIDTH * 0.82 - offset, y + (i % 2 ? 3 : -3));
+          ctx.stroke();
+        }
+
+        ctx.globalAlpha = lowPowerMode ? 0.07 : 0.14;
+        for (let i = 0; i < 5; i++) {
+          const y = CANVAS_HEIGHT * (0.17 + i * 0.1) + Math.sin(now * 1.2 + i * 0.6) * 10;
+          ctx.strokeStyle = i % 2 ? 'rgba(255, 120, 200, 0.65)' : 'rgba(110, 205, 255, 0.6)';
+          ctx.beginPath();
+          ctx.moveTo(-10, y);
+          ctx.lineTo(CANVAS_WIDTH + 10, y + (i % 2 ? 5 : -5));
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (phaseOneArt.overlay === 'ocean-caustics') {
+        ctx.save();
+        ctx.globalAlpha = lowPowerMode ? 0.08 : 0.17;
+        const causticRows = frameStressed ? 5 : 9;
+        for (let i = 0; i < causticRows; i++) {
+          const y = (i / causticRows) * CANVAS_HEIGHT;
+          const path = ctx.createLinearGradient(0, y - 18, CANVAS_WIDTH, y + 18);
+          path.addColorStop(0, 'rgba(170, 245, 255, 0)');
+          path.addColorStop(0.45, 'rgba(170, 245, 255, 0.5)');
+          path.addColorStop(1, 'rgba(170, 245, 255, 0)');
+          ctx.strokeStyle = path;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let x = -20; x <= CANVAS_WIDTH + 20; x += 24) {
+            const py = y + Math.sin(now * 1.6 + i * 0.5 + x * 0.022) * 11 + Math.cos(now * 0.9 + x * 0.016) * 4;
+            if (x === -20) ctx.moveTo(x, py);
+            else ctx.lineTo(x, py);
+          }
+          ctx.stroke();
+        }
+
+        const bubbleCount = frameStressed ? 4 : 8;
+        ctx.globalAlpha = lowPowerMode ? 0.07 : 0.13;
+        for (let i = 0; i < bubbleCount; i++) {
+          const bx = ((i * 137) % CANVAS_WIDTH) + Math.sin(now * 0.6 + i) * 20;
+          const by = (CANVAS_HEIGHT + 30) - (((now * (22 + i * 3)) + i * 70) % (CANVAS_HEIGHT + 60));
+          const radius = 10 + (i % 3) * 6;
+          ctx.strokeStyle = 'rgba(210, 250, 255, 0.8)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(bx, by, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
     
     // Draw floating geometric shapes in background with boosted accent colors
     ctx.save();
@@ -4220,7 +4443,6 @@ const Brikx = () => {
     // Draw combo display
     if (combo > 0 && lastClearWasCombo) {
       ctx.save();
-      const comboTier = combo >= 15 ? 'legendary' : combo >= 10 ? 'mega' : combo >= 5 ? 'super' : 'base';
       const baseFontSize = isMobile ? 30 : 22;
       const pulseAmount = isMobile ? 0.2 : 0.12;
       const pulse = 1 + Math.sin(gridAnimation * 0.28) * pulseAmount;
@@ -4240,58 +4462,6 @@ const Brikx = () => {
       const comboY = (isMobile ? 42 : 30) + sway + dropYOffset;
       const comboText = `${combo}x COMBO`;
       ctx.font = `900 ${headlineFontPx}px Arial`;
-
-      // Draw a subtle tiered capsule background so the text reads clearly over effects.
-      const textWidth = ctx.measureText(comboText).width;
-      const capsulePaddingX = isMobile ? 16 : 12;
-      const capsulePaddingY = isMobile ? 13 : 10;
-      const capsuleWidth = textWidth + capsulePaddingX * 2;
-      const capsuleHeight = headlineFontPx + capsulePaddingY;
-      const capsuleX = comboX - capsuleWidth / 2;
-      const capsuleY = comboY - capsuleHeight + (isMobile ? 6 : 4);
-      const capsuleRadius = isMobile ? 14 : 11;
-
-      const capsuleGrad = ctx.createLinearGradient(capsuleX, capsuleY, capsuleX, capsuleY + capsuleHeight);
-      if (comboTier === 'legendary') {
-        capsuleGrad.addColorStop(0, 'rgba(255, 210, 90, 0.92)');
-        capsuleGrad.addColorStop(1, 'rgba(255, 140, 40, 0.78)');
-      } else if (comboTier === 'mega') {
-        capsuleGrad.addColorStop(0, 'rgba(255, 130, 170, 0.9)');
-        capsuleGrad.addColorStop(1, 'rgba(255, 85, 120, 0.75)');
-      } else if (comboTier === 'super') {
-        capsuleGrad.addColorStop(0, 'rgba(120, 220, 255, 0.9)');
-        capsuleGrad.addColorStop(1, 'rgba(65, 165, 255, 0.72)');
-      } else {
-        capsuleGrad.addColorStop(0, 'rgba(155, 155, 155, 0.88)');
-        capsuleGrad.addColorStop(1, 'rgba(95, 95, 95, 0.72)');
-      }
-
-      ctx.beginPath();
-      ctx.moveTo(capsuleX + capsuleRadius, capsuleY);
-      ctx.lineTo(capsuleX + capsuleWidth - capsuleRadius, capsuleY);
-      ctx.quadraticCurveTo(capsuleX + capsuleWidth, capsuleY, capsuleX + capsuleWidth, capsuleY + capsuleRadius);
-      ctx.lineTo(capsuleX + capsuleWidth, capsuleY + capsuleHeight - capsuleRadius);
-      ctx.quadraticCurveTo(capsuleX + capsuleWidth, capsuleY + capsuleHeight, capsuleX + capsuleWidth - capsuleRadius, capsuleY + capsuleHeight);
-      ctx.lineTo(capsuleX + capsuleRadius, capsuleY + capsuleHeight);
-      ctx.quadraticCurveTo(capsuleX, capsuleY + capsuleHeight, capsuleX, capsuleY + capsuleHeight - capsuleRadius);
-      ctx.lineTo(capsuleX, capsuleY + capsuleRadius);
-      ctx.quadraticCurveTo(capsuleX, capsuleY, capsuleX + capsuleRadius, capsuleY);
-      ctx.closePath();
-      ctx.fillStyle = capsuleGrad;
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-      ctx.shadowBlur = isMobile ? 14 : 9;
-      ctx.fill();
-
-      const shine = ctx.createLinearGradient(capsuleX, capsuleY, capsuleX, capsuleY + capsuleHeight * 0.9);
-      shine.addColorStop(0, 'rgba(255,255,255,0.42)');
-      shine.addColorStop(0.36, 'rgba(255,255,255,0.1)');
-      shine.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = shine;
-      ctx.fill();
-
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
 
       ctx.font = `900 ${headlineFontPx}px Arial`;
       ctx.textAlign = 'center';
