@@ -1269,7 +1269,7 @@ const Brikx = () => {
   const playRotateSuccessSound = useCallback(() => {
     if (!soundEnabled) return;
     // Immediate synthesized cue to avoid silent rotates when file playback is blocked.
-    playSound('rotate', 420, 0.09, 0.2);
+    playSound('rotate', 690, 0.07, 0.12);
     playSfxFile('mixkit-quick-positive-video-game-notification-interface-265.wav', 0.5, 'Rotate sound');
   }, [soundEnabled, playSfxFile, playSound]);
 
@@ -2604,7 +2604,7 @@ const Brikx = () => {
     gameState.current.currentY += dropDistance;
     setScore(prev => prev + dropDistance * 2);
     // Synth fallback ensures hard-drop has audible feedback even if file SFX is delayed.
-    playSound('drop', 120, 0.13, 0.26);
+    playSound('drop', 78, 0.2, 0.34);
     playSfxFile('mixkit-sci-fi-positive-notification-266.wav', 0.8, 'Hard-drop sound');
     mergePiece();
     clearLines();
