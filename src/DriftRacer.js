@@ -2290,11 +2290,11 @@ const Brikx = () => {
       linesToClear.forEach(y => addLineParticles(y, isCombo, isPerfectClear, combo));
 
       // Highlight connected color matches with a fast green pulse.
-      if (!prefersReducedMotion && connectedMatchHighlights.length > 0) {
+      if (connectedMatchHighlights.length > 0) {
         gameState.current.connectedMatchFlashes = connectedMatchHighlights.map((match) => ({
           ...match,
-          life: isMobile ? 9 : 8,
-          maxLife: isMobile ? 9 : 8
+          life: prefersReducedMotion ? (isMobile ? 7 : 6) : (isMobile ? 10 : 8),
+          maxLife: prefersReducedMotion ? (isMobile ? 7 : 6) : (isMobile ? 10 : 8)
         }));
       }
       
@@ -3789,6 +3789,7 @@ const Brikx = () => {
           const intensity = (intensityA + intensityB) * 0.5;
           const avgMatchSize = ((flash.matchSize || 3) + (neighborFlash.matchSize || 3)) * 0.5;
           const thicknessBoost = Math.min(1.6, Math.max(0, (avgMatchSize - 3) * 0.22));
+          const mobileBeamBoost = isMobile ? 1.35 : 1;
 
           const centerAX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
           const centerAY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
@@ -3797,21 +3798,21 @@ const Brikx = () => {
 
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
-          ctx.globalAlpha = 0.45 * intensity;
+          ctx.globalAlpha = (isMobile ? 0.62 : 0.45) * intensity;
           const linkGrad = ctx.createLinearGradient(centerAX, centerAY, centerBX, centerBY);
           linkGrad.addColorStop(0, 'rgba(70, 255, 120, 0.15)');
           linkGrad.addColorStop(0.5, 'rgba(165, 255, 185, 0.95)');
           linkGrad.addColorStop(1, 'rgba(70, 255, 120, 0.15)');
           ctx.strokeStyle = linkGrad;
-          ctx.lineWidth = 3.2 + thicknessBoost;
+          ctx.lineWidth = (3.2 + thicknessBoost) * mobileBeamBoost;
           ctx.beginPath();
           ctx.moveTo(centerAX, centerAY);
           ctx.lineTo(centerBX, centerBY);
           ctx.stroke();
 
-          ctx.globalAlpha = 0.32 * intensity;
+          ctx.globalAlpha = (isMobile ? 0.44 : 0.32) * intensity;
           ctx.strokeStyle = 'rgba(230, 255, 238, 0.9)';
-          ctx.lineWidth = 1.2 + thicknessBoost * 0.45;
+          ctx.lineWidth = (1.2 + thicknessBoost * 0.45) * mobileBeamBoost;
           ctx.beginPath();
           ctx.moveTo(centerAX, centerAY);
           ctx.lineTo(centerBX, centerBY);
@@ -3822,14 +3823,15 @@ const Brikx = () => {
 
       gameState.current.connectedMatchFlashes.forEach((flash) => {
         const intensity = flash.life / flash.maxLife;
-        const pulse = 0.6 + Math.sin((1 - intensity) * Math.PI * 3.5) * 0.4;
+        const pulse = prefersReducedMotion ? 1 : (0.6 + Math.sin((1 - intensity) * Math.PI * 3.5) * 0.4);
         const blockX = flash.x * BLOCK_SIZE;
         const blockY = flash.y * BLOCK_SIZE;
         const size = BLOCK_SIZE - 2;
+        const mobileFlashBoost = isMobile ? 1.28 : 1;
 
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 0.35 * intensity * pulse;
+        ctx.globalAlpha = 0.35 * mobileFlashBoost * intensity * pulse;
 
         const flashGrad = ctx.createRadialGradient(
           blockX + BLOCK_SIZE / 2,
@@ -3845,9 +3847,9 @@ const Brikx = () => {
         ctx.fillStyle = flashGrad;
         ctx.fillRect(blockX - 4, blockY - 4, BLOCK_SIZE + 8, BLOCK_SIZE + 8);
 
-        ctx.globalAlpha = 0.55 * intensity;
+        ctx.globalAlpha = 0.55 * mobileFlashBoost * intensity;
         ctx.strokeStyle = `rgba(120, 255, 145, ${0.65 * intensity})`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = isMobile ? 2.8 : 2;
         ctx.strokeRect(blockX + 1.5, blockY + 1.5, size - 1, size - 1);
 
         ctx.restore();
