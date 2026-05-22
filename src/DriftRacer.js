@@ -3094,7 +3094,10 @@ const Brikx = () => {
   const getThemeBlockColors = useCallback(() => {
     const selectedTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
     const saturationBoost = Math.max(0, (gameState.current.saturationBoost || 0));
-    const saturationMultiplier = 1.14 + saturationBoost * 0.58;
+    const mobileSunlightMode = isMobile && !lowPowerMode;
+    const sunlightSaturationBoost = mobileSunlightMode ? 1.08 : 1;
+    const sunlightBrightnessBoost = mobileSunlightMode ? 1.12 : 1;
+    const saturationMultiplier = (1.14 + saturationBoost * 0.58) * sunlightSaturationBoost;
     
     const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
     const themeSuccess = hexToRgbArray(selectedTheme?.colors?.success, [0, 240, 100]);
@@ -3104,15 +3107,15 @@ const Brikx = () => {
     
     // Map each tetromino to theme colors with saturation boost
     return {
-      I: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier, 1.28).join(',')})`,
-      O: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier * 0.98, 1.3).join(',')})`,
-      T: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier * 0.9, 1.2).join(',')})`, // Purple-ish
-      S: `rgb(${boostColorSaturation(themeSuccess, saturationMultiplier, 1.26).join(',')})`,
-      Z: `rgb(${boostColorSaturation(themeError, saturationMultiplier, 1.24).join(',')})`,
-      J: `rgb(${boostColorSaturation([Math.min(255, themeSecondary[0] + themeAccent[0] * 0.58), Math.min(255, themeSecondary[1] + themeAccent[1] * 0.58), Math.min(255, themeSecondary[2] + themeAccent[2] * 0.9)], saturationMultiplier, 1.2).join(',')})`,
-      L: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier, 1.24).join(',')})` // Orange variant
+      I: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier, 1.28 * sunlightBrightnessBoost).join(',')})`,
+      O: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier * 0.98, 1.3 * sunlightBrightnessBoost).join(',')})`,
+      T: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier * 0.9, 1.2 * sunlightBrightnessBoost).join(',')})`, // Purple-ish
+      S: `rgb(${boostColorSaturation(themeSuccess, saturationMultiplier, 1.26 * sunlightBrightnessBoost).join(',')})`,
+      Z: `rgb(${boostColorSaturation(themeError, saturationMultiplier, 1.24 * sunlightBrightnessBoost).join(',')})`,
+      J: `rgb(${boostColorSaturation([Math.min(255, themeSecondary[0] + themeAccent[0] * 0.58), Math.min(255, themeSecondary[1] + themeAccent[1] * 0.58), Math.min(255, themeSecondary[2] + themeAccent[2] * 0.9)], saturationMultiplier, 1.2 * sunlightBrightnessBoost).join(',')})`,
+      L: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier, 1.24 * sunlightBrightnessBoost).join(',')})` // Orange variant
     };
-  }, [currentTheme]);
+  }, [currentTheme, isMobile, lowPowerMode]);
 
   // Draw game
   const draw = useCallback(() => {
@@ -3179,6 +3182,8 @@ const Brikx = () => {
     const visualPattern = resolvedVisual?.pattern || null;
     const now = Date.now() * 0.001;
     const animOffset = gridAnimation * 0.01;
+    const mobileSunlightMode = isMobile && !lowPowerMode;
+    const bloomReduction = mobileSunlightMode ? 0.74 : 1;
     
     // Add combo-based pulsing effect to background
     const comboPulse = combo > 0 ? Math.sin(gridAnimation * 0.15) * (combo * 0.03) : 0;
@@ -3234,9 +3239,9 @@ const Brikx = () => {
       CANVAS_HEIGHT * 0.5,
       CANVAS_HEIGHT * 0.9
     );
-    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, 0.16 + comboIntensity * 0.1));
-    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, 0.12 + comboIntensity * 0.08));
-    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, 0.1 + comboIntensity * 0.06));
+    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, (0.16 + comboIntensity * 0.1) * bloomReduction));
+    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, (0.12 + comboIntensity * 0.08) * bloomReduction));
+    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, (0.1 + comboIntensity * 0.06) * bloomReduction));
     ctx.fillStyle = chromaVeil;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -3442,7 +3447,7 @@ const Brikx = () => {
     // Draw floating geometric shapes in background with boosted accent colors
     ctx.save();
     // Increased opacity on background shapes
-    ctx.globalAlpha = lowPowerMode ? 0.11 + comboIntensity * 0.12 : 0.2 + comboIntensity * 0.24;
+    ctx.globalAlpha = (lowPowerMode ? 0.11 + comboIntensity * 0.12 : 0.2 + comboIntensity * 0.24) * (mobileSunlightMode ? 0.8 : 1);
     const shapeCount = severelyStressed
       ? (lowPowerMode ? 2 : 3)
       : frameStressed
@@ -3640,8 +3645,8 @@ const Brikx = () => {
         CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
         CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_HEIGHT * 0.8
       );
-      overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, 0.05)`);
-      overlayGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+      overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, ${mobileSunlightMode ? 0.032 : 0.05})`);
+      overlayGradient.addColorStop(1, mobileSunlightMode ? 'rgba(0, 0, 0, 0.36)' : 'rgba(0, 0, 0, 0.3)');
       ctx.fillStyle = overlayGradient;
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     }
@@ -3727,7 +3732,7 @@ const Brikx = () => {
           
           // Main block with enhanced glow
           ctx.shadowColor = cell;
-          ctx.shadowBlur = isMobile ? 11 : 10;
+          ctx.shadowBlur = isMobile ? 8.5 : 10;
           ctx.fillStyle = cell;
           ctx.fillRect(blockX + 1, blockY + 1, size, size);
           ctx.shadowBlur = 0;
@@ -3753,13 +3758,13 @@ const Brikx = () => {
           ctx.fillRect(blockX + 1, blockY + 1, size, size);
           
           // Glossy edge highlight
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.58)';
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = isMobile ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.58)';
+          ctx.lineWidth = isMobile ? 2.5 : 2;
           ctx.strokeRect(blockX + 2, blockY + 2, size - 3, size - 3);
           
           // Deep shadow for depth
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = isMobile ? 'rgba(0, 0, 0, 0.78)' : 'rgba(0, 0, 0, 0.5)';
+          ctx.lineWidth = isMobile ? 2.2 : 1.5;
           ctx.strokeRect(blockX + 1, blockY + 1, size, size);
           
           ctx.restore();
@@ -4301,7 +4306,7 @@ const Brikx = () => {
             
             // Enhanced glow for active piece
             ctx.shadowColor = currentPiece.color;
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = isMobile ? 9 : 12;
             ctx.fillStyle = currentPiece.color;
             ctx.fillRect(blockX + 1, blockY + 1, size, size);
             ctx.shadowBlur = 0;
@@ -4327,15 +4332,15 @@ const Brikx = () => {
             ctx.fillRect(blockX + 1, blockY + 1, size, size);
             
             // Glossy edge with pulsing effect
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = isMobile ? 'rgba(255, 255, 255, 0.78)' : 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = isMobile ? 3 : 2.5;
             ctx.strokeRect(blockX + 2, blockY + 2, size - 3, size - 3);
             
             // Outer glow ring
             ctx.shadowColor = currentPiece.color;
-            ctx.shadowBlur = 8;
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = isMobile ? 5 : 8;
+            ctx.strokeStyle = isMobile ? 'rgba(0, 0, 0, 0.86)' : 'rgba(0, 0, 0, 0.7)';
+            ctx.lineWidth = isMobile ? 2.2 : 1.5;
             ctx.strokeRect(blockX + 1, blockY + 1, size, size);
             ctx.shadowBlur = 0;
           }
