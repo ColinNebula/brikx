@@ -2305,14 +2305,16 @@ const Brikx = () => {
       // Trigger scanline flash strips for each cleared row
       if (!prefersReducedMotion) {
         linesToClear.forEach(y => {
-          gameState.current.scanlineFlash.push({ y, life: 18, maxLife: 18 });
+          gameState.current.scanlineFlash.push({ y, life: isMobile ? 22 : 20, maxLife: isMobile ? 22 : 20 });
         });
         // Chromatic aberration on Tetris or Perfect Clear
         if (linesToClear.length >= 4 || isPerfectClear) {
           gameState.current.chromaticAberration = isPerfectClear ? 20 : 12;
         }
         // Boost saturation for visual pop on line clears
-        gameState.current.saturationBoost = isPerfectClear ? 1.5 : Math.min(1.2, linesToClear.length * 0.35);
+        gameState.current.saturationBoost = isPerfectClear
+          ? 1.95
+          : Math.min(1.6, linesToClear.length * 0.5 + (combo >= 3 ? 0.2 : 0));
       }
       
       // Store lines for animation
@@ -3092,7 +3094,7 @@ const Brikx = () => {
   const getThemeBlockColors = useCallback(() => {
     const selectedTheme = THEME_DEFINITIONS[currentTheme] || THEME_DEFINITIONS.dark;
     const saturationBoost = Math.max(0, (gameState.current.saturationBoost || 0));
-    const saturationMultiplier = 1 + saturationBoost * 0.4;
+    const saturationMultiplier = 1.14 + saturationBoost * 0.58;
     
     const themeAccent = hexToRgbArray(selectedTheme?.colors?.accent, [0, 240, 240]);
     const themeSuccess = hexToRgbArray(selectedTheme?.colors?.success, [0, 240, 100]);
@@ -3102,13 +3104,13 @@ const Brikx = () => {
     
     // Map each tetromino to theme colors with saturation boost
     return {
-      I: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier, 1.2).join(',')})`,
-      O: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier, 1.2).join(',')})`,
-      T: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier * 0.8, 1.1).join(',')})`, // Purple-ish
-      S: `rgb(${boostColorSaturation(themeSuccess, saturationMultiplier, 1.2).join(',')})`,
-      Z: `rgb(${boostColorSaturation(themeError, saturationMultiplier, 1.2).join(',')})`,
-      J: `rgb(${boostColorSaturation([Math.min(255, themeSecondary[0] + themeAccent[0] * 0.5), Math.min(255, themeSecondary[1] + themeAccent[1] * 0.5), Math.min(255, themeSecondary[2] + themeAccent[2] * 0.8)], saturationMultiplier, 1.1).join(',')})`,
-      L: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier * 0.9, 1.15).join(',')})` // Orange variant
+      I: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier, 1.28).join(',')})`,
+      O: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier * 0.98, 1.3).join(',')})`,
+      T: `rgb(${boostColorSaturation(themeAccent, saturationMultiplier * 0.9, 1.2).join(',')})`, // Purple-ish
+      S: `rgb(${boostColorSaturation(themeSuccess, saturationMultiplier, 1.26).join(',')})`,
+      Z: `rgb(${boostColorSaturation(themeError, saturationMultiplier, 1.24).join(',')})`,
+      J: `rgb(${boostColorSaturation([Math.min(255, themeSecondary[0] + themeAccent[0] * 0.58), Math.min(255, themeSecondary[1] + themeAccent[1] * 0.58), Math.min(255, themeSecondary[2] + themeAccent[2] * 0.9)], saturationMultiplier, 1.2).join(',')})`,
+      L: `rgb(${boostColorSaturation(themeWarning, saturationMultiplier, 1.24).join(',')})` // Orange variant
     };
   }, [currentTheme]);
 
@@ -3164,12 +3166,12 @@ const Brikx = () => {
     
     // Boost saturation for better visual pop (especially during events)
     const saturationBoost = Math.max(0, (gameState.current.saturationBoost || 0));
-    const saturationMultiplier = 1 + saturationBoost * 0.4;
-    const boostedAccent = boostColorSaturation(themeAccent, saturationMultiplier, 1.15);
-    const boostedSuccess = boostColorSaturation(themeSuccess, saturationMultiplier * 0.95, 1.08);
-    const boostedWarning = boostColorSaturation(themeWarning, saturationMultiplier * 0.9, 1.05);
-    const boostedPrimary = brightenColor(themePrimary, 1 + saturationBoost * 0.2);
-    const boostedSecondary = brightenColor(themeSecondary, 1 + saturationBoost * 0.15);
+    const saturationMultiplier = 1.12 + saturationBoost * 0.5;
+    const boostedAccent = boostColorSaturation(themeAccent, saturationMultiplier, 1.22);
+    const boostedSuccess = boostColorSaturation(themeSuccess, saturationMultiplier, 1.16);
+    const boostedWarning = boostColorSaturation(themeWarning, saturationMultiplier * 0.95, 1.14);
+    const boostedPrimary = brightenColor(themePrimary, 1.05 + saturationBoost * 0.24);
+    const boostedSecondary = brightenColor(themeSecondary, 1.08 + saturationBoost * 0.2);
     
     const resolvedVisual = selectedTheme?.visual || getThemeVisualProfile(currentTheme, selectedTheme?.category);
     const phaseOneArt = resolvedVisual?.art || null;
@@ -3232,9 +3234,9 @@ const Brikx = () => {
       CANVAS_HEIGHT * 0.5,
       CANVAS_HEIGHT * 0.9
     );
-    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, 0.1 + comboIntensity * 0.08));
-    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, 0.08 + comboIntensity * 0.06));
-    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, 0.06 + comboIntensity * 0.05));
+    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, 0.16 + comboIntensity * 0.1));
+    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, 0.12 + comboIntensity * 0.08));
+    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, 0.1 + comboIntensity * 0.06));
     ctx.fillStyle = chromaVeil;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -3243,7 +3245,7 @@ const Brikx = () => {
       if (phaseOneArt.overlay === 'neon-pulse') {
         ctx.save();
         const beamCount = frameStressed ? 4 : 7;
-        ctx.globalAlpha = lowPowerMode ? 0.09 : 0.16 + comboIntensity * 0.08;
+        ctx.globalAlpha = lowPowerMode ? 0.11 : 0.22 + comboIntensity * 0.1;
         for (let i = 0; i < beamCount; i++) {
           const wave = Math.sin(now * 0.8 + i * 0.9);
           const x = (i * CANVAS_WIDTH / beamCount) + wave * 42;
@@ -3270,7 +3272,7 @@ const Brikx = () => {
         ctx.restore();
       } else if (phaseOneArt.overlay === 'matrix-rain') {
         ctx.save();
-        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.2;
+        ctx.globalAlpha = lowPowerMode ? 0.12 : 0.26;
         const stepX = frameStressed ? 52 : 38;
         for (let x = 0; x < CANVAS_WIDTH + stepX; x += stepX) {
           const speed = 42 + (x % 5) * 8;
@@ -3282,7 +3284,7 @@ const Brikx = () => {
           ctx.fillStyle = trailGrad;
           ctx.fillRect(x, headY - 80, 3, 92);
         }
-        ctx.globalAlpha = lowPowerMode ? 0.05 : 0.1;
+        ctx.globalAlpha = lowPowerMode ? 0.07 : 0.14;
         const scanY = ((now * 120) % (CANVAS_HEIGHT + 30)) - 15;
         const scanGrad = ctx.createLinearGradient(0, scanY - 20, 0, scanY + 20);
         scanGrad.addColorStop(0, 'rgba(0,255,120,0)');
@@ -3293,7 +3295,7 @@ const Brikx = () => {
         ctx.restore();
       } else if (phaseOneArt.overlay === 'sunset-horizon') {
         ctx.save();
-        ctx.globalAlpha = lowPowerMode ? 0.13 : 0.24;
+        ctx.globalAlpha = lowPowerMode ? 0.16 : 0.3;
         const sunX = CANVAS_WIDTH * 0.5;
         const sunY = CANVAS_HEIGHT * 0.58;
         const sunRadius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.22;
@@ -3319,7 +3321,7 @@ const Brikx = () => {
         ctx.closePath();
         ctx.fill();
 
-        ctx.globalAlpha = lowPowerMode ? 0.08 : 0.14;
+        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.18;
         ctx.strokeStyle = 'rgba(255, 175, 120, 0.85)';
         ctx.lineWidth = 2;
         for (let i = 0; i < 6; i++) {
@@ -3333,7 +3335,7 @@ const Brikx = () => {
       } else if (phaseOneArt.overlay === 'retro-grid') {
         ctx.save();
         const horizonY = CANVAS_HEIGHT * 0.64;
-        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.19;
+        ctx.globalAlpha = lowPowerMode ? 0.13 : 0.25;
 
         const sunGrad = ctx.createRadialGradient(CANVAS_WIDTH * 0.5, horizonY - 34, 0, CANVAS_WIDTH * 0.5, horizonY - 34, 140);
         sunGrad.addColorStop(0, 'rgba(255, 232, 165, 0.92)');
@@ -3367,7 +3369,7 @@ const Brikx = () => {
       } else if (phaseOneArt.overlay === 'synthwave-drive') {
         ctx.save();
         const horizonY = CANVAS_HEIGHT * 0.62;
-        ctx.globalAlpha = lowPowerMode ? 0.11 : 0.21;
+        ctx.globalAlpha = lowPowerMode ? 0.13 : 0.27;
 
         const glow = ctx.createRadialGradient(CANVAS_WIDTH * 0.5, horizonY - 28, 0, CANVAS_WIDTH * 0.5, horizonY - 28, 210);
         glow.addColorStop(0, 'rgba(255, 170, 135, 0.92)');
@@ -3390,7 +3392,7 @@ const Brikx = () => {
           ctx.stroke();
         }
 
-        ctx.globalAlpha = lowPowerMode ? 0.07 : 0.14;
+        ctx.globalAlpha = lowPowerMode ? 0.09 : 0.18;
         for (let i = 0; i < 5; i++) {
           const y = CANVAS_HEIGHT * (0.17 + i * 0.1) + Math.sin(now * 1.2 + i * 0.6) * 10;
           ctx.strokeStyle = i % 2 ? 'rgba(255, 120, 200, 0.65)' : 'rgba(110, 205, 255, 0.6)';
@@ -3402,7 +3404,7 @@ const Brikx = () => {
         ctx.restore();
       } else if (phaseOneArt.overlay === 'ocean-caustics') {
         ctx.save();
-        ctx.globalAlpha = lowPowerMode ? 0.08 : 0.17;
+        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.24;
         const causticRows = frameStressed ? 5 : 9;
         for (let i = 0; i < causticRows; i++) {
           const y = (i / causticRows) * CANVAS_HEIGHT;
@@ -3422,7 +3424,7 @@ const Brikx = () => {
         }
 
         const bubbleCount = frameStressed ? 4 : 8;
-        ctx.globalAlpha = lowPowerMode ? 0.07 : 0.13;
+        ctx.globalAlpha = lowPowerMode ? 0.09 : 0.18;
         for (let i = 0; i < bubbleCount; i++) {
           const bx = ((i * 137) % CANVAS_WIDTH) + Math.sin(now * 0.6 + i) * 20;
           const by = (CANVAS_HEIGHT + 30) - (((now * (22 + i * 3)) + i * 70) % (CANVAS_HEIGHT + 60));
@@ -3440,7 +3442,7 @@ const Brikx = () => {
     // Draw floating geometric shapes in background with boosted accent colors
     ctx.save();
     // Increased opacity on background shapes
-    ctx.globalAlpha = lowPowerMode ? 0.08 + comboIntensity * 0.1 : 0.15 + comboIntensity * 0.2;
+    ctx.globalAlpha = lowPowerMode ? 0.11 + comboIntensity * 0.12 : 0.2 + comboIntensity * 0.24;
     const shapeCount = severelyStressed
       ? (lowPowerMode ? 2 : 3)
       : frameStressed
@@ -3457,7 +3459,7 @@ const Brikx = () => {
       ctx.translate(x, y);
       ctx.rotate(rotation);
       ctx.strokeStyle = `rgb(${boostedAccent[0]}, ${boostedAccent[1]}, ${boostedAccent[2]})`;
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       
       if (i % 3 === 0) {
         // Triangle
@@ -3725,7 +3727,7 @@ const Brikx = () => {
           
           // Main block with enhanced glow
           ctx.shadowColor = cell;
-          ctx.shadowBlur = 8;
+          ctx.shadowBlur = isMobile ? 11 : 10;
           ctx.fillStyle = cell;
           ctx.fillRect(blockX + 1, blockY + 1, size, size);
           ctx.shadowBlur = 0;
@@ -3751,12 +3753,12 @@ const Brikx = () => {
           ctx.fillRect(blockX + 1, blockY + 1, size, size);
           
           // Glossy edge highlight
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.58)';
           ctx.lineWidth = 2;
           ctx.strokeRect(blockX + 2, blockY + 2, size - 3, size - 3);
           
           // Deep shadow for depth
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
           ctx.lineWidth = 1.5;
           ctx.strokeRect(blockX + 1, blockY + 1, size, size);
           
@@ -3868,12 +3870,12 @@ const Brikx = () => {
         ctx.globalCompositeOperation = 'lighter';
         const scanGrad = ctx.createLinearGradient(0, flashY, 0, flashY + BLOCK_SIZE);
         scanGrad.addColorStop(0, `rgba(255,255,255,0)`);
-        scanGrad.addColorStop(0.3, `rgba(255,255,255,${sfAlpha * 0.9})`);
-        scanGrad.addColorStop(0.5, `rgba(200,240,255,${sfAlpha})`);
-        scanGrad.addColorStop(0.7, `rgba(255,255,255,${sfAlpha * 0.9})`);
+        scanGrad.addColorStop(0.3, `rgba(255,255,255,${sfAlpha})`);
+        scanGrad.addColorStop(0.5, `rgba(200,240,255,${Math.min(1, sfAlpha * 1.2)})`);
+        scanGrad.addColorStop(0.7, `rgba(255,255,255,${sfAlpha})`);
         scanGrad.addColorStop(1, `rgba(255,255,255,0)`);
         ctx.fillStyle = scanGrad;
-        ctx.fillRect(0, flashY - 2, BOARD_WIDTH, BLOCK_SIZE + 4);
+        ctx.fillRect(0, flashY - 3, BOARD_WIDTH, BLOCK_SIZE + 6);
         ctx.restore();
         sf.life--;
       });
@@ -3920,7 +3922,7 @@ const Brikx = () => {
       
       // Apply enhanced glow effect with pulse
       if (p.glow) {
-        const glowIntensity = p.pulse ? 20 + Math.sin((1 - alpha) * Math.PI * 4) * 10 : 15;
+        const glowIntensity = p.pulse ? 24 + Math.sin((1 - alpha) * Math.PI * 4) * 12 : 18;
         ctx.shadowColor = p.color;
         ctx.shadowBlur = glowIntensity * finalAlpha;
       }
