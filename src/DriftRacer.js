@@ -274,6 +274,50 @@ const FIXED_SIM_STEP_MS = 1000 / 60;
 const MAX_SIM_STEPS_PER_FRAME = 5;
 const REPLAY_EVENT_LIMIT = 6000;
 
+const FRAME_BUDGET_LEVEL_ORDER = {
+  full: 0,
+  balanced: 1,
+  stressed: 2,
+  critical: 3
+};
+
+const FRAME_BUDGET_PROFILES = {
+  full: {
+    frameBudgetScale: 1,
+    particleSpawnScale: 1,
+    particleRenderScale: 1,
+    glowIntensity: 1,
+    postFxIntensity: 1,
+    beamComplexity: 1
+  },
+  balanced: {
+    frameBudgetScale: 0.84,
+    particleSpawnScale: 0.8,
+    particleRenderScale: 0.86,
+    glowIntensity: 0.82,
+    postFxIntensity: 0.75,
+    beamComplexity: 0.82
+  },
+  stressed: {
+    frameBudgetScale: 0.64,
+    particleSpawnScale: 0.56,
+    particleRenderScale: 0.62,
+    glowIntensity: 0.58,
+    postFxIntensity: 0.42,
+    beamComplexity: 0.58
+  },
+  critical: {
+    frameBudgetScale: 0.44,
+    particleSpawnScale: 0.34,
+    particleRenderScale: 0.42,
+    glowIntensity: 0.36,
+    postFxIntensity: 0.15,
+    beamComplexity: 0.34
+  }
+};
+
+const getFrameBudgetProfile = (level) => FRAME_BUDGET_PROFILES[level] || FRAME_BUDGET_PROFILES.full;
+
 const advanceSeed = (state) => ((state * 1664525) + 1013904223) >>> 0;
 
 const generateSessionSeed = () => {
@@ -1866,7 +1910,8 @@ const Brikx = () => {
     lastRenderTime: 0,
     avgFrameMs: 16.67,
     frameBudgetScale: 1,
-    frameBudgetLevel: 'balanced',
+    frameBudgetLevel: 'full',
+    frameBudgetRecoveryFrames: 0,
     sessionSeed: 0,
     colorBonusDisplay: null,
     bag: [],
@@ -2311,10 +2356,14 @@ const Brikx = () => {
     const boardOffsetX = 130;
     const isHighCombo = comboCount >= 5;
     const isMegaCombo = comboCount >= 10;
+    const frameBudgetProfile = getFrameBudgetProfile(gameState.current.frameBudgetLevel);
+    const particleSpawnScale = frameBudgetProfile.particleSpawnScale;
+    const beamComplexity = frameBudgetProfile.beamComplexity;
+    const glowEnabled = frameBudgetProfile.glowIntensity > 0.42;
     const mobileParticleScale = isMobile ? (lowPowerMode ? 1.25 : 1.55) : 1;
     
     // Reduce particle count for reduced motion preference
-    const motionMultiplier = lowPowerMode ? 0.2 : prefersReducedMotion ? 0.3 : 1;
+    const motionMultiplier = (lowPowerMode ? 0.2 : prefersReducedMotion ? 0.3 : 1) * particleSpawnScale;
     const baseParticleCount = Math.floor((isMegaCombo ? 20 : isHighCombo ? 16 : isPerfect ? 12 : isCombo ? 8 : 6) * motionMultiplier);
     const particleTypes = ['circle', 'star', 'square', 'spark', 'diamond', 'ring', 'confetti'];
     
@@ -2324,7 +2373,7 @@ const Brikx = () => {
       const centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
       
       // Create circular explosion with multiple rings
-      const rings = isPerfect ? 3 : isCombo ? 2 : 1;
+      const rings = Math.max(1, Math.floor((isPerfect ? 3 : isCombo ? 2 : 1) * beamComplexity));
       
       for (let ring = 0; ring < rings; ring++) {
         const particlesInRing = baseParticleCount + ring * (isMegaCombo ? 8 : isHighCombo ? 6 : 4);
@@ -2348,7 +2397,7 @@ const Brikx = () => {
             type: particleTypes[Math.floor(Math.random() * particleTypes.length)],
             rotation: angle,
             rotationSpeed: (Math.random() - 0.5) * 0.3,
-            glow: true,
+            glow: glowEnabled,
             trail: isPerfect || (isCombo && ring === 0),
             pulse: isPerfect || isCombo,
             ring: ring,
@@ -2374,7 +2423,7 @@ const Brikx = () => {
             type: 'wave',
             rotation: 0,
             rotationSpeed: 0,
-            glow: true,
+            glow: glowEnabled,
             trail: false,
             pulse: false,
             ring: ring,
@@ -2407,7 +2456,7 @@ const Brikx = () => {
             type: 'confetti',
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.5,
-            glow: true,
+            glow: glowEnabled,
             trail: false,
             pulse: false,
             ring: 0,
@@ -2438,7 +2487,7 @@ const Brikx = () => {
             type: Math.random() > 0.5 ? 'circle' : 'star',
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.4,
-            glow: true,
+            glow: glowEnabled,
             trail: true,
             pulse: true,
             ring: 0,
@@ -2451,7 +2500,7 @@ const Brikx = () => {
       }
       
       // Add lightning chains for mega combos
-      if (isMegaCombo && x < COLS - 1) {
+      if (isMegaCombo && x < COLS - 1 && beamComplexity > 0.42) {
         const lightning = getParticleFromPool({
           x: centerX,
           y: centerY,
@@ -2466,7 +2515,7 @@ const Brikx = () => {
           type: 'lightning',
           rotation: 0,
           rotationSpeed: 0,
-          glow: true,
+          glow: glowEnabled,
           trail: false,
           pulse: true,
           ring: 0,
@@ -2492,7 +2541,7 @@ const Brikx = () => {
             type: 'star',
             rotation: 0,
             rotationSpeed: 0.4,
-            glow: true,
+            glow: glowEnabled,
             trail: true,
             pulse: true,
             ring: 0,
@@ -2509,7 +2558,9 @@ const Brikx = () => {
   // Spawn debris shards when a line is cleared (broken block fragments)
   const addDebrisParticles = useCallback((y, boardOffsetX) => {
     if (lowPowerMode) return;
-    const motionMultiplier = prefersReducedMotion ? 0.3 : 1;
+    const frameBudgetProfile = getFrameBudgetProfile(gameState.current.frameBudgetLevel);
+    const motionMultiplier = (prefersReducedMotion ? 0.3 : 1) * frameBudgetProfile.particleSpawnScale;
+    const glowEnabled = frameBudgetProfile.glowIntensity > 0.45;
     const mobileParticleScale = isMobile ? 1.4 : 1;
     for (let x = 0; x < COLS; x++) {
       const blockColor = getCellColor(getBoardCell(gameState.current.board, x, y));
@@ -2532,7 +2583,7 @@ const Brikx = () => {
           type: 'debris',
           rotation: Math.random() * Math.PI * 2,
           rotationSpeed: (Math.random() - 0.5) * 0.35,
-          glow: true,
+          glow: glowEnabled,
           trail: false,
           pulse: false,
           ring: 0,
@@ -2545,7 +2596,7 @@ const Brikx = () => {
         }
       }
       // Plasma burst at each block position for spectacular effect
-      if (Math.random() > 0.5) {
+      if (frameBudgetProfile.postFxIntensity > 0.3 && Math.random() > 0.5) {
         const plasma = getParticleFromPool({
           x: centerX, y: centerY,
           vx: (Math.random() - 0.5) * 2, vy: -2 - Math.random() * 2,
@@ -2553,7 +2604,7 @@ const Brikx = () => {
           color: blockColor, size: (5 + Math.random() * 4) * mobileParticleScale,
           type: 'plasma',
           rotation: 0, rotationSpeed: 0.08,
-          glow: true, trail: false, pulse: true, ring: 0, bounce: false,
+          glow: glowEnabled, trail: false, pulse: true, ring: 0, bounce: false,
           innerColor: '#ffffff',
         });
         if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
@@ -3182,7 +3233,8 @@ const Brikx = () => {
     gameState.current.lastRenderTime = 0;
     gameState.current.avgFrameMs = 16.67;
     gameState.current.frameBudgetScale = 1;
-    gameState.current.frameBudgetLevel = 'balanced';
+    gameState.current.frameBudgetLevel = 'full';
+    gameState.current.frameBudgetRecoveryFrames = 0;
     gameState.current.sessionSeed = sessionSeed;
     gameState.current.colorBonusDisplay = null;
     gameState.current.bag = [];
@@ -3546,7 +3598,13 @@ const Brikx = () => {
     if (!ctx) return;
     const { board, currentPiece, currentX, currentY, holdPiece, nextPieces, clearingLines, clearAnimation, particles, scorePopups, screenShake, gridAnimation } = gameState.current;
     const avgFrameMs = gameState.current.avgFrameMs || 16.67;
+    const frameBudgetLevel = gameState.current.frameBudgetLevel || 'balanced';
+    const frameBudgetProfile = getFrameBudgetProfile(frameBudgetLevel);
     const adaptiveBudgetScale = gameState.current.frameBudgetScale || 1;
+    const adaptiveParticleScale = frameBudgetProfile.particleRenderScale;
+    const adaptiveGlowIntensity = frameBudgetProfile.glowIntensity;
+    const adaptivePostFx = frameBudgetProfile.postFxIntensity;
+    const adaptiveBeamComplexity = frameBudgetProfile.beamComplexity;
     const frameStressed = avgFrameMs > (lowPowerMode ? 28 : 22);
     const severelyStressed = avgFrameMs > (lowPowerMode ? 36 : 30);
 
@@ -3564,7 +3622,7 @@ const Brikx = () => {
     }
 
     // Init ambient bg particles if empty
-    if (!lowPowerMode && !prefersReducedMotion && gameState.current.bgParticles.length === 0) {
+    if (!lowPowerMode && !prefersReducedMotion && adaptivePostFx > 0.45 && gameState.current.bgParticles.length === 0) {
       initBgParticles(CANVAS_WIDTH, CANVAS_HEIGHT);
     }
 
@@ -3656,29 +3714,31 @@ const Brikx = () => {
       CANVAS_HEIGHT * 0.5,
       CANVAS_HEIGHT * 0.9
     );
-    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, (0.16 + comboIntensity * 0.1) * bloomReduction));
-    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, (0.12 + comboIntensity * 0.08) * bloomReduction));
-    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, (0.1 + comboIntensity * 0.06) * bloomReduction));
-    ctx.fillStyle = chromaVeil;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    chromaVeil.addColorStop(0, rgbAlpha(boostedAccent, (0.16 + comboIntensity * 0.1) * bloomReduction * adaptivePostFx));
+    chromaVeil.addColorStop(0.5, rgbAlpha(boostedSuccess, (0.12 + comboIntensity * 0.08) * bloomReduction * adaptivePostFx));
+    chromaVeil.addColorStop(1, rgbAlpha(boostedWarning, (0.1 + comboIntensity * 0.06) * bloomReduction * adaptivePostFx));
+    if (adaptivePostFx > 0.12) {
+      ctx.fillStyle = chromaVeil;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
 
     // Phase 1 theme art overlays: bold visual identity for select themes.
-    if (!severelyStressed && phaseOneArt?.overlay && adaptiveBudgetScale > 0.66) {
+    if (!severelyStressed && phaseOneArt?.overlay && adaptiveBudgetScale > 0.66 && adaptivePostFx > 0.3) {
       if (phaseOneArt.overlay === 'neon-pulse') {
         ctx.save();
-        const beamCount = frameStressed ? 4 : 7;
-        ctx.globalAlpha = lowPowerMode ? 0.11 : 0.22 + comboIntensity * 0.1;
+        const beamCount = Math.max(2, Math.floor((frameStressed ? 4 : 7) * adaptiveBeamComplexity));
+        ctx.globalAlpha = (lowPowerMode ? 0.11 : 0.22 + comboIntensity * 0.1) * adaptivePostFx;
         for (let i = 0; i < beamCount; i++) {
           const wave = Math.sin(now * 0.8 + i * 0.9);
           const x = (i * CANVAS_WIDTH / beamCount) + wave * 42;
-          ctx.lineWidth = i % 2 ? 7 : 5;
+          ctx.lineWidth = (i % 2 ? 7 : 5) * Math.max(0.75, adaptiveBeamComplexity);
           ctx.strokeStyle = i % 2 ? 'rgba(255, 90, 235, 0.8)' : 'rgba(90, 215, 255, 0.78)';
           ctx.beginPath();
           ctx.moveTo(x + 48, 0);
           ctx.lineTo(x - 84, CANVAS_HEIGHT);
           ctx.stroke();
         }
-        const orbCount = frameStressed ? 3 : 6;
+        const orbCount = Math.max(2, Math.floor((frameStressed ? 3 : 6) * adaptiveBeamComplexity));
         for (let i = 0; i < orbCount; i++) {
           const ox = (CANVAS_WIDTH * ((i + 1) / (orbCount + 1))) + Math.sin(now * 0.7 + i) * 28;
           const oy = CANVAS_HEIGHT * (0.18 + (i % 3) * 0.22) + Math.cos(now * 0.55 + i) * 18;
@@ -3694,7 +3754,7 @@ const Brikx = () => {
         ctx.restore();
       } else if (phaseOneArt.overlay === 'matrix-rain') {
         ctx.save();
-        ctx.globalAlpha = lowPowerMode ? 0.12 : 0.26;
+        ctx.globalAlpha = (lowPowerMode ? 0.12 : 0.26) * adaptivePostFx;
         const stepX = frameStressed ? 52 : 38;
         for (let x = 0; x < CANVAS_WIDTH + stepX; x += stepX) {
           const speed = 42 + (x % 5) * 8;
@@ -3706,7 +3766,7 @@ const Brikx = () => {
           ctx.fillStyle = trailGrad;
           ctx.fillRect(x, headY - 80, 3, 92);
         }
-        ctx.globalAlpha = lowPowerMode ? 0.07 : 0.14;
+        ctx.globalAlpha = (lowPowerMode ? 0.07 : 0.14) * adaptivePostFx;
         const scanY = ((now * 120) % (CANVAS_HEIGHT + 30)) - 15;
         const scanGrad = ctx.createLinearGradient(0, scanY - 20, 0, scanY + 20);
         scanGrad.addColorStop(0, 'rgba(0,255,120,0)');
@@ -3717,7 +3777,7 @@ const Brikx = () => {
         ctx.restore();
       } else if (phaseOneArt.overlay === 'sunset-horizon') {
         ctx.save();
-        ctx.globalAlpha = lowPowerMode ? 0.16 : 0.3;
+        ctx.globalAlpha = (lowPowerMode ? 0.16 : 0.3) * adaptivePostFx;
         const sunX = CANVAS_WIDTH * 0.5;
         const sunY = CANVAS_HEIGHT * 0.58;
         const sunRadius = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) * 0.22;
@@ -3743,10 +3803,10 @@ const Brikx = () => {
         ctx.closePath();
         ctx.fill();
 
-        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.18;
+        ctx.globalAlpha = (lowPowerMode ? 0.1 : 0.18) * adaptivePostFx;
         ctx.strokeStyle = 'rgba(255, 175, 120, 0.85)';
         ctx.lineWidth = 2;
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < Math.max(3, Math.floor(6 * adaptiveBeamComplexity)); i++) {
           const y = CANVAS_HEIGHT * (0.2 + i * 0.08) + Math.sin(now * 0.8 + i) * 8;
           ctx.beginPath();
           ctx.moveTo(-10, y);
@@ -3757,7 +3817,7 @@ const Brikx = () => {
       } else if (phaseOneArt.overlay === 'retro-grid') {
         ctx.save();
         const horizonY = CANVAS_HEIGHT * 0.64;
-        ctx.globalAlpha = lowPowerMode ? 0.13 : 0.25;
+        ctx.globalAlpha = (lowPowerMode ? 0.13 : 0.25) * adaptivePostFx;
 
         const sunGrad = ctx.createRadialGradient(CANVAS_WIDTH * 0.5, horizonY - 34, 0, CANVAS_WIDTH * 0.5, horizonY - 34, 140);
         sunGrad.addColorStop(0, 'rgba(255, 232, 165, 0.92)');
@@ -3770,7 +3830,7 @@ const Brikx = () => {
 
         ctx.strokeStyle = 'rgba(255, 120, 210, 0.75)';
         ctx.lineWidth = 1.6;
-        const perspectiveLines = frameStressed ? 7 : 12;
+        const perspectiveLines = Math.max(4, Math.floor((frameStressed ? 7 : 12) * adaptiveBeamComplexity));
         for (let i = -perspectiveLines; i <= perspectiveLines; i++) {
           ctx.beginPath();
           ctx.moveTo(CANVAS_WIDTH * 0.5, horizonY);
@@ -3778,7 +3838,7 @@ const Brikx = () => {
           ctx.stroke();
         }
 
-        const rowCount = frameStressed ? 7 : 12;
+        const rowCount = Math.max(4, Math.floor((frameStressed ? 7 : 12) * adaptiveBeamComplexity));
         for (let i = 1; i <= rowCount; i++) {
           const t = i / rowCount;
           const y = horizonY + Math.pow(t, 1.45) * (CANVAS_HEIGHT - horizonY + 24);
@@ -3791,7 +3851,7 @@ const Brikx = () => {
       } else if (phaseOneArt.overlay === 'synthwave-drive') {
         ctx.save();
         const horizonY = CANVAS_HEIGHT * 0.62;
-        ctx.globalAlpha = lowPowerMode ? 0.13 : 0.27;
+        ctx.globalAlpha = (lowPowerMode ? 0.13 : 0.27) * adaptivePostFx;
 
         const glow = ctx.createRadialGradient(CANVAS_WIDTH * 0.5, horizonY - 28, 0, CANVAS_WIDTH * 0.5, horizonY - 28, 210);
         glow.addColorStop(0, 'rgba(255, 170, 135, 0.92)');
@@ -3804,7 +3864,7 @@ const Brikx = () => {
 
         ctx.strokeStyle = 'rgba(120, 245, 255, 0.72)';
         ctx.lineWidth = 1.4;
-        const roadLines = frameStressed ? 6 : 10;
+        const roadLines = Math.max(3, Math.floor((frameStressed ? 6 : 10) * adaptiveBeamComplexity));
         for (let i = 0; i < roadLines; i++) {
           const y = horizonY + i * ((CANVAS_HEIGHT - horizonY) / Math.max(1, roadLines - 1));
           const offset = Math.sin(now * 1.4 + i * 0.45) * 7;
@@ -3814,8 +3874,8 @@ const Brikx = () => {
           ctx.stroke();
         }
 
-        ctx.globalAlpha = lowPowerMode ? 0.09 : 0.18;
-        for (let i = 0; i < 5; i++) {
+        ctx.globalAlpha = (lowPowerMode ? 0.09 : 0.18) * adaptivePostFx;
+        for (let i = 0; i < Math.max(2, Math.floor(5 * adaptiveBeamComplexity)); i++) {
           const y = CANVAS_HEIGHT * (0.17 + i * 0.1) + Math.sin(now * 1.2 + i * 0.6) * 10;
           ctx.strokeStyle = i % 2 ? 'rgba(255, 120, 200, 0.65)' : 'rgba(110, 205, 255, 0.6)';
           ctx.beginPath();
@@ -3826,8 +3886,8 @@ const Brikx = () => {
         ctx.restore();
       } else if (phaseOneArt.overlay === 'ocean-caustics') {
         ctx.save();
-        ctx.globalAlpha = lowPowerMode ? 0.1 : 0.24;
-        const causticRows = frameStressed ? 5 : 9;
+        ctx.globalAlpha = (lowPowerMode ? 0.1 : 0.24) * adaptivePostFx;
+        const causticRows = Math.max(3, Math.floor((frameStressed ? 5 : 9) * adaptiveBeamComplexity));
         for (let i = 0; i < causticRows; i++) {
           const y = (i / causticRows) * CANVAS_HEIGHT;
           const path = ctx.createLinearGradient(0, y - 18, CANVAS_WIDTH, y + 18);
@@ -3845,8 +3905,8 @@ const Brikx = () => {
           ctx.stroke();
         }
 
-        const bubbleCount = frameStressed ? 4 : 8;
-        ctx.globalAlpha = lowPowerMode ? 0.09 : 0.18;
+        const bubbleCount = Math.max(2, Math.floor((frameStressed ? 4 : 8) * adaptiveBeamComplexity));
+        ctx.globalAlpha = (lowPowerMode ? 0.09 : 0.18) * adaptivePostFx;
         for (let i = 0; i < bubbleCount; i++) {
           const bx = ((i * 137) % CANVAS_WIDTH) + Math.sin(now * 0.6 + i) * 20;
           const by = (CANVAS_HEIGHT + 30) - (((now * (22 + i * 3)) + i * 70) % (CANVAS_HEIGHT + 60));
@@ -3864,7 +3924,7 @@ const Brikx = () => {
     // Draw floating geometric shapes in background with boosted accent colors
     ctx.save();
     // Increased opacity on background shapes
-    ctx.globalAlpha = (lowPowerMode ? 0.11 + comboIntensity * 0.12 : 0.2 + comboIntensity * 0.24) * (mobileSunlightMode ? 0.8 : 1);
+    ctx.globalAlpha = (lowPowerMode ? 0.11 + comboIntensity * 0.12 : 0.2 + comboIntensity * 0.24) * (mobileSunlightMode ? 0.8 : 1) * adaptivePostFx;
     const baseShapeCount = severelyStressed
       ? (lowPowerMode ? 2 : 3)
       : frameStressed
@@ -3906,10 +3966,10 @@ const Brikx = () => {
     ctx.restore();
 
     // Pattern overlay for premium and seasonal themes
-    if (visualPattern && !severelyStressed && adaptiveBudgetScale > 0.62) {
+    if (visualPattern && !severelyStressed && adaptiveBudgetScale > 0.62 && adaptivePostFx > 0.34) {
       ctx.save();
       // Increased opacity for better theme visibility
-      ctx.globalAlpha = lowPowerMode ? 0.08 : prefersReducedMotion ? 0.12 : 0.22;
+      ctx.globalAlpha = (lowPowerMode ? 0.08 : prefersReducedMotion ? 0.12 : 0.22) * adaptivePostFx;
       ctx.strokeStyle = `rgb(${boostedAccent[0]}, ${boostedAccent[1]}, ${boostedAccent[2]})`;
       ctx.lineWidth = 1.5;
 
@@ -3959,12 +4019,12 @@ const Brikx = () => {
     }
 
     // Animated seasonal and premium motifs
-    if (visualMotif && !severelyStressed && adaptiveBudgetScale > 0.58) {
+    if (visualMotif && !severelyStressed && adaptiveBudgetScale > 0.58 && adaptivePostFx > 0.24) {
       ctx.save();
       const baseMotifCount = frameStressed
         ? (lowPowerMode ? 4 : 6)
         : (lowPowerMode ? 6 : prefersReducedMotion ? 8 : 22);
-      const motifCount = Math.max(lowPowerMode ? 3 : 4, Math.floor(baseMotifCount * adaptiveBudgetScale));
+      const motifCount = Math.max(lowPowerMode ? 2 : 3, Math.floor(baseMotifCount * adaptiveBudgetScale * adaptiveBeamComplexity));
       for (let i = 0; i < motifCount; i++) {
         const speed = 16 + (i % 5) * 6;
         const baseX = ((i * 73) % CANVAS_WIDTH);
@@ -4029,10 +4089,12 @@ const Brikx = () => {
     }
     
     // Draw ambient depth particles (star-field style depth layer)
-    if (!lowPowerMode && !prefersReducedMotion && !severelyStressed && gameState.current.bgParticles.length > 0) {
+    if (!lowPowerMode && !prefersReducedMotion && !severelyStressed && adaptivePostFx > 0.4 && gameState.current.bgParticles.length > 0) {
       ctx.save();
       const accentR = themeAccent[0], accentG = themeAccent[1], accentB = themeAccent[2];
-      gameState.current.bgParticles.forEach(bp => {
+      const activeBgCount = Math.max(10, Math.floor(gameState.current.bgParticles.length * adaptivePostFx));
+      for (let i = 0; i < activeBgCount; i++) {
+        const bp = gameState.current.bgParticles[i];
         // Twinkle effect
         const twinkle = 0.5 + 0.5 * Math.sin(now * bp.twinkleSpeed * 10 + bp.twinkleOffset);
         const a = bp.alpha * twinkle;
@@ -4054,17 +4116,17 @@ const Brikx = () => {
         if (bp.y < -10) bp.y = CANVAS_HEIGHT + 10;
         if (bp.x < -10) bp.x = CANVAS_WIDTH + 10;
         if (bp.x > CANVAS_WIDTH + 10) bp.x = -10;
-      });
+      }
       ctx.restore();
     }
     
     // Add level-based overlay glow
-    if (!severelyStressed) {
+    if (!severelyStressed && adaptivePostFx > 0.2) {
       const overlayGradient = ctx.createRadialGradient(
         CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 0,
         CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_HEIGHT * 0.8
       );
-      overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, ${mobileSunlightMode ? 0.032 : 0.05})`);
+      overlayGradient.addColorStop(0, `rgba(${themeAccent[0]}, ${themeAccent[1]}, ${themeAccent[2]}, ${(mobileSunlightMode ? 0.032 : 0.05) * adaptivePostFx})`);
       overlayGradient.addColorStop(1, mobileSunlightMode ? 'rgba(0, 0, 0, 0.36)' : 'rgba(0, 0, 0, 0.3)');
       ctx.fillStyle = overlayGradient;
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -4162,7 +4224,7 @@ const Brikx = () => {
           
           // Main block with enhanced glow
           ctx.shadowColor = cellColor;
-          ctx.shadowBlur = isMobile ? 8.5 : 10;
+          ctx.shadowBlur = (isMobile ? 8.5 : 10) * Math.max(0.35, adaptiveGlowIntensity);
           ctx.fillStyle = cellColor;
           ctx.fillRect(blockX + 1, blockY + 1, size, size);
           ctx.shadowBlur = 0;
@@ -4226,7 +4288,7 @@ const Brikx = () => {
           const intensity = (intensityA + intensityB) * 0.5;
           const avgMatchSize = ((flash.matchSize || 3) + (neighborFlash.matchSize || 3)) * 0.5;
           const thicknessBoost = Math.min(1.6, Math.max(0, (avgMatchSize - 3) * 0.22));
-          const mobileBeamBoost = isMobile ? 1.35 : 1;
+          const mobileBeamBoost = (isMobile ? 1.35 : 1) * Math.max(0.45, adaptiveBeamComplexity);
 
           const centerAX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
           const centerAY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
@@ -4235,7 +4297,7 @@ const Brikx = () => {
 
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';
-          ctx.globalAlpha = (isMobile ? 0.62 : 0.45) * intensity;
+          ctx.globalAlpha = (isMobile ? 0.62 : 0.45) * intensity * adaptivePostFx;
           const linkGrad = ctx.createLinearGradient(centerAX, centerAY, centerBX, centerBY);
           linkGrad.addColorStop(0, 'rgba(70, 255, 120, 0.15)');
           linkGrad.addColorStop(0.5, 'rgba(165, 255, 185, 0.95)');
@@ -4247,13 +4309,15 @@ const Brikx = () => {
           ctx.lineTo(centerBX, centerBY);
           ctx.stroke();
 
-          ctx.globalAlpha = (isMobile ? 0.44 : 0.32) * intensity;
-          ctx.strokeStyle = 'rgba(230, 255, 238, 0.9)';
-          ctx.lineWidth = (1.2 + thicknessBoost * 0.45) * mobileBeamBoost;
-          ctx.beginPath();
-          ctx.moveTo(centerAX, centerAY);
-          ctx.lineTo(centerBX, centerBY);
-          ctx.stroke();
+          if (adaptiveBeamComplexity > 0.55) {
+            ctx.globalAlpha = (isMobile ? 0.44 : 0.32) * intensity * adaptivePostFx;
+            ctx.strokeStyle = 'rgba(230, 255, 238, 0.9)';
+            ctx.lineWidth = (1.2 + thicknessBoost * 0.45) * mobileBeamBoost;
+            ctx.beginPath();
+            ctx.moveTo(centerAX, centerAY);
+            ctx.lineTo(centerBX, centerBY);
+            ctx.stroke();
+          }
           ctx.restore();
         });
       });
@@ -4319,7 +4383,7 @@ const Brikx = () => {
 
     // Draw particles
     const baseFrameParticleCap = severelyStressed ? 140 : frameStressed ? 240 : MAX_ACTIVE_PARTICLES;
-    const frameParticleCap = Math.max(100, Math.floor(baseFrameParticleCap * adaptiveBudgetScale));
+    const frameParticleCap = Math.max(70, Math.floor(baseFrameParticleCap * adaptiveBudgetScale * adaptiveParticleScale));
     if (particles.length > frameParticleCap) {
       const overflow = particles.splice(0, particles.length - frameParticleCap);
       overflow.forEach(p => returnParticleToPool(p));
@@ -4339,7 +4403,7 @@ const Brikx = () => {
       
       // Draw enhanced trail effect with multiple segments
       if (p.trail) {
-        const trailSegments = lowPowerMode ? 2 : 5;
+        const trailSegments = Math.max(1, Math.floor((lowPowerMode ? 2 : 5) * adaptiveBeamComplexity));
         for (let t = 0; t < trailSegments; t++) {
           const trailFactor = (t + 1) / trailSegments;
           ctx.globalAlpha = finalAlpha * 0.3 * (1 - trailFactor);
@@ -4360,7 +4424,7 @@ const Brikx = () => {
       if (p.glow) {
         const glowIntensity = p.pulse ? 24 + Math.sin((1 - alpha) * Math.PI * 4) * 12 : 18;
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = glowIntensity * finalAlpha;
+        ctx.shadowBlur = glowIntensity * finalAlpha * adaptiveGlowIntensity;
       }
       
       ctx.fillStyle = p.color;
@@ -4621,7 +4685,7 @@ const Brikx = () => {
 
       if (p.life > 0) {
         nextAliveParticles.push(p);
-        if (!lowPowerMode && p.glow && p.type !== 'wave' && p.type !== 'lightning' && p.type !== 'debris') {
+        if (!lowPowerMode && p.glow && adaptivePostFx > 0.45 && p.type !== 'wave' && p.type !== 'lightning' && p.type !== 'debris') {
           glowParticles.push(p);
         }
       } else {
@@ -4632,17 +4696,17 @@ const Brikx = () => {
     gameState.current.particles = nextAliveParticles;
 
     // Additive glow second pass for luminous particle bloom
-    if (!lowPowerMode && !frameStressed) {
+    if (!lowPowerMode && !frameStressed && adaptivePostFx > 0.55) {
       if (glowParticles.length > 0) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         glowParticles.forEach(p => {
           const alpha = p.life / p.maxLife;
           const easeAlpha = alpha * alpha;
-          ctx.globalAlpha = easeAlpha * 0.25;
+          ctx.globalAlpha = easeAlpha * 0.25 * adaptivePostFx;
           ctx.fillStyle = p.color;
           ctx.shadowColor = p.color;
-          ctx.shadowBlur = p.size * 3;
+          ctx.shadowBlur = p.size * 3 * adaptiveGlowIntensity;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * 1.4, 0, Math.PI * 2);
           ctx.fill();
@@ -4653,16 +4717,16 @@ const Brikx = () => {
     }
 
     // Chromatic aberration post-process (RGB channel split on intense events)
-    if (gameState.current.chromaticAberration > 0 && !lowPowerMode && !prefersReducedMotion && !frameStressed) {
+    if (gameState.current.chromaticAberration > 0 && !lowPowerMode && !prefersReducedMotion && !frameStressed && adaptivePostFx > 0.65) {
       const ca = gameState.current.chromaticAberration;
-      const caStrength = Math.min(ca / 20, 1) * 4;
+      const caStrength = Math.min(ca / 20, 1) * 4 * adaptivePostFx;
       const boardLeft = boardOffsetX;
       const boardW = BOARD_WIDTH;
       const boardH = BOARD_HEIGHT;
       // Save the current board region as image data, then redraw shifted with color channel tinting
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = 0.15;
+      ctx.globalAlpha = 0.15 * adaptivePostFx;
       // Red channel offset (left)
       ctx.fillStyle = `rgb(255,0,0)`;
       ctx.drawImage(canvas, boardLeft, 0, boardW, boardH, boardLeft - caStrength, 0, boardW, boardH);
@@ -4695,7 +4759,7 @@ const Brikx = () => {
               // Simple colored block with glow
               ctx.fillStyle = trail.piece.color;
               ctx.shadowColor = trail.piece.color;
-              ctx.shadowBlur = 15;
+              ctx.shadowBlur = 15 * adaptiveGlowIntensity;
               ctx.fillRect(blockX + 1, blockY + 1, size, size);
               ctx.shadowBlur = 0;
             }
@@ -4736,7 +4800,7 @@ const Brikx = () => {
             
             // Enhanced glow for active piece
             ctx.shadowColor = currentPiece.color;
-            ctx.shadowBlur = isMobile ? 9 : 12;
+            ctx.shadowBlur = (isMobile ? 9 : 12) * Math.max(0.45, adaptiveGlowIntensity);
             ctx.fillStyle = currentPiece.color;
             ctx.fillRect(blockX + 1, blockY + 1, size, size);
             ctx.shadowBlur = 0;
@@ -4768,7 +4832,7 @@ const Brikx = () => {
             
             // Outer glow ring
             ctx.shadowColor = currentPiece.color;
-            ctx.shadowBlur = isMobile ? 5 : 8;
+            ctx.shadowBlur = (isMobile ? 5 : 8) * Math.max(0.45, adaptiveGlowIntensity);
             ctx.strokeStyle = isMobile ? 'rgba(0, 0, 0, 0.86)' : 'rgba(0, 0, 0, 0.7)';
             ctx.lineWidth = isMobile ? 2.2 : 1.5;
             ctx.strokeRect(blockX + 1, blockY + 1, size, size);
@@ -5412,16 +5476,41 @@ const Brikx = () => {
 
       // Adaptive frame budget tiering keeps VFX responsive on slower hardware.
       const avgFrameMs = gameState.current.avgFrameMs;
-      if (avgFrameMs > (lowPowerMode ? 34 : 28)) {
-        gameState.current.frameBudgetScale = 0.65;
-        gameState.current.frameBudgetLevel = 'stressed';
-      } else if (avgFrameMs > (lowPowerMode ? 26 : 20)) {
-        gameState.current.frameBudgetScale = 0.82;
-        gameState.current.frameBudgetLevel = 'balanced';
-      } else {
-        gameState.current.frameBudgetScale = 1;
-        gameState.current.frameBudgetLevel = 'full';
+      const targetFrameMs = lowPowerMode ? (1000 / 30) : (1000 / 60);
+      const framePressure = avgFrameMs / targetFrameMs;
+
+      let targetBudgetLevel = 'full';
+      if (framePressure > 2.2) {
+        targetBudgetLevel = 'critical';
+      } else if (framePressure > 1.65) {
+        targetBudgetLevel = 'stressed';
+      } else if (framePressure > 1.25) {
+        targetBudgetLevel = 'balanced';
       }
+
+      const currentLevel = gameState.current.frameBudgetLevel || 'full';
+      const currentRank = FRAME_BUDGET_LEVEL_ORDER[currentLevel] ?? 0;
+      const targetRank = FRAME_BUDGET_LEVEL_ORDER[targetBudgetLevel] ?? 0;
+
+      if (targetRank > currentRank) {
+        // Drop quality immediately when the frame budget is exceeded.
+        gameState.current.frameBudgetLevel = targetBudgetLevel;
+        gameState.current.frameBudgetRecoveryFrames = 0;
+      } else if (targetRank < currentRank) {
+        // Recover quality only after sustained healthy frame time to avoid flicker.
+        const nextRecoveryFrames = (gameState.current.frameBudgetRecoveryFrames || 0) + 1;
+        gameState.current.frameBudgetRecoveryFrames = nextRecoveryFrames;
+        if (nextRecoveryFrames >= 48) {
+          gameState.current.frameBudgetLevel = targetBudgetLevel;
+          gameState.current.frameBudgetRecoveryFrames = 0;
+        }
+      } else {
+        gameState.current.frameBudgetRecoveryFrames = 0;
+      }
+
+      const budgetProfile = getFrameBudgetProfile(gameState.current.frameBudgetLevel);
+      gameState.current.frameBudgetScale =
+        (gameState.current.frameBudgetScale * 0.84) + (budgetProfile.frameBudgetScale * 0.16);
 
       let simSteps = 0;
       while (gameState.current.fixedStepAccumulator >= gameState.current.simStepMs && simSteps < MAX_SIM_STEPS_PER_FRAME) {
