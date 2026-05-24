@@ -318,6 +318,53 @@ const FRAME_BUDGET_PROFILES = {
 
 const getFrameBudgetProfile = (level) => FRAME_BUDGET_PROFILES[level] || FRAME_BUDGET_PROFILES.full;
 
+const clampNumber = (value, min, max, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+
+const MODE_TUNING_PROFILES = {
+  classic: {
+    lockDelayMs: 420,
+    maxLockResets: 12,
+    wallKickProfile: 'classic',
+    defaultDasMs: 150,
+    defaultArrMs: 38
+  },
+  sprint: {
+    lockDelayMs: 500,
+    maxLockResets: 15,
+    wallKickProfile: 'precision',
+    defaultDasMs: 135,
+    defaultArrMs: 24
+  },
+  marathon: {
+    lockDelayMs: 460,
+    maxLockResets: 14,
+    wallKickProfile: 'forgiving',
+    defaultDasMs: 165,
+    defaultArrMs: 44
+  }
+};
+
+const WALL_KICK_OFFSETS = {
+  classic: {
+    default: [[0, 0], [-1, 0], [1, 0], [0, -1]],
+    I: [[0, 0], [-2, 0], [2, 0], [-1, 0], [1, 0], [0, -1]]
+  },
+  precision: {
+    default: [[0, 0], [-1, 0], [1, 0], [-2, 0], [2, 0], [0, -1], [-1, -1], [1, -1]],
+    I: [[0, 0], [-2, 0], [2, 0], [-1, 0], [1, 0], [-3, 0], [3, 0], [0, -1]]
+  },
+  forgiving: {
+    default: [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [0, -2]],
+    I: [[0, 0], [-2, 0], [2, 0], [-1, 0], [1, 0], [0, -1], [0, -2]]
+  }
+};
+
+const getModeTuningProfile = (mode) => MODE_TUNING_PROFILES[mode] || MODE_TUNING_PROFILES.classic;
+
 const advanceSeed = (state) => ((state * 1664525) + 1013904223) >>> 0;
 
 const generateSessionSeed = () => {
@@ -737,10 +784,13 @@ const Brikx = () => {
 
   // Game modes: 'classic', 'sprint', 'marathon'
   const [gameMode, setGameMode] = useState('classic');
+  const [dasMs, setDasMs] = useState(() => clampNumber(safeGetItem('brickxDasMs', '150'), 50, 300, 150));
+  const [arrMs, setArrMs] = useState(() => clampNumber(safeGetItem('brickxArrMs', '38'), 0, 120, 38));
   const [showModeSelect, setShowModeSelect] = useState(false);
   const [sprintLinesRemaining, setSprintLinesRemaining] = useState(40);
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const modeTuningProfile = useMemo(() => getModeTuningProfile(gameMode), [gameMode]);
 
   // Statistics
   const [showStatistics, setShowStatistics] = useState(false);
@@ -811,6 +861,15 @@ const Brikx = () => {
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
   const holdIntervalRef = useRef(null);
   const holdTimeoutRef = useRef(null);
+  const keyboardStateRef = useRef({
+    left: false,
+    right: false,
+    down: false,
+    horizontal: 0,
+    dasElapsed: 0,
+    arrElapsed: 0,
+    softDropElapsed: 0
+  });
 
   // Vibration feedback for mobile
   const vibrate = useCallback((pattern = 10) => {
@@ -1706,6 +1765,8 @@ const Brikx = () => {
       musicEnabled,
       sfxVolume,
       musicVolume,
+      dasMs,
+      arrMs,
       batterySaverMode,
       currentTheme,
       themePreviewEnabled,
@@ -1723,6 +1784,8 @@ const Brikx = () => {
     musicEnabled,
     sfxVolume,
     musicVolume,
+    dasMs,
+    arrMs,
     batterySaverMode,
     currentTheme,
     themePreviewEnabled,
@@ -1790,6 +1853,18 @@ const Brikx = () => {
       const nextMusicVolume = normalizeVolume(snapshot.musicVolume, 0.5);
       setMusicVolume(nextMusicVolume);
       safeSetItem('brickxMusicVolume', nextMusicVolume.toString());
+    }
+
+    if (snapshot.dasMs !== undefined) {
+      const nextDasMs = clampNumber(snapshot.dasMs, 50, 300, 150);
+      setDasMs(nextDasMs);
+      safeSetItem('brickxDasMs', nextDasMs.toString());
+    }
+
+    if (snapshot.arrMs !== undefined) {
+      const nextArrMs = clampNumber(snapshot.arrMs, 0, 120, 38);
+      setArrMs(nextArrMs);
+      safeSetItem('brickxArrMs', nextArrMs.toString());
     }
 
     if (snapshot.batterySaverMode === 'off' || snapshot.batterySaverMode === 'auto' || snapshot.batterySaverMode === 'on') {
@@ -1904,6 +1979,10 @@ const Brikx = () => {
     canHold: true,
     dropCounter: 0,
     dropInterval: 1000,
+    lockDelayMs: MODE_TUNING_PROFILES.classic.lockDelayMs,
+    lockTimerMs: 0,
+    lockResetCount: 0,
+    maxLockResets: MODE_TUNING_PROFILES.classic.maxLockResets,
     fixedStepAccumulator: 0,
     simStepMs: FIXED_SIM_STEP_MS,
     lastTime: 0,
@@ -2921,6 +3000,10 @@ const Brikx = () => {
     gameState.current.currentX = Math.floor(COLS / 2) - Math.floor(gameState.current.currentPiece.shape[0].length / 2);
     gameState.current.currentY = 0;
     gameState.current.canHold = true;
+    gameState.current.lockDelayMs = modeTuningProfile.lockDelayMs;
+    gameState.current.maxLockResets = modeTuningProfile.maxLockResets;
+    gameState.current.lockTimerMs = 0;
+    gameState.current.lockResetCount = 0;
     
     // Update statistics
     updateStatistics({ totalPieces: statistics.totalPieces + 1 });
@@ -2960,7 +3043,78 @@ const Brikx = () => {
         setGameStarted(false);
       }
     }
-  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound, finalizeReplayRecording]);
+  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound, finalizeReplayRecording, modeTuningProfile.lockDelayMs, modeTuningProfile.maxLockResets]);
+
+  const resetLockDelayIfGrounded = useCallback(() => {
+    const { board, currentPiece, currentX, currentY } = gameState.current;
+    if (!currentPiece) return;
+
+    const grounded = checkCollision(board, currentPiece, currentX, currentY + 1);
+    if (!grounded) {
+      gameState.current.lockTimerMs = 0;
+      gameState.current.lockResetCount = 0;
+      return;
+    }
+
+    if (gameState.current.lockResetCount < gameState.current.maxLockResets) {
+      gameState.current.lockTimerMs = 0;
+      gameState.current.lockResetCount++;
+    }
+  }, [checkCollision]);
+
+  const lockCurrentPiece = useCallback(() => {
+    const { currentPiece, currentX, currentY } = gameState.current;
+    if (!currentPiece) return;
+
+    mergePiece();
+    playCollisionSound();
+
+    gameState.current.lockTimerMs = 0;
+    gameState.current.lockResetCount = 0;
+
+    // Add piece lock animation
+    gameState.current.pieceLockAnimation = 12;
+
+    // Add lock particles at piece position
+    const boardOffsetX = 130;
+    currentPiece.shape.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value) {
+          const centerX = boardOffsetX + (currentX + x) * BLOCK_SIZE + BLOCK_SIZE / 2;
+          const centerY = (currentY + y) * BLOCK_SIZE + BLOCK_SIZE / 2;
+
+          // Small burst of particles on lock
+          for (let i = 0; i < 4; i++) {
+            const angle = (Math.PI * 2 * i) / 4;
+            const particle = getParticleFromPool({
+              x: centerX,
+              y: centerY,
+              vx: Math.cos(angle) * 2,
+              vy: Math.sin(angle) * 2,
+              life: 20,
+              maxLife: 20,
+              color: currentPiece.color,
+              size: 2,
+              type: 'spark',
+              rotation: angle,
+              rotationSpeed: 0.2,
+              glow: true,
+              trail: false,
+              pulse: false,
+              ring: 0,
+              bounce: false
+            });
+            if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+              gameState.current.particles.push(particle);
+            }
+          }
+        }
+      });
+    });
+
+    clearLines();
+    spawnPiece();
+  }, [mergePiece, playCollisionSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, clearLines, spawnPiece]);
 
   // Move piece down
   const moveDown = useCallback((source = 'gravity') => {
@@ -2972,54 +3126,13 @@ const Brikx = () => {
     
     if (!checkCollision(board, currentPiece, currentX, currentY + 1)) {
       gameState.current.currentY++;
-    } else {
-      mergePiece();
-      playCollisionSound();
-      
-      // Add piece lock animation
-      gameState.current.pieceLockAnimation = 12;
-      
-      // Add lock particles at piece position
-      const boardOffsetX = 130;
-      currentPiece.shape.forEach((row, y) => {
-        row.forEach((value, x) => {
-          if (value) {
-            const centerX = boardOffsetX + (currentX + x) * BLOCK_SIZE + BLOCK_SIZE / 2;
-            const centerY = (currentY + y) * BLOCK_SIZE + BLOCK_SIZE / 2;
-            
-            // Small burst of particles on lock
-            for (let i = 0; i < 4; i++) {
-              const angle = (Math.PI * 2 * i) / 4;
-              const particle = getParticleFromPool({
-                x: centerX,
-                y: centerY,
-                vx: Math.cos(angle) * 2,
-                vy: Math.sin(angle) * 2,
-                life: 20,
-                maxLife: 20,
-                color: currentPiece.color,
-                size: 2,
-                type: 'spark',
-                rotation: angle,
-                rotationSpeed: 0.2,
-                glow: true,
-                trail: false,
-                pulse: false,
-                ring: 0,
-                bounce: false
-              });
-              if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
-                gameState.current.particles.push(particle);
-              }
-            }
-          }
-        });
-      });
-      
-      clearLines();
-      spawnPiece();
+      gameState.current.lockTimerMs = 0;
+      gameState.current.lockResetCount = 0;
+    } else if (source === 'input') {
+      // Soft drop taps should not force lock instantly; apply modern lock reset behavior.
+      resetLockDelayIfGrounded();
     }
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, playCollisionSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, recordReplayInput]);
+  }, [checkCollision, recordReplayInput, resetLockDelayIfGrounded]);
 
   // Move piece horizontally
   const moveHorizontal = useCallback((dir) => {
@@ -3028,71 +3141,93 @@ const Brikx = () => {
     
     if (!checkCollision(board, currentPiece, newX, currentY)) {
       gameState.current.currentX = newX;
+      resetLockDelayIfGrounded();
       recordReplayInput(dir < 0 ? 'move_left' : 'move_right');
       playPieceSound(currentPiece.type);
     }
-  }, [checkCollision, playPieceSound, recordReplayInput]);
+  }, [checkCollision, playPieceSound, recordReplayInput, resetLockDelayIfGrounded]);
 
   // Rotate current piece
   const rotate = useCallback(() => {
     const { board, currentPiece, currentX, currentY } = gameState.current;
     const rotated = rotatePiece(currentPiece);
-    
-    if (!checkCollision(board, rotated, currentX, currentY)) {
-      const wasTPiece = currentPiece.type === 'T';
-      gameState.current.currentPiece = rotated;
-      
-      // Check for T-Spin (3+ corners filled around T)
-      if (wasTPiece) {
-        const corners = [
-          { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
-          { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
-        ];
-        
-        let filledCorners = 0;
-        corners.forEach(corner => {
-          const checkX = currentX + 1 + corner.dx;
-          const checkY = currentY + 1 + corner.dy;
-          
-          if (checkX < 0 || checkX >= COLS || checkY >= ROWS || 
-              (checkY >= 0 && getBoardCell(board, checkX, checkY))) {
-            filledCorners++;
-          }
-        });
-        
-        if (filledCorners >= 3) {
-          gameState.current.lastMoveWasTSpin = true;
-          
-          // T-Spin particles
-          const boardOffsetX = 130;
-          const centerX = boardOffsetX + currentX * BLOCK_SIZE + (BLOCK_SIZE * 1.5);
-          const centerY = currentY * BLOCK_SIZE + (BLOCK_SIZE * 1.5);
-          
-          for (let i = 0; i < 12; i++) {
-            const angle = (Math.PI * 2 * i) / 12;
-            const particle = getParticleFromPool({
-              x: centerX, y: centerY,
-              vx: Math.cos(angle) * 4, vy: Math.sin(angle) * 4,
-              life: 30, maxLife: 30, color: '#ff00ff', size: 4,
-              type: 'star', rotation: angle, rotationSpeed: 0.4,
-              glow: true, trail: true, pulse: true, ring: 0, bounce: false
-            });
-            if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
-              gameState.current.particles.push(particle);
-            }
-          }
-          
-          playSound('combo', 800, 0.3);
-          vibrate([30, 10, 30]);
-        } else {
-          gameState.current.lastMoveWasTSpin = false;
-        }
+
+    const kickProfile = WALL_KICK_OFFSETS[modeTuningProfile.wallKickProfile] || WALL_KICK_OFFSETS.classic;
+    const kickTests = (currentPiece.type === 'I' ? kickProfile.I : null) || kickProfile.default;
+
+    let kickX = currentX;
+    let kickY = currentY;
+    let rotatedApplied = false;
+    for (let i = 0; i < kickTests.length; i++) {
+      const [offsetX, offsetY] = kickTests[i];
+      const testX = currentX + offsetX;
+      const testY = currentY + offsetY;
+      if (!checkCollision(board, rotated, testX, testY)) {
+        kickX = testX;
+        kickY = testY;
+        rotatedApplied = true;
+        break;
       }
-      
-      recordReplayInput('rotate');
-      playRotateSuccessSound();
     }
-  }, [checkCollision, rotatePiece, playRotateSuccessSound, SHAPES.T.shape, COLS, ROWS, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSound, vibrate, recordReplayInput]);
+
+    if (!rotatedApplied) return;
+
+    const wasTPiece = currentPiece.type === 'T';
+    gameState.current.currentPiece = rotated;
+    gameState.current.currentX = kickX;
+    gameState.current.currentY = kickY;
+    resetLockDelayIfGrounded();
+
+    // Check for T-Spin (3+ corners filled around T)
+    if (wasTPiece) {
+      const corners = [
+        { dx: -1, dy: -1 }, { dx: 1, dy: -1 },
+        { dx: -1, dy: 1 }, { dx: 1, dy: 1 }
+      ];
+
+      let filledCorners = 0;
+      corners.forEach(corner => {
+        const checkX = kickX + 1 + corner.dx;
+        const checkY = kickY + 1 + corner.dy;
+
+        if (checkX < 0 || checkX >= COLS || checkY >= ROWS ||
+            (checkY >= 0 && getBoardCell(board, checkX, checkY))) {
+          filledCorners++;
+        }
+      });
+
+      if (filledCorners >= 3) {
+        gameState.current.lastMoveWasTSpin = true;
+
+        // T-Spin particles
+        const boardOffsetX = 130;
+        const centerX = boardOffsetX + kickX * BLOCK_SIZE + (BLOCK_SIZE * 1.5);
+        const centerY = kickY * BLOCK_SIZE + (BLOCK_SIZE * 1.5);
+
+        for (let i = 0; i < 12; i++) {
+          const angle = (Math.PI * 2 * i) / 12;
+          const particle = getParticleFromPool({
+            x: centerX, y: centerY,
+            vx: Math.cos(angle) * 4, vy: Math.sin(angle) * 4,
+            life: 30, maxLife: 30, color: '#ff00ff', size: 4,
+            type: 'star', rotation: angle, rotationSpeed: 0.4,
+            glow: true, trail: true, pulse: true, ring: 0, bounce: false
+          });
+          if (gameState.current.particles.length < MAX_ACTIVE_PARTICLES) {
+            gameState.current.particles.push(particle);
+          }
+        }
+
+        playSound('combo', 800, 0.3);
+        vibrate([30, 10, 30]);
+      } else {
+        gameState.current.lastMoveWasTSpin = false;
+      }
+    }
+
+    recordReplayInput('rotate');
+    playRotateSuccessSound();
+  }, [checkCollision, rotatePiece, modeTuningProfile.wallKickProfile, COLS, ROWS, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSound, vibrate, recordReplayInput, playRotateSuccessSound, resetLockDelayIfGrounded]);
 
   // Hold piece
   const holdCurrentPiece = useCallback(() => {
@@ -3118,6 +3253,10 @@ const Brikx = () => {
     gameState.current.currentX = Math.floor(COLS / 2) - Math.floor(gameState.current.currentPiece.shape[0].length / 2);
     gameState.current.currentY = 0;
     gameState.current.canHold = false;
+    gameState.current.lockDelayMs = modeTuningProfile.lockDelayMs;
+    gameState.current.maxLockResets = modeTuningProfile.maxLockResets;
+    gameState.current.lockTimerMs = 0;
+    gameState.current.lockResetCount = 0;
     
     // Check if held piece can spawn
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
@@ -3135,7 +3274,7 @@ const Brikx = () => {
         setGameStarted(false);
       }
     }
-  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic, playGameOverSound, vibrate, recordReplayInput, finalizeReplayRecording]);
+  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic, playGameOverSound, vibrate, recordReplayInput, finalizeReplayRecording, modeTuningProfile.lockDelayMs, modeTuningProfile.maxLockResets]);
 
   // Hard drop
   const hardDrop = useCallback(() => {
@@ -3208,10 +3347,8 @@ const Brikx = () => {
     // Synth fallback ensures hard-drop has audible feedback even if file SFX is delayed.
     playSound('drop', 78, 0.2, 0.34);
     playSfxFile('mixkit-sci-fi-positive-notification-266.wav', 0.8, 'Hard-drop sound');
-    mergePiece();
-    clearLines();
-    spawnPiece();
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSfxFile, playSound, recordReplayInput, getFxFromPool]);
+    lockCurrentPiece();
+  }, [checkCollision, lockCurrentPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSfxFile, playSound, recordReplayInput, getFxFromPool]);
 
   // Reset game
   const resetGame = useCallback(() => {
@@ -3227,6 +3364,10 @@ const Brikx = () => {
     gameState.current.canHold = true;
     gameState.current.dropCounter = 0;
     gameState.current.dropInterval = gameMode === 'marathon' ? 800 : 1000;
+    gameState.current.lockDelayMs = modeTuningProfile.lockDelayMs;
+    gameState.current.lockTimerMs = 0;
+    gameState.current.lockResetCount = 0;
+    gameState.current.maxLockResets = modeTuningProfile.maxLockResets;
     gameState.current.fixedStepAccumulator = 0;
     gameState.current.simStepMs = FIXED_SIM_STEP_MS;
     gameState.current.lastTime = 0;
@@ -3252,6 +3393,13 @@ const Brikx = () => {
     gameState.current.scanlineFlash = [];
     gameState.current.connectedMatchFlashes = [];
     gameState.current.comboBannerDropFrames = 0;
+    keyboardStateRef.current.left = false;
+    keyboardStateRef.current.right = false;
+    keyboardStateRef.current.down = false;
+    keyboardStateRef.current.horizontal = 0;
+    keyboardStateRef.current.dasElapsed = 0;
+    keyboardStateRef.current.arrElapsed = 0;
+    keyboardStateRef.current.softDropElapsed = 0;
     
     setScore(0);
     setLevel(1);
@@ -3275,7 +3423,7 @@ const Brikx = () => {
     beginReplayRecording(sessionSeed);
     
     spawnPiece();
-  }, [spawnPiece, ROWS, COLS, gameMode, updateStatistics, statistics.totalGames, beginReplayRecording, finalizeReplayRecording, returnFxToPool]);
+  }, [spawnPiece, ROWS, COLS, gameMode, updateStatistics, statistics.totalGames, beginReplayRecording, finalizeReplayRecording, returnFxToPool, modeTuningProfile.lockDelayMs, modeTuningProfile.maxLockResets]);
 
   const startCountdown = useCallback(() => {
     // Clear game over state when starting countdown
@@ -3412,13 +3560,67 @@ const Brikx = () => {
     gameState.current.clearAnimation = 0;
     gameState.current.chromaticAberration = 0;
     gameState.current.scanlineFlash = [];
+    keyboardStateRef.current.left = false;
+    keyboardStateRef.current.right = false;
+    keyboardStateRef.current.down = false;
+    keyboardStateRef.current.horizontal = 0;
+    keyboardStateRef.current.dasElapsed = 0;
+    keyboardStateRef.current.arrElapsed = 0;
+    keyboardStateRef.current.softDropElapsed = 0;
   }, [ROWS, COLS, stopMusic, returnFxToPool]);
+
+  const processHeldKeyboardInput = useCallback((deltaMs) => {
+    const state = keyboardStateRef.current;
+
+    if (state.horizontal !== 0) {
+      state.dasElapsed += deltaMs;
+      if (state.dasElapsed >= dasMs) {
+        if (arrMs <= 0) {
+          moveHorizontal(state.horizontal);
+        } else {
+          state.arrElapsed += deltaMs;
+          let movesThisFrame = 0;
+          while (state.arrElapsed >= arrMs && movesThisFrame < 8) {
+            moveHorizontal(state.horizontal);
+            state.arrElapsed -= arrMs;
+            movesThisFrame++;
+          }
+        }
+      }
+    } else {
+      state.dasElapsed = 0;
+      state.arrElapsed = 0;
+    }
+
+    if (state.down) {
+      state.softDropElapsed += deltaMs;
+      const softDropIntervalMs = 50;
+      let dropsThisFrame = 0;
+      while (state.softDropElapsed >= softDropIntervalMs && dropsThisFrame < 6) {
+        moveDown('input');
+        state.softDropElapsed -= softDropIntervalMs;
+        dropsThisFrame++;
+      }
+    } else {
+      state.softDropElapsed = 0;
+    }
+  }, [moveHorizontal, moveDown, dasMs, arrMs]);
 
   // Keyboard controls
   useEffect(() => {
+    const resetKeyboardState = () => {
+      keyboardStateRef.current.left = false;
+      keyboardStateRef.current.right = false;
+      keyboardStateRef.current.down = false;
+      keyboardStateRef.current.horizontal = 0;
+      keyboardStateRef.current.dasElapsed = 0;
+      keyboardStateRef.current.arrElapsed = 0;
+      keyboardStateRef.current.softDropElapsed = 0;
+    };
+
     const handleKeyDown = (e) => {
       if (!gameStarted || gameOver || isPaused) {
-        if (e.key === ' ' && !gameStarted) {
+        if (e.key === ' ' && !gameStarted && !e.repeat) {
           startCountdown();
         }
         return;
@@ -3428,40 +3630,113 @@ const Brikx = () => {
         e.preventDefault();
       }
 
+      const keyState = keyboardStateRef.current;
+
       switch (e.key) {
         case 'ArrowLeft':
-          moveHorizontal(-1);
+          if (!keyState.left) {
+            keyState.left = true;
+            keyState.horizontal = -1;
+            keyState.dasElapsed = 0;
+            keyState.arrElapsed = 0;
+            moveHorizontal(-1);
+          }
           break;
         case 'ArrowRight':
-          moveHorizontal(1);
+          if (!keyState.right) {
+            keyState.right = true;
+            keyState.horizontal = 1;
+            keyState.dasElapsed = 0;
+            keyState.arrElapsed = 0;
+            moveHorizontal(1);
+          }
           break;
         case 'ArrowDown':
-          moveDown('input');
+          if (!keyState.down) {
+            keyState.down = true;
+            keyState.softDropElapsed = 0;
+            moveDown('input');
+          }
           break;
         case 'ArrowUp':
-          rotate();
+          if (!e.repeat) {
+            rotate();
+          }
           break;
         case ' ':
-          hardDrop();
+          if (!e.repeat) {
+            hardDrop();
+          }
           break;
         case 'c':
         case 'C':
         case 'Shift':
-          holdCurrentPiece();
+          if (!e.repeat) {
+            holdCurrentPiece();
+          }
           break;
         case 'p':
         case 'P':
         case 'Escape':
-          recordReplayInput('pause_toggle');
-          setIsPaused(prev => !prev);
+          if (!e.repeat) {
+            recordReplayInput('pause_toggle');
+            setIsPaused(prev => !prev);
+          }
           break;
         default:
           break;
       }
     };
 
+    const handleKeyUp = (e) => {
+      const keyState = keyboardStateRef.current;
+      switch (e.key) {
+        case 'ArrowLeft':
+          keyState.left = false;
+          if (keyState.horizontal === -1) {
+            if (keyState.right) {
+              keyState.horizontal = 1;
+              keyState.dasElapsed = 0;
+              keyState.arrElapsed = 0;
+              moveHorizontal(1);
+            } else {
+              keyState.horizontal = 0;
+            }
+          }
+          break;
+        case 'ArrowRight':
+          keyState.right = false;
+          if (keyState.horizontal === 1) {
+            if (keyState.left) {
+              keyState.horizontal = -1;
+              keyState.dasElapsed = 0;
+              keyState.arrElapsed = 0;
+              moveHorizontal(-1);
+            } else {
+              keyState.horizontal = 0;
+            }
+          }
+          break;
+        case 'ArrowDown':
+          keyState.down = false;
+          keyState.softDropElapsed = 0;
+          break;
+        default:
+          break;
+      }
+    };
+
+    if (!gameStarted || gameOver || isPaused) {
+      resetKeyboardState();
+    }
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      resetKeyboardState();
+    };
   }, [gameStarted, gameOver, isPaused, moveHorizontal, moveDown, rotate, hardDrop, holdCurrentPiece, startCountdown, recordReplayInput]);
 
   // Gamepad support
@@ -5470,6 +5745,8 @@ const Brikx = () => {
         handleGamepadInput();
       }
 
+      processHeldKeyboardInput(deltaTime);
+
       // Track smoothed frame cost so draw can adapt visual complexity.
       const frameCost = deltaTime > 0 ? deltaTime : 16.67;
       gameState.current.avgFrameMs = (gameState.current.avgFrameMs * 0.9) + (frameCost * 0.1);
@@ -5514,10 +5791,30 @@ const Brikx = () => {
 
       let simSteps = 0;
       while (gameState.current.fixedStepAccumulator >= gameState.current.simStepMs && simSteps < MAX_SIM_STEPS_PER_FRAME) {
+        const { board, currentPiece, currentX, currentY } = gameState.current;
+        const grounded = currentPiece
+          ? checkCollision(board, currentPiece, currentX, currentY + 1)
+          : false;
+
         gameState.current.dropCounter += gameState.current.simStepMs;
-        if (gameState.current.dropCounter >= gameState.current.dropInterval) {
+        if (!grounded && gameState.current.dropCounter >= gameState.current.dropInterval) {
           moveDown('gravity');
           gameState.current.dropCounter -= gameState.current.dropInterval;
+        }
+
+        const postMovePiece = gameState.current.currentPiece;
+        const postMoveGrounded = postMovePiece
+          ? checkCollision(gameState.current.board, postMovePiece, gameState.current.currentX, gameState.current.currentY + 1)
+          : false;
+
+        if (postMoveGrounded) {
+          gameState.current.lockTimerMs += gameState.current.simStepMs;
+          if (gameState.current.lockTimerMs >= gameState.current.lockDelayMs) {
+            lockCurrentPiece();
+          }
+        } else {
+          gameState.current.lockTimerMs = 0;
+          gameState.current.lockResetCount = 0;
         }
 
         gameState.current.fixedStepAccumulator -= gameState.current.simStepMs;
@@ -5542,7 +5839,7 @@ const Brikx = () => {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [gameStarted, gameOver, isPaused, moveDown, draw, handleGamepadInput, lowPowerMode, gamepadConnected]);
+  }, [gameStarted, gameOver, isPaused, moveDown, draw, handleGamepadInput, lowPowerMode, gamepadConnected, processHeldKeyboardInput, checkCollision, lockCurrentPiece]);
 
   // Draw when paused
   useEffect(() => {
@@ -5614,13 +5911,13 @@ const Brikx = () => {
 
       // Hold-to-move functionality for left/right buttons
       if (enableHold && holdCallback) {
-        // Start auto-repeat after 300ms
+        // Start auto-repeat after configured DAS
         holdTimeoutRef.current = setTimeout(() => {
           holdIntervalRef.current = setInterval(() => {
             vibrate(5); // Light vibration for auto-repeat
             holdCallback();
-          }, 100); // Repeat every 100ms
-        }, 300);
+          }, Math.max(16, arrMs || 16));
+        }, dasMs);
       }
     };
 
@@ -5704,7 +6001,7 @@ const Brikx = () => {
         button.removeEventListener('touchcancel', endListener);
       });
     };
-  }, [isMobile, gameStarted, gameOver, isPaused, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate, recordReplayInput]);
+  }, [isMobile, gameStarted, gameOver, isPaused, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate, recordReplayInput, dasMs, arrMs]);
 
   // Swipe gesture detection on canvas
   useEffect(() => {
@@ -6974,6 +7271,48 @@ const Brikx = () => {
               </div>
 
               <div className="settings-section">
+                <h3 className="settings-heading">⚡ Input Tuning</h3>
+                <div className="setting-item" style={{ marginBottom: '10px' }}>
+                  <label className="volume-label">DAS (Delayed Auto Shift): {dasMs} ms</label>
+                  <input
+                    type="range"
+                    min="50"
+                    max="300"
+                    step="5"
+                    value={dasMs}
+                    onChange={(e) => {
+                      const nextValue = clampNumber(e.target.value, 50, 300, dasMs);
+                      setDasMs(nextValue);
+                      safeSetItem('brickxDasMs', nextValue.toString());
+                    }}
+                    className="volume-slider"
+                    aria-label="Adjust delayed auto shift"
+                  />
+                </div>
+                <div className="setting-item" style={{ marginBottom: '8px' }}>
+                  <label className="volume-label">ARR (Auto Repeat Rate): {arrMs} ms {arrMs === 0 ? '(Instant)' : ''}</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="120"
+                    step="2"
+                    value={arrMs}
+                    onChange={(e) => {
+                      const nextValue = clampNumber(e.target.value, 0, 120, arrMs);
+                      setArrMs(nextValue);
+                      safeSetItem('brickxArrMs', nextValue.toString());
+                    }}
+                    className="volume-slider"
+                    aria-label="Adjust auto repeat rate"
+                  />
+                </div>
+                <div className="setting-info" style={{ marginTop: '6px' }}>
+                  <p>Lock Delay: {modeTuningProfile.lockDelayMs} ms • Reset Limit: {modeTuningProfile.maxLockResets}</p>
+                  <p>Wall-Kick Profile: {modeTuningProfile.wallKickProfile}</p>
+                </div>
+              </div>
+
+              <div className="settings-section">
                 <h3 className="settings-heading">⌨️ Keyboard Controls</h3>
                 <div className="controls-grid">
                   <div className="control-item">
@@ -7286,6 +7625,44 @@ const Brikx = () => {
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="setting-item" style={{ marginBottom: '10px' }}>
+                  <label className="volume-label">DAS (Delayed Auto Shift): {dasMs} ms</label>
+                  <input
+                    type="range"
+                    min="50"
+                    max="300"
+                    step="5"
+                    value={dasMs}
+                    onChange={(e) => {
+                      const nextValue = clampNumber(e.target.value, 50, 300, dasMs);
+                      setDasMs(nextValue);
+                      safeSetItem('brickxDasMs', nextValue.toString());
+                    }}
+                    className="volume-slider"
+                    aria-label="Adjust delayed auto shift"
+                  />
+                </div>
+                <div className="setting-item" style={{ marginBottom: '8px' }}>
+                  <label className="volume-label">ARR (Auto Repeat Rate): {arrMs} ms {arrMs === 0 ? '(Instant)' : ''}</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="120"
+                    step="2"
+                    value={arrMs}
+                    onChange={(e) => {
+                      const nextValue = clampNumber(e.target.value, 0, 120, arrMs);
+                      setArrMs(nextValue);
+                      safeSetItem('brickxArrMs', nextValue.toString());
+                    }}
+                    className="volume-slider"
+                    aria-label="Adjust auto repeat rate"
+                  />
+                </div>
+                <div className="setting-info" style={{ marginTop: '6px' }}>
+                  <p>Lock Delay: {modeTuningProfile.lockDelayMs} ms • Reset Limit: {modeTuningProfile.maxLockResets}</p>
+                  <p>Wall-Kick Profile: {modeTuningProfile.wallKickProfile}</p>
                 </div>
               </div>
 
