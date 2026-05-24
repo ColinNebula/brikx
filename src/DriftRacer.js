@@ -184,6 +184,107 @@ const getThemeVisualProfile = (themeId, category) => {
   return overrides[themeId] || defaultByCategory[category] || defaultByCategory.base;
 };
 
+const BASE_SHAPES = {
+  I: [[1, 1, 1, 1]],
+  O: [[1, 1], [1, 1]],
+  T: [[0, 1, 0], [1, 1, 1]],
+  S: [[0, 1, 1], [1, 1, 0]],
+  Z: [[1, 1, 0], [0, 1, 1]],
+  J: [[1, 0, 0], [1, 1, 1]],
+  L: [[0, 0, 1], [1, 1, 1]]
+};
+
+const BASE_COLORS = {
+  I: '#00f0f0',
+  O: '#f0f000',
+  T: '#a000f0',
+  S: '#00f000',
+  Z: '#f00000',
+  J: '#0000f0',
+  L: '#f0a000'
+};
+
+const PIECE_TYPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+const BASE_PIECE_TO_INDEX = {
+  I: 1,
+  O: 2,
+  T: 3,
+  S: 4,
+  Z: 5,
+  J: 6,
+  L: 7
+};
+const BASE_INDEX_TO_PIECE = [null, ...PIECE_TYPES];
+
+const rotateShapeMatrix = (shape) => shape[0].map((_, i) => shape.map(row => row[i]).reverse());
+const shapeKey = (shape) => shape.map(row => row.join('')).join('|');
+
+const buildRotationMasksForShape = (pieceType, typeIndex, baseShape) => {
+  const rotations = [];
+  const seen = new Set();
+  let rotated = baseShape;
+
+  for (let step = 0; step < 4; step++) {
+    const key = shapeKey(rotated);
+    if (!seen.has(key)) {
+      seen.add(key);
+      const height = rotated.length;
+      const width = rotated[0].length;
+      const rowMasks = new Uint16Array(height);
+      const cells = [];
+
+      for (let y = 0; y < height; y++) {
+        let rowMask = 0;
+        for (let x = 0; x < width; x++) {
+          if (!rotated[y][x]) continue;
+          rowMask |= (1 << x);
+          cells.push([x, y]);
+        }
+        rowMasks[y] = rowMask;
+      }
+
+      rotations.push({
+        rotationSteps: step,
+        shape: rotated,
+        rowMasks,
+        cells,
+        width,
+        height,
+        piece: {
+          type: pieceType,
+          typeIndex,
+          shape: rotated,
+          rotationIndex: rotations.length
+        }
+      });
+    }
+
+    rotated = rotateShapeMatrix(rotated);
+  }
+
+  return rotations;
+};
+
+const SHAPE_MASKS = PIECE_TYPES.reduce((acc, pieceType) => {
+  acc[pieceType] = buildRotationMasksForShape(pieceType, BASE_PIECE_TO_INDEX[pieceType], BASE_SHAPES[pieceType]);
+  return acc;
+}, {});
+
+const FIXED_SIM_STEP_MS = 1000 / 60;
+const MAX_SIM_STEPS_PER_FRAME = 5;
+const REPLAY_EVENT_LIMIT = 6000;
+
+const advanceSeed = (state) => ((state * 1664525) + 1013904223) >>> 0;
+
+const generateSessionSeed = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const seedBuffer = new Uint32Array(1);
+    crypto.getRandomValues(seedBuffer);
+    return seedBuffer[0] >>> 0;
+  }
+  return (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+};
+
 // Score History Chart Component
 const ScoreHistoryChart = ({ history }) => {
   const canvasRef = useRef(null);
@@ -443,6 +544,15 @@ const Brikx = () => {
   const canvasCtxRef = useRef(null);
   const touchButtonsRef = useRef([]);
   const menuContainerRef = useRef(null);
+  const rngStateRef = useRef(1);
+  const replayRecorderRef = useRef({
+    active: false,
+    seed: 0,
+    startTime: 0,
+    startedAt: 0,
+    mode: 'classic',
+    events: []
+  });
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
     const stored = safeGetItem('brikxHighScore', '0');
@@ -794,6 +904,13 @@ const Brikx = () => {
   const particlePool = useRef([]);
   const MAX_POOL_SIZE = 500;
   const MAX_ACTIVE_PARTICLES = 500;
+  const fxPoolsRef = useRef({
+    scorePopup: [],
+    hardDropTrail: [],
+    connectedFlash: [],
+    scanlineFlash: []
+  });
+  const MAX_FX_POOL_SIZE = 240;
 
   const getParticleFromPool = useCallback((particleData) => {
     let particle = particlePool.current.pop();
@@ -808,6 +925,36 @@ const Brikx = () => {
       particlePool.current.push(particle);
     }
   }, []);
+
+  const getFxFromPool = useCallback((poolName, effectData) => {
+    const pool = fxPoolsRef.current[poolName];
+    let entry = pool && pool.length > 0 ? pool.pop() : {};
+    return Object.assign(entry, effectData);
+  }, []);
+
+  const returnFxToPool = useCallback((poolName, entry) => {
+    const pool = fxPoolsRef.current[poolName];
+    if (!pool) return;
+    if (pool.length < MAX_FX_POOL_SIZE) {
+      pool.push(entry);
+    }
+  }, []);
+
+  const compactActiveEffects = useCallback((list, poolName) => {
+    let write = 0;
+    for (let read = 0; read < list.length; read++) {
+      const item = list[read];
+      if (item.life > 0) {
+        if (write !== read) {
+          list[write] = item;
+        }
+        write++;
+      } else {
+        returnFxToPool(poolName, item);
+      }
+    }
+    list.length = write;
+  }, [returnFxToPool]);
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
@@ -1684,30 +1831,27 @@ const Brikx = () => {
   const CANVAS_WIDTH = BOARD_WIDTH + 260; // 610px total (350 + 130 hold + 130 next panels)
   const CANVAS_HEIGHT = BOARD_HEIGHT; // 700px
 
-  // Tetromino shapes
-  const SHAPES = {
-    I: [[1, 1, 1, 1]],
-    O: [[1, 1], [1, 1]],
-    T: [[0, 1, 0], [1, 1, 1]],
-    S: [[0, 1, 1], [1, 1, 0]],
-    Z: [[1, 1, 0], [0, 1, 1]],
-    J: [[1, 0, 0], [1, 1, 1]],
-    L: [[0, 0, 1], [1, 1, 1]]
-  };
+  // Tetromino shape and color tables are module-level to avoid per-render recreation.
+  const SHAPES = BASE_SHAPES;
+  const COLORS = BASE_COLORS;
+  const PIECE_TO_INDEX = BASE_PIECE_TO_INDEX;
+  const INDEX_TO_PIECE = BASE_INDEX_TO_PIECE;
 
-  const COLORS = {
-    I: '#00f0f0',
-    O: '#f0f000',
-    T: '#a000f0',
-    S: '#00f000',
-    Z: '#f00000',
-    J: '#0000f0',
-    L: '#f0a000'
+  const createEmptyBoard = () => new Uint8Array(ROWS * COLS);
+  const boardOffset = (x, y) => (y * COLS) + x;
+  const getBoardCell = (board, x, y) => board[boardOffset(x, y)];
+  const setBoardCell = (board, x, y, value) => {
+    board[boardOffset(x, y)] = value;
+  };
+  const getPieceTypeFromCell = (value) => INDEX_TO_PIECE[value] || null;
+  const getCellColor = (value) => {
+    const pieceType = getPieceTypeFromCell(value);
+    return pieceType ? COLORS[pieceType] : null;
   };
 
   // Game state
   const gameState = useRef({
-    board: Array(ROWS).fill(null).map(() => Array(COLS).fill(0)),
+    board: createEmptyBoard(),
     currentPiece: null,
     currentX: 0,
     currentY: 0,
@@ -1716,9 +1860,14 @@ const Brikx = () => {
     canHold: true,
     dropCounter: 0,
     dropInterval: 1000,
+    fixedStepAccumulator: 0,
+    simStepMs: FIXED_SIM_STEP_MS,
     lastTime: 0,
     lastRenderTime: 0,
     avgFrameMs: 16.67,
+    frameBudgetScale: 1,
+    frameBudgetLevel: 'balanced',
+    sessionSeed: 0,
     colorBonusDisplay: null,
     bag: [],
     particles: [],
@@ -1747,6 +1896,70 @@ const Brikx = () => {
       rotateDelay: 0
     }
   });
+  const boardCompactionBufferRef = useRef(createEmptyBoard());
+  const smartGhostBaseGridRef = useRef(null);
+  const smartGhostBoardRowMasksRef = useRef(new Uint16Array(ROWS));
+  const smartGhostBaseRowCountsRef = useRef(new Uint8Array(ROWS));
+  const smartGhostBaseColumnHolesRef = useRef(new Uint8Array(COLS));
+  const smartGhostAddedRowCountsRef = useRef(new Uint8Array(ROWS));
+  const smartGhostAddedRowMaskByColRef = useRef(new Uint32Array(COLS));
+  const smartGhostTouchedRowsRef = useRef(new Int8Array(8));
+  const smartGhostTouchedColsRef = useRef(new Int8Array(8));
+  const smartGhostPlacementPoolRef = useRef([]);
+  const smartGhostPlacementsRef = useRef([]);
+  const smartGhostTopPlacementsRef = useRef([null, null, null]);
+  const smartGhostTopScoresRef = useRef(new Float64Array(3));
+
+  const nextSeededRandom = useCallback(() => {
+    rngStateRef.current = advanceSeed(rngStateRef.current);
+    return rngStateRef.current / 0x100000000;
+  }, []);
+
+  const beginReplayRecording = useCallback((seedValue) => {
+    replayRecorderRef.current = {
+      active: true,
+      seed: seedValue >>> 0,
+      startTime: typeof performance !== 'undefined' ? performance.now() : 0,
+      startedAt: Date.now(),
+      mode: gameMode,
+      events: []
+    };
+  }, [gameMode]);
+
+  const recordReplayInput = useCallback((action, payload = null) => {
+    const replay = replayRecorderRef.current;
+    if (!replay.active || replay.events.length >= REPLAY_EVENT_LIMIT) return;
+
+    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    replay.events.push({
+      t: Math.max(0, Math.round(now - replay.startTime)),
+      a: action,
+      p: payload
+    });
+  }, []);
+
+  const finalizeReplayRecording = useCallback((result = 'completed') => {
+    const replay = replayRecorderRef.current;
+    if (!replay.active) return;
+
+    const snapshot = {
+      version: 1,
+      seed: replay.seed,
+      mode: replay.mode,
+      startedAt: replay.startedAt,
+      endedAt: Date.now(),
+      result,
+      summary: {
+        score,
+        lines,
+        level
+      },
+      events: replay.events
+    };
+
+    safeSetItem('brikxLastReplay', JSON.stringify(snapshot));
+    replayRecorderRef.current = { ...replay, active: false };
+  }, [score, lines, level]);
 
   // 7-bag randomizer for fair piece distribution
   const fillBag = useCallback(() => {
@@ -1754,11 +1967,11 @@ const Brikx = () => {
     const bag = [...pieces];
     // Fisher-Yates shuffle
     for (let i = bag.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(nextSeededRandom() * (i + 1));
       [bag[i], bag[j]] = [bag[j], bag[i]];
     }
     return bag;
-  }, [SHAPES]);
+  }, [SHAPES, nextSeededRandom]);
 
   // Get next piece from bag
   const getNextPiece = useCallback(() => {
@@ -1769,9 +1982,11 @@ const Brikx = () => {
     return {
       shape: SHAPES[pieceType],
       color: COLORS[pieceType],
-      type: pieceType
+      type: pieceType,
+      typeIndex: PIECE_TO_INDEX[pieceType] || 0,
+      rotationIndex: 0
     };
-  }, [fillBag, SHAPES, COLORS]);
+  }, [fillBag, SHAPES, COLORS, PIECE_TO_INDEX]);
 
   // Check collision
   const checkCollision = useCallback((board, piece, offsetX, offsetY) => {
@@ -1785,7 +2000,7 @@ const Brikx = () => {
             return true;
           }
           
-          if (newY >= 0 && board[newY][newX]) {
+          if (newY >= 0 && getBoardCell(board, newX, newY)) {
             return true;
           }
         }
@@ -1807,95 +2022,168 @@ const Brikx = () => {
   const calculateSmartGhostPlacements = useCallback((board, piece, currentX) => {
     if (!piece || !piece.shape) return [];
 
-    const rotateShape = (shape) => shape[0].map((_, i) => shape.map(row => row[i]).reverse());
-
-    const shapeKey = (shape) => shape.map(row => row.join('')).join('|');
-    const baseHoles = (() => {
-      let holes = 0;
-      for (let x = 0; x < COLS; x++) {
-        let foundBlock = false;
-        for (let y = 0; y < ROWS; y++) {
-          if (board[y][x]) {
-            foundBlock = true;
-          } else if (foundBlock) {
-            holes++;
-          }
-        }
-      }
-      return holes;
-    })();
-
-    const seenShapes = new Set();
-    const rotations = [];
-    let rotatedPiece = piece;
-
-    for (let i = 0; i < 4; i++) {
-      const key = shapeKey(rotatedPiece.shape);
-      if (!seenShapes.has(key)) {
-        seenShapes.add(key);
-        rotations.push({ piece: rotatedPiece, rotationSteps: i });
-      }
-      rotatedPiece = { ...rotatedPiece, shape: rotateShape(rotatedPiece.shape) };
+    const cellCount = ROWS * COLS;
+    if (!smartGhostBaseGridRef.current || smartGhostBaseGridRef.current.length !== cellCount) {
+      smartGhostBaseGridRef.current = new Uint8Array(cellCount);
     }
 
-    const placements = [];
+    const baseGrid = smartGhostBaseGridRef.current;
+    const boardRowMasks = smartGhostBoardRowMasksRef.current;
+    const baseRowCounts = smartGhostBaseRowCountsRef.current;
+    const baseColumnHoles = smartGhostBaseColumnHolesRef.current;
+    const addedRowCounts = smartGhostAddedRowCountsRef.current;
+    const addedRowMaskByCol = smartGhostAddedRowMaskByColRef.current;
+    const touchedRows = smartGhostTouchedRowsRef.current;
+    const touchedCols = smartGhostTouchedColsRef.current;
 
-    rotations.forEach(({ piece: rotated, rotationSteps }) => {
-      const width = rotated.shape[0].length;
+    if (boardRowMasks.length !== ROWS) {
+      smartGhostBoardRowMasksRef.current = new Uint16Array(ROWS);
+    }
+
+    const placements = smartGhostPlacementsRef.current;
+    const placementPool = smartGhostPlacementPoolRef.current;
+    const topPlacements = smartGhostTopPlacementsRef.current;
+    const topScores = smartGhostTopScoresRef.current;
+
+    // Return previously used placement objects to pool for reuse.
+    while (placements.length > 0) {
+      placementPool.push(placements.pop());
+    }
+
+    for (let i = 0; i < 3; i++) {
+      topPlacements[i] = null;
+      topScores[i] = Number.NEGATIVE_INFINITY;
+    }
+
+    for (let y = 0; y < ROWS; y++) {
+      let rowMask = 0;
+      let rowCount = 0;
+      for (let x = 0; x < COLS; x++) {
+        const occupied = getBoardCell(board, x, y) ? 1 : 0;
+        baseGrid[y * COLS + x] = occupied;
+        if (occupied) {
+          rowCount++;
+          rowMask |= (1 << x);
+        }
+      }
+      boardRowMasks[y] = rowMask;
+      baseRowCounts[y] = rowCount;
+    }
+    let baseCompletedLines = 0;
+    for (let y = 0; y < ROWS; y++) {
+      if (baseRowCounts[y] === COLS) {
+        baseCompletedLines++;
+      }
+    }
+
+    let baseHoles = 0;
+    for (let x = 0; x < COLS; x++) {
+      let holes = 0;
+      let foundBlock = false;
+      for (let y = 0; y < ROWS; y++) {
+        if (baseGrid[y * COLS + x]) {
+          foundBlock = true;
+        } else if (foundBlock) {
+          holes++;
+        }
+      }
+      baseColumnHoles[x] = holes;
+      baseHoles += holes;
+    }
+
+
+    const rotations = SHAPE_MASKS[piece.type] || [];
+    const pieceCenterX = currentX + (piece.shape[0].length / 2);
+    const hasCollisionAt = (rotationMask, x, y) => {
+      if (x < 0 || x + rotationMask.width > COLS) return true;
+      if (y + rotationMask.height > ROWS) return true;
+
+      for (let ry = 0; ry < rotationMask.height; ry++) {
+        const boardY = y + ry;
+        if (boardY < 0) continue;
+        const shiftedMask = rotationMask.rowMasks[ry] << x;
+        if (boardRowMasks[boardY] & shiftedMask) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    rotations.forEach((rotationMask) => {
+      const width = rotationMask.width;
       for (let x = -2; x <= COLS - width + 2; x++) {
         let y = -4;
+        let touchedRowCount = 0;
+        let touchedColCount = 0;
 
-        if (checkCollision(board, rotated, x, y)) {
+        if (hasCollisionAt(rotationMask, x, y)) {
           continue;
         }
 
-        while (!checkCollision(board, rotated, x, y + 1)) {
+        while (!hasCollisionAt(rotationMask, x, y + 1)) {
           y++;
         }
 
-        if (y < -1 || checkCollision(board, rotated, x, y)) {
+        if (y < -1 || hasCollisionAt(rotationMask, x, y)) {
           continue;
         }
 
-        const sim = board.map(row => [...row]);
         let supportCount = 0;
         let sideContactCount = 0;
 
-        rotated.shape.forEach((row, py) => {
-          row.forEach((cell, px) => {
-            if (!cell) return;
-            const bx = x + px;
-            const by = y + py;
-            if (by >= 0 && by < ROWS && bx >= 0 && bx < COLS) {
-              sim[by][bx] = piece.color;
+        for (let c = 0; c < rotationMask.cells.length; c++) {
+          const [px, py] = rotationMask.cells[c];
+          const bx = x + px;
+          const by = y + py;
+          if (by < 0 || by >= ROWS || bx < 0 || bx >= COLS) continue;
 
-              if (by === ROWS - 1 || (by + 1 < ROWS && board[by + 1][bx])) {
-                supportCount++;
-              }
-              if ((bx > 0 && board[by][bx - 1]) || (bx < COLS - 1 && board[by][bx + 1])) {
-                sideContactCount++;
-              }
-            }
-          });
-        });
+          if (addedRowCounts[by] === 0) {
+            touchedRows[touchedRowCount++] = by;
+          }
+          addedRowCounts[by]++;
 
-        const completedLines = sim.reduce((count, row) => count + (row.every(cell => cell !== 0) ? 1 : 0), 0);
+          if (addedRowMaskByCol[bx] === 0) {
+            touchedCols[touchedColCount++] = bx;
+          }
+          addedRowMaskByCol[bx] |= (1 << by);
 
-        let holesAfter = 0;
-        for (let col = 0; col < COLS; col++) {
-          let foundBlock = false;
-          for (let row = 0; row < ROWS; row++) {
-            if (sim[row][col]) {
-              foundBlock = true;
-            } else if (foundBlock) {
-              holesAfter++;
-            }
+          if (by === ROWS - 1 || (by + 1 < ROWS && getBoardCell(board, bx, by + 1))) {
+            supportCount++;
+          }
+          if ((bx > 0 && getBoardCell(board, bx - 1, by)) || (bx < COLS - 1 && getBoardCell(board, bx + 1, by))) {
+            sideContactCount++;
           }
         }
 
+        let completedLines = baseCompletedLines;
+        for (let i = 0; i < touchedRowCount; i++) {
+          const row = touchedRows[i];
+          if (baseRowCounts[row] < COLS && (baseRowCounts[row] + addedRowCounts[row]) >= COLS) {
+            completedLines++;
+          }
+        }
+
+        let holesAfter = baseHoles;
+        for (let i = 0; i < touchedColCount; i++) {
+          const col = touchedCols[i];
+          const addedMask = addedRowMaskByCol[col];
+          let updatedHoles = 0;
+          let foundBlock = false;
+          for (let row = 0; row < ROWS; row++) {
+            const occupied = baseGrid[row * COLS + col] || ((addedMask >>> row) & 1);
+            if (occupied) {
+              foundBlock = true;
+            } else if (foundBlock) {
+              updatedHoles++;
+            }
+          }
+          holesAfter += (updatedHoles - baseColumnHoles[col]);
+        }
+
         const holeDelta = holesAfter - baseHoles;
-        const centerX = x + width / 2;
-        const horizontalTravel = Math.abs(centerX - (currentX + piece.shape[0].length / 2));
+        const centerX = x + (width / 2);
+        const horizontalTravel = Math.abs(centerX - pieceCenterX);
 
         const score =
           (completedLines * 140) +
@@ -1905,31 +2193,80 @@ const Brikx = () => {
           (Math.max(0, holeDelta) * 55) -
           (horizontalTravel * 2.2);
 
-        placements.push({
-          x,
-          y,
-          piece: rotated,
-          rotationSteps,
-          score
-        });
+        const placement = placementPool.pop() || {};
+        placement.x = x;
+        placement.y = y;
+        placement.piece = rotationMask.piece;
+        placement.rotationSteps = rotationMask.rotationSteps;
+        placement.score = score;
+
+        let insertIndex = -1;
+        if (score > topScores[0]) insertIndex = 0;
+        else if (score > topScores[1]) insertIndex = 1;
+        else if (score > topScores[2]) insertIndex = 2;
+
+        if (insertIndex === -1) {
+          placementPool.push(placement);
+          for (let i = 0; i < touchedRowCount; i++) {
+            addedRowCounts[touchedRows[i]] = 0;
+          }
+          for (let i = 0; i < touchedColCount; i++) {
+            addedRowMaskByCol[touchedCols[i]] = 0;
+          }
+          continue;
+        }
+
+        const displaced = topPlacements[2];
+        for (let idx = 2; idx > insertIndex; idx--) {
+          topPlacements[idx] = topPlacements[idx - 1];
+          topScores[idx] = topScores[idx - 1];
+        }
+
+        topPlacements[insertIndex] = placement;
+        topScores[insertIndex] = score;
+
+        if (displaced) {
+          placementPool.push(displaced);
+        }
+
+        for (let i = 0; i < touchedRowCount; i++) {
+          addedRowCounts[touchedRows[i]] = 0;
+        }
+        for (let i = 0; i < touchedColCount; i++) {
+          addedRowMaskByCol[touchedCols[i]] = 0;
+        }
       }
     });
 
-    placements.sort((a, b) => b.score - a.score);
-    return placements.slice(0, 3);
-  }, [checkCollision, COLS, ROWS]);
+    for (let i = 0; i < 3; i++) {
+      if (topPlacements[i]) {
+        placements.push(topPlacements[i]);
+      }
+    }
+
+    return placements;
+  }, [COLS, ROWS]);
 
   // Rotate piece
   const rotatePiece = useCallback((piece) => {
-    const rotated = piece.shape[0].map((_, i) =>
-      piece.shape.map(row => row[i]).reverse()
-    );
-    return { ...piece, shape: rotated };
+    const rotations = SHAPE_MASKS[piece.type] || [];
+    if (rotations.length <= 1) {
+      return piece;
+    }
+    const currentRotationIndex = typeof piece.rotationIndex === 'number' ? piece.rotationIndex : 0;
+    const nextRotationIndex = (currentRotationIndex + 1) % rotations.length;
+    const nextRotation = rotations[nextRotationIndex];
+    return {
+      ...piece,
+      shape: nextRotation.shape,
+      rotationIndex: nextRotationIndex
+    };
   }, []);
 
   // Merge piece to board
   const mergePiece = useCallback(() => {
     const { board, currentPiece, currentX, currentY } = gameState.current;
+    const pieceTypeIndex = currentPiece?.typeIndex || 0;
     
     currentPiece.shape.forEach((row, y) => {
       row.forEach((value, x) => {
@@ -1937,7 +2274,7 @@ const Brikx = () => {
           const boardY = currentY + y;
           const boardX = currentX + x;
           if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
-            board[boardY][boardX] = currentPiece.color;
+            setBoardCell(board, boardX, boardY, pieceTypeIndex);
           }
         }
       });
@@ -1948,7 +2285,7 @@ const Brikx = () => {
   const addScorePopup = useCallback((points, text, x, y) => {
     const isHypePopup = typeof text === 'string' && (text.includes('COMBO') || text.includes('PERFECT'));
     const mobileScale = isMobile ? (isHypePopup ? 1.65 : 1.35) : (isHypePopup ? 1.2 : 1);
-    gameState.current.scorePopups.push({
+    gameState.current.scorePopups.push(getFxFromPool('scorePopup', {
       points,
       text,
       x,
@@ -1957,8 +2294,8 @@ const Brikx = () => {
       maxLife: isHypePopup ? 72 : 60,
       vy: isHypePopup ? -2.6 : -2,
       scale: mobileScale
-    });
-  }, [isMobile]);
+    }));
+  }, [isMobile, getFxFromPool]);
 
   // Get color for combo tier
   const getComboColor = useCallback((combo) => {
@@ -1982,7 +2319,7 @@ const Brikx = () => {
     const particleTypes = ['circle', 'star', 'square', 'spark', 'diamond', 'ring', 'confetti'];
     
     for (let x = 0; x < COLS; x++) {
-      const blockColor = gameState.current.board[y][x];
+      const blockColor = getCellColor(getBoardCell(gameState.current.board, x, y));
       const centerX = boardOffsetX + x * BLOCK_SIZE + BLOCK_SIZE / 2;
       const centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
       
@@ -2175,7 +2512,7 @@ const Brikx = () => {
     const motionMultiplier = prefersReducedMotion ? 0.3 : 1;
     const mobileParticleScale = isMobile ? 1.4 : 1;
     for (let x = 0; x < COLS; x++) {
-      const blockColor = gameState.current.board[y][x];
+      const blockColor = getCellColor(getBoardCell(gameState.current.board, x, y));
       if (!blockColor) continue;
       const centerX = boardOffsetX + x * BLOCK_SIZE + BLOCK_SIZE / 2;
       const centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
@@ -2230,40 +2567,58 @@ const Brikx = () => {
     const linesToClear = [];
     let colorBonusPoints = 0;
     const connectedMatchHighlights = [];
+    const lineClearFlags = new Uint8Array(ROWS);
+    const colorGroups = new Map();
     
     // Find all complete lines
     for (let y = ROWS - 1; y >= 0; y--) {
-      if (board[y].every(cell => cell !== 0)) {
+      let isFullRow = true;
+      colorGroups.clear();
+
+      for (let x = 0; x < COLS; x++) {
+        const cellValue = getBoardCell(board, x, y);
+        if (!cellValue) {
+          isFullRow = false;
+          break;
+        }
+        colorGroups.set(cellValue, (colorGroups.get(cellValue) || 0) + 1);
+      }
+
+      if (isFullRow) {
         linesToClear.push(y);
+        lineClearFlags[y] = 1;
         
         // Calculate color matching bonus
-        const colorGroups = {};
-        board[y].forEach(color => {
-          colorGroups[color] = (colorGroups[color] || 0) + 1;
-        });
-        
-        // eslint-disable-next-line no-loop-func
-        Object.entries(colorGroups).forEach(([groupColor, count]) => {
+        for (const [groupColor, count] of colorGroups.entries()) {
           if (count >= 3) {
             colorBonusPoints += count * 50;
 
-            board[y].forEach((cellColor, x) => {
-              if (cellColor === groupColor) {
+            for (let x = 0; x < COLS; x++) {
+              if (getBoardCell(board, x, y) === groupColor) {
                 connectedMatchHighlights.push({ x, y, color: groupColor, matchSize: count });
               }
-            });
+            }
           }
           if (count === COLS) {
             colorBonusPoints += 500;
           }
-        });
+        }
       }
     }
     
     if (linesToClear.length > 0) {
       const comboChain = lastClearWasCombo ? combo + 1 : 1;
       // Check for perfect clear
-      const isPerfectClear = board.every(row => row.every(cell => cell === 0));
+      let isPerfectClear = true;
+      for (let y = 0; y < ROWS && isPerfectClear; y++) {
+        if (lineClearFlags[y]) continue;
+        for (let x = 0; x < COLS; x++) {
+          if (getBoardCell(board, x, y) !== 0) {
+            isPerfectClear = false;
+            break;
+          }
+        }
+      }
       const isCombo = combo > 0;
       
       // Vibration feedback based on lines cleared
@@ -2291,7 +2646,8 @@ const Brikx = () => {
 
       // Highlight connected color matches with a fast green pulse.
       if (connectedMatchHighlights.length > 0) {
-        gameState.current.connectedMatchFlashes = connectedMatchHighlights.map((match) => ({
+        gameState.current.connectedMatchFlashes.forEach((flash) => returnFxToPool('connectedFlash', flash));
+        gameState.current.connectedMatchFlashes = connectedMatchHighlights.map((match) => getFxFromPool('connectedFlash', {
           ...match,
           life: prefersReducedMotion ? (isMobile ? 7 : 6) : (isMobile ? 10 : 8),
           maxLife: prefersReducedMotion ? (isMobile ? 7 : 6) : (isMobile ? 10 : 8)
@@ -2305,7 +2661,11 @@ const Brikx = () => {
       // Trigger scanline flash strips for each cleared row
       if (!prefersReducedMotion) {
         linesToClear.forEach(y => {
-          gameState.current.scanlineFlash.push({ y, life: isMobile ? 22 : 20, maxLife: isMobile ? 22 : 20 });
+          gameState.current.scanlineFlash.push(getFxFromPool('scanlineFlash', {
+            y,
+            life: isMobile ? 22 : 20,
+            maxLife: isMobile ? 22 : 20
+          }));
         });
         // Chromatic aberration on Tetris or Perfect Clear
         if (linesToClear.length >= 4 || isPerfectClear) {
@@ -2323,10 +2683,23 @@ const Brikx = () => {
       
       // Remove cleared lines after brief delay
       setTimeout(() => {
-        linesToClear.sort((a, b) => b - a).forEach(y => {
-          board.splice(y, 1);
-          board.unshift(Array(COLS).fill(0));
-        });
+        const sourceBoard = gameState.current.board;
+        const targetBoard = boardCompactionBufferRef.current && boardCompactionBufferRef.current.length === ROWS * COLS
+          ? boardCompactionBufferRef.current
+          : new Uint8Array(ROWS * COLS);
+        targetBoard.fill(0);
+
+        let writeRow = ROWS - 1;
+        for (let readRow = ROWS - 1; readRow >= 0; readRow--) {
+          if (lineClearFlags[readRow]) continue;
+          const srcOffset = readRow * COLS;
+          const dstOffset = writeRow * COLS;
+          targetBoard.set(sourceBoard.subarray(srcOffset, srcOffset + COLS), dstOffset);
+          writeRow--;
+        }
+
+        gameState.current.board = targetBoard;
+        boardCompactionBufferRef.current = sourceBoard;
         gameState.current.clearingLines = [];
       }, 150);
       
@@ -2479,7 +2852,7 @@ const Brikx = () => {
       }
       gameState.current.comboBannerDropFrames = 0;
     }
-  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addDebrisParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, playComboTierStinger, vibrate, prefersReducedMotion, isMobile]);
+  }, [level, lines, highScore, combo, lastClearWasCombo, ROWS, COLS, BLOCK_SIZE, addLineParticles, addDebrisParticles, addScorePopup, playLineClearSound, playComboSound, playPerfectClearSound, playLevelUpSound, playComboTierStinger, vibrate, prefersReducedMotion, isMobile, getFxFromPool, returnFxToPool]);
 
   // Spawn new piece
   const spawnPiece = useCallback(() => {
@@ -2503,6 +2876,7 @@ const Brikx = () => {
     
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
       try {
+        finalizeReplayRecording('game_over');
         setGameOver(true);
         setGameStarted(false);
         stopMusic();
@@ -2530,15 +2904,20 @@ const Brikx = () => {
       } catch (error) {
         console.error('Error during game over:', error);
         // Failsafe - still set game over even if stats fail
+        finalizeReplayRecording('game_over');
         setGameOver(true);
         setGameStarted(false);
       }
     }
-  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound]);
+  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound, finalizeReplayRecording]);
 
   // Move piece down
-  const moveDown = useCallback(() => {
+  const moveDown = useCallback((source = 'gravity') => {
     const { board, currentPiece, currentX, currentY } = gameState.current;
+
+    if (source === 'input') {
+      recordReplayInput('soft_drop');
+    }
     
     if (!checkCollision(board, currentPiece, currentX, currentY + 1)) {
       gameState.current.currentY++;
@@ -2589,7 +2968,7 @@ const Brikx = () => {
       clearLines();
       spawnPiece();
     }
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, playCollisionSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, playCollisionSound, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, recordReplayInput]);
 
   // Move piece horizontally
   const moveHorizontal = useCallback((dir) => {
@@ -2598,9 +2977,10 @@ const Brikx = () => {
     
     if (!checkCollision(board, currentPiece, newX, currentY)) {
       gameState.current.currentX = newX;
+      recordReplayInput(dir < 0 ? 'move_left' : 'move_right');
       playPieceSound(currentPiece.type);
     }
-  }, [checkCollision, playPieceSound]);
+  }, [checkCollision, playPieceSound, recordReplayInput]);
 
   // Rotate current piece
   const rotate = useCallback(() => {
@@ -2608,7 +2988,7 @@ const Brikx = () => {
     const rotated = rotatePiece(currentPiece);
     
     if (!checkCollision(board, rotated, currentX, currentY)) {
-      const wasTPiece = currentPiece.shape === SHAPES.T.shape;
+      const wasTPiece = currentPiece.type === 'T';
       gameState.current.currentPiece = rotated;
       
       // Check for T-Spin (3+ corners filled around T)
@@ -2624,7 +3004,7 @@ const Brikx = () => {
           const checkY = currentY + 1 + corner.dy;
           
           if (checkX < 0 || checkX >= COLS || checkY >= ROWS || 
-              (checkY >= 0 && board[checkY][checkX])) {
+              (checkY >= 0 && getBoardCell(board, checkX, checkY))) {
             filledCorners++;
           }
         });
@@ -2658,9 +3038,10 @@ const Brikx = () => {
         }
       }
       
+      recordReplayInput('rotate');
       playRotateSuccessSound();
     }
-  }, [checkCollision, rotatePiece, playRotateSuccessSound, SHAPES.T.shape, COLS, ROWS, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSound, vibrate]);
+  }, [checkCollision, rotatePiece, playRotateSuccessSound, SHAPES.T.shape, COLS, ROWS, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSound, vibrate, recordReplayInput]);
 
   // Hold piece
   const holdCurrentPiece = useCallback(() => {
@@ -2669,6 +3050,7 @@ const Brikx = () => {
     const { currentPiece, holdPiece, board } = gameState.current;
     
     playHoldSound();
+    recordReplayInput('hold');
     
     if (holdPiece) {
       // Swap current with held
@@ -2689,6 +3071,7 @@ const Brikx = () => {
     // Check if held piece can spawn
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
       try {
+        finalizeReplayRecording('game_over');
         setGameOver(true);
         setGameStarted(false);
         stopMusic();
@@ -2696,11 +3079,12 @@ const Brikx = () => {
         vibrate([50, 50, 100]);
       } catch (error) {
         console.error('Error during hold game over:', error);
+        finalizeReplayRecording('game_over');
         setGameOver(true);
         setGameStarted(false);
       }
     }
-  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic, playGameOverSound, vibrate]);
+  }, [getNextPiece, checkCollision, COLS, playHoldSound, stopMusic, playGameOverSound, vibrate, recordReplayInput, finalizeReplayRecording]);
 
   // Hard drop
   const hardDrop = useCallback(() => {
@@ -2710,6 +3094,8 @@ const Brikx = () => {
     while (!checkCollision(board, currentPiece, currentX, currentY + dropDistance + 1)) {
       dropDistance++;
     }
+
+    recordReplayInput('hard_drop');
     
     // Create hard drop trail effect
     if (dropDistance > 0) {
@@ -2718,14 +3104,14 @@ const Brikx = () => {
       
       for (let i = 0; i < trailPositions; i++) {
         const trailY = currentY + Math.floor((dropDistance * i) / trailPositions);
-        gameState.current.hardDropTrail.push({
+        gameState.current.hardDropTrail.push(getFxFromPool('hardDropTrail', {
           piece: currentPiece,
           x: currentX,
           y: trailY,
           life: 15 - i * 2, // Stagger fade
           maxLife: 15,
           offsetX: boardOffsetX
-        });
+        }));
       }
       
       // Add impact particles at landing position
@@ -2774,21 +3160,40 @@ const Brikx = () => {
     mergePiece();
     clearLines();
     spawnPiece();
-  }, [checkCollision, mergePiece, clearLines, spawnPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSfxFile, playSound]);
+  }, [checkCollision, mergePiece, clearLines, spawnPiece, BLOCK_SIZE, MAX_ACTIVE_PARTICLES, getParticleFromPool, playSfxFile, playSound, recordReplayInput, getFxFromPool]);
 
   // Reset game
   const resetGame = useCallback(() => {
-    gameState.current.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+    finalizeReplayRecording('reset');
+
+    const sessionSeed = generateSessionSeed();
+    rngStateRef.current = sessionSeed;
+
+    gameState.current.board = createEmptyBoard();
     gameState.current.currentPiece = null;
     gameState.current.nextPieces = [];
     gameState.current.holdPiece = null;
     gameState.current.canHold = true;
     gameState.current.dropCounter = 0;
     gameState.current.dropInterval = gameMode === 'marathon' ? 800 : 1000;
+    gameState.current.fixedStepAccumulator = 0;
+    gameState.current.simStepMs = FIXED_SIM_STEP_MS;
+    gameState.current.lastTime = 0;
+    gameState.current.lastRenderTime = 0;
+    gameState.current.avgFrameMs = 16.67;
+    gameState.current.frameBudgetScale = 1;
+    gameState.current.frameBudgetLevel = 'balanced';
+    gameState.current.sessionSeed = sessionSeed;
     gameState.current.colorBonusDisplay = null;
     gameState.current.bag = [];
     gameState.current.particles = [];
     gameState.current.bgParticles = [];
+    gameState.current.scorePopups.forEach((popup) => returnFxToPool('scorePopup', popup));
+    gameState.current.hardDropTrail.forEach((trail) => returnFxToPool('hardDropTrail', trail));
+    gameState.current.scanlineFlash.forEach((sf) => returnFxToPool('scanlineFlash', sf));
+    gameState.current.connectedMatchFlashes.forEach((flash) => returnFxToPool('connectedFlash', flash));
+    gameState.current.scorePopups = [];
+    gameState.current.hardDropTrail = [];
     gameState.current.clearingLines = [];
     gameState.current.clearAnimation = 0;
     gameState.current.chromaticAberration = 0;
@@ -2814,9 +3219,11 @@ const Brikx = () => {
     
     // Update statistics
     updateStatistics({ totalGames: statistics.totalGames + 1 });
+
+    beginReplayRecording(sessionSeed);
     
     spawnPiece();
-  }, [spawnPiece, ROWS, COLS, gameMode, updateStatistics, statistics.totalGames]);
+  }, [spawnPiece, ROWS, COLS, gameMode, updateStatistics, statistics.totalGames, beginReplayRecording, finalizeReplayRecording, returnFxToPool]);
 
   const startCountdown = useCallback(() => {
     // Clear game over state when starting countdown
@@ -2936,17 +3343,24 @@ const Brikx = () => {
     setLastClearWasCombo(false);
     setShowQuitConfirm(false);
     
-    gameState.current.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+    gameState.current.board = createEmptyBoard();
     gameState.current.currentPiece = null;
     gameState.current.nextPieces = [];
     gameState.current.holdPiece = null;
     gameState.current.particles = [];
     gameState.current.bgParticles = [];
+    gameState.current.scorePopups.forEach((popup) => returnFxToPool('scorePopup', popup));
+    gameState.current.hardDropTrail.forEach((trail) => returnFxToPool('hardDropTrail', trail));
+    gameState.current.scanlineFlash.forEach((sf) => returnFxToPool('scanlineFlash', sf));
+    gameState.current.connectedMatchFlashes.forEach((flash) => returnFxToPool('connectedFlash', flash));
+    gameState.current.scorePopups = [];
+    gameState.current.hardDropTrail = [];
+    gameState.current.connectedMatchFlashes = [];
     gameState.current.clearingLines = [];
     gameState.current.clearAnimation = 0;
     gameState.current.chromaticAberration = 0;
     gameState.current.scanlineFlash = [];
-  }, [ROWS, COLS, stopMusic]);
+  }, [ROWS, COLS, stopMusic, returnFxToPool]);
 
   // Keyboard controls
   useEffect(() => {
@@ -2970,7 +3384,7 @@ const Brikx = () => {
           moveHorizontal(1);
           break;
         case 'ArrowDown':
-          moveDown();
+          moveDown('input');
           break;
         case 'ArrowUp':
           rotate();
@@ -2986,6 +3400,7 @@ const Brikx = () => {
         case 'p':
         case 'P':
         case 'Escape':
+          recordReplayInput('pause_toggle');
           setIsPaused(prev => !prev);
           break;
         default:
@@ -2995,7 +3410,7 @@ const Brikx = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameStarted, gameOver, isPaused, moveHorizontal, moveDown, rotate, hardDrop, holdCurrentPiece, startCountdown]);
+  }, [gameStarted, gameOver, isPaused, moveHorizontal, moveDown, rotate, hardDrop, holdCurrentPiece, startCountdown, recordReplayInput]);
 
   // Gamepad support
   useEffect(() => {
@@ -3040,6 +3455,7 @@ const Brikx = () => {
 
     // Button 9: Start/Options (Pause)
     if (gamepad.buttons[9]?.pressed && !gpState.lastButtons[9]) {
+      recordReplayInput('pause_toggle');
       setIsPaused(prev => !prev);
     }
 
@@ -3065,7 +3481,7 @@ const Brikx = () => {
     // D-pad down or Left Stick down (Soft drop)
     const downPressed = gamepad.buttons[13]?.pressed || gamepad.axes[1] > 0.5;
     if (downPressed && !gpState.lastAxes[1]) {
-      moveDown();
+      moveDown('input');
     }
 
     // Button 0: A/X (Hard drop)
@@ -3088,7 +3504,7 @@ const Brikx = () => {
     gpState.lastAxes[0] = leftPressed ? -1 : (rightPressed ? 1 : 0);
     gpState.lastAxes[1] = downPressed ? 1 : 0;
     gpState.lastAxes[2] = upPressed ? -1 : 0;
-  }, [gameStarted, gameOver, isPaused, moveHorizontal, moveDown, rotate, hardDrop, resetGame]);
+  }, [gameStarted, gameOver, isPaused, moveHorizontal, moveDown, rotate, hardDrop, resetGame, recordReplayInput]);
 
   // Map tetromino pieces to theme palette colors
   const getThemeBlockColors = useCallback(() => {
@@ -3130,6 +3546,7 @@ const Brikx = () => {
     if (!ctx) return;
     const { board, currentPiece, currentX, currentY, holdPiece, nextPieces, clearingLines, clearAnimation, particles, scorePopups, screenShake, gridAnimation } = gameState.current;
     const avgFrameMs = gameState.current.avgFrameMs || 16.67;
+    const adaptiveBudgetScale = gameState.current.frameBudgetScale || 1;
     const frameStressed = avgFrameMs > (lowPowerMode ? 28 : 22);
     const severelyStressed = avgFrameMs > (lowPowerMode ? 36 : 30);
 
@@ -3246,7 +3663,7 @@ const Brikx = () => {
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Phase 1 theme art overlays: bold visual identity for select themes.
-    if (!severelyStressed && phaseOneArt?.overlay) {
+    if (!severelyStressed && phaseOneArt?.overlay && adaptiveBudgetScale > 0.66) {
       if (phaseOneArt.overlay === 'neon-pulse') {
         ctx.save();
         const beamCount = frameStressed ? 4 : 7;
@@ -3448,11 +3865,12 @@ const Brikx = () => {
     ctx.save();
     // Increased opacity on background shapes
     ctx.globalAlpha = (lowPowerMode ? 0.11 + comboIntensity * 0.12 : 0.2 + comboIntensity * 0.24) * (mobileSunlightMode ? 0.8 : 1);
-    const shapeCount = severelyStressed
+    const baseShapeCount = severelyStressed
       ? (lowPowerMode ? 2 : 3)
       : frameStressed
         ? (lowPowerMode ? 2 : 5)
         : (lowPowerMode ? 3 + Math.floor(combo * 0.2) : 8 + Math.floor(combo * 0.5));
+    const shapeCount = Math.max(2, Math.floor(baseShapeCount * adaptiveBudgetScale));
     for (let i = 0; i < shapeCount; i++) {
       const shapeAnim = (gridAnimation + i * 60) * (0.02 + comboIntensity * 0.03); // Faster during combos
       const x = (i * CANVAS_WIDTH / shapeCount + Math.sin(shapeAnim) * (50 + combo * 5)) % CANVAS_WIDTH;
@@ -3488,7 +3906,7 @@ const Brikx = () => {
     ctx.restore();
 
     // Pattern overlay for premium and seasonal themes
-    if (visualPattern && !severelyStressed) {
+    if (visualPattern && !severelyStressed && adaptiveBudgetScale > 0.62) {
       ctx.save();
       // Increased opacity for better theme visibility
       ctx.globalAlpha = lowPowerMode ? 0.08 : prefersReducedMotion ? 0.12 : 0.22;
@@ -3541,11 +3959,12 @@ const Brikx = () => {
     }
 
     // Animated seasonal and premium motifs
-    if (visualMotif && !severelyStressed) {
+    if (visualMotif && !severelyStressed && adaptiveBudgetScale > 0.58) {
       ctx.save();
-      const motifCount = frameStressed
+      const baseMotifCount = frameStressed
         ? (lowPowerMode ? 4 : 6)
         : (lowPowerMode ? 6 : prefersReducedMotion ? 8 : 22);
+      const motifCount = Math.max(lowPowerMode ? 3 : 4, Math.floor(baseMotifCount * adaptiveBudgetScale));
       for (let i = 0; i < motifCount; i++) {
         const speed = 16 + (i % 5) * 6;
         const baseX = ((i * 73) % CANVAS_WIDTH);
@@ -3653,6 +4072,7 @@ const Brikx = () => {
     
     // Set up translation for main board (centered with left panel space)
     const boardOffsetX = 130; // Space for hold piece panel
+    const themeBlockColors = getThemeBlockColors();
 
     // Draw animated grid background
     ctx.save();
@@ -3685,7 +4105,14 @@ const Brikx = () => {
     const dangerThreshold = 5; // Top 5 rows
     let highestBlock = -1;
     for (let y = 0; y < dangerThreshold; y++) {
-      if (board[y].some(cell => cell)) {
+      let rowHasBlocks = false;
+      for (let x = 0; x < COLS; x++) {
+        if (getBoardCell(board, x, y)) {
+          rowHasBlocks = true;
+          break;
+        }
+      }
+      if (rowHasBlocks) {
         highestBlock = y;
         break;
       }
@@ -3717,12 +4144,15 @@ const Brikx = () => {
       ctx.restore();
     }
     
-    board.forEach((row, y) => {
+    for (let y = 0; y < ROWS; y++) {
       const isClearing = clearingLines.includes(y);
       const alpha = isClearing ? Math.sin((clearAnimation / 15) * Math.PI) : 1;
-      
-      row.forEach((cell, x) => {
+
+      for (let x = 0; x < COLS; x++) {
+        const cell = getBoardCell(board, x, y);
         if (cell) {
+          const pieceType = getPieceTypeFromCell(cell);
+          const cellColor = pieceType ? (themeBlockColors[pieceType] || COLORS[pieceType]) : '#ffffff';
           const blockX = x * BLOCK_SIZE;
           const blockY = y * BLOCK_SIZE;
           const size = BLOCK_SIZE - 2;
@@ -3731,9 +4161,9 @@ const Brikx = () => {
           ctx.globalAlpha = alpha;
           
           // Main block with enhanced glow
-          ctx.shadowColor = cell;
+          ctx.shadowColor = cellColor;
           ctx.shadowBlur = isMobile ? 8.5 : 10;
-          ctx.fillStyle = cell;
+          ctx.fillStyle = cellColor;
           ctx.fillRect(blockX + 1, blockY + 1, size, size);
           ctx.shadowBlur = 0;
           
@@ -3769,8 +4199,8 @@ const Brikx = () => {
           
           ctx.restore();
         }
-      });
-    });
+      }
+    }
 
     // Draw connected block flash highlights for color-match groups.
     if (gameState.current.connectedMatchFlashes.length > 0) {
@@ -3863,7 +4293,7 @@ const Brikx = () => {
         flash.life -= 1;
       });
 
-      gameState.current.connectedMatchFlashes = gameState.current.connectedMatchFlashes.filter((flash) => flash.life > 0);
+      compactActiveEffects(gameState.current.connectedMatchFlashes, 'connectedFlash');
     }
 
     // Draw scanline flash effect (horizontal bright strips on cleared rows)
@@ -3884,11 +4314,12 @@ const Brikx = () => {
         ctx.restore();
         sf.life--;
       });
-      gameState.current.scanlineFlash = gameState.current.scanlineFlash.filter(sf => sf.life > 0);
+      compactActiveEffects(gameState.current.scanlineFlash, 'scanlineFlash');
     }
 
     // Draw particles
-    const frameParticleCap = severelyStressed ? 140 : frameStressed ? 240 : MAX_ACTIVE_PARTICLES;
+    const baseFrameParticleCap = severelyStressed ? 140 : frameStressed ? 240 : MAX_ACTIVE_PARTICLES;
+    const frameParticleCap = Math.max(100, Math.floor(baseFrameParticleCap * adaptiveBudgetScale));
     if (particles.length > frameParticleCap) {
       const overflow = particles.splice(0, particles.length - frameParticleCap);
       overflow.forEach(p => returnParticleToPool(p));
@@ -4276,11 +4707,10 @@ const Brikx = () => {
       });
       
       // Remove dead trails
-      gameState.current.hardDropTrail = gameState.current.hardDropTrail.filter(t => t.life > 0);
+      compactActiveEffects(gameState.current.hardDropTrail, 'hardDropTrail');
     }
 
     // Apply theme colors to pieces for consistent visual theming
-    const themeBlockColors = getThemeBlockColors();
     if (currentPiece) {
       currentPiece.color = themeBlockColors[currentPiece.type] || currentPiece.color;
     }
@@ -4509,7 +4939,7 @@ const Brikx = () => {
     });
     
     // Remove dead popups
-    gameState.current.scorePopups = scorePopups.filter(p => p.life > 0);
+    compactActiveEffects(gameState.current.scorePopups, 'scorePopup');
 
     // Draw grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
@@ -4924,7 +5354,9 @@ const Brikx = () => {
       const { board } = gameState.current;
       for (let y = 0; y < ROWS; y++) {
         for (let x = 0; x < COLS; x++) {
-          if (board[y][x]) {
+          const cellValue = getBoardCell(board, x, y);
+          if (cellValue) {
+            const glowColor = getCellColor(cellValue) || '#ffffff';
             const centerX = x * BLOCK_SIZE + BLOCK_SIZE / 2;
             const centerY = y * BLOCK_SIZE + BLOCK_SIZE / 2;
             
@@ -4934,7 +5366,7 @@ const Brikx = () => {
                 centerX, centerY, 0,
                 centerX, centerY, BLOCK_SIZE * scale
               );
-              gradient.addColorStop(0, board[y][x]);
+              gradient.addColorStop(0, glowColor);
               gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
               ctx.fillStyle = gradient;
               ctx.fillRect(centerX - BLOCK_SIZE, centerY - BLOCK_SIZE, BLOCK_SIZE * 2, BLOCK_SIZE * 2);
@@ -4946,7 +5378,7 @@ const Brikx = () => {
       ctx.restore();
       gameState.current.pieceLockAnimation--;
     }
-  }, [checkCollision, ghostHintMode, calculateSmartGhostPlacements, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES, isMobile]);
+  }, [checkCollision, ghostHintMode, calculateSmartGhostPlacements, isPaused, combo, lastClearWasCombo, CANVAS_WIDTH, CANVAS_HEIGHT, BOARD_WIDTH, BOARD_HEIGHT, BLOCK_SIZE, COLS, ROWS, getComboColor, returnParticleToPool, currentTheme, prefersReducedMotion, lowPowerMode, initBgParticles, MAX_ACTIVE_PARTICLES, isMobile, compactActiveEffects]);
 
   // Game loop
   useEffect(() => {
@@ -4954,11 +5386,20 @@ const Brikx = () => {
 
     let animationFrameId;
     const frameInterval = lowPowerMode ? 1000 / 30 : 1000 / 60;
+    gameState.current.fixedStepAccumulator = 0;
+    gameState.current.lastTime = 0;
+    gameState.current.lastRenderTime = 0;
     
     const gameLoop = (time = 0) => {
-      const deltaTime = time - gameState.current.lastTime;
+      if (!gameState.current.lastTime) {
+        gameState.current.lastTime = time;
+      }
+
+      let deltaTime = time - gameState.current.lastTime;
+      if (deltaTime < 0) deltaTime = 0;
+      if (deltaTime > 250) deltaTime = 250;
       gameState.current.lastTime = time;
-      gameState.current.dropCounter += deltaTime;
+      gameState.current.fixedStepAccumulator += deltaTime;
 
       // Handle gamepad input only when a controller is connected.
       if (gamepadConnected) {
@@ -4969,9 +5410,33 @@ const Brikx = () => {
       const frameCost = deltaTime > 0 ? deltaTime : 16.67;
       gameState.current.avgFrameMs = (gameState.current.avgFrameMs * 0.9) + (frameCost * 0.1);
 
-      if (gameState.current.dropCounter > gameState.current.dropInterval) {
-        moveDown();
-        gameState.current.dropCounter = 0;
+      // Adaptive frame budget tiering keeps VFX responsive on slower hardware.
+      const avgFrameMs = gameState.current.avgFrameMs;
+      if (avgFrameMs > (lowPowerMode ? 34 : 28)) {
+        gameState.current.frameBudgetScale = 0.65;
+        gameState.current.frameBudgetLevel = 'stressed';
+      } else if (avgFrameMs > (lowPowerMode ? 26 : 20)) {
+        gameState.current.frameBudgetScale = 0.82;
+        gameState.current.frameBudgetLevel = 'balanced';
+      } else {
+        gameState.current.frameBudgetScale = 1;
+        gameState.current.frameBudgetLevel = 'full';
+      }
+
+      let simSteps = 0;
+      while (gameState.current.fixedStepAccumulator >= gameState.current.simStepMs && simSteps < MAX_SIM_STEPS_PER_FRAME) {
+        gameState.current.dropCounter += gameState.current.simStepMs;
+        if (gameState.current.dropCounter >= gameState.current.dropInterval) {
+          moveDown('gravity');
+          gameState.current.dropCounter -= gameState.current.dropInterval;
+        }
+
+        gameState.current.fixedStepAccumulator -= gameState.current.simStepMs;
+        simSteps++;
+      }
+
+      if (simSteps === MAX_SIM_STEPS_PER_FRAME && gameState.current.fixedStepAccumulator >= gameState.current.simStepMs) {
+        gameState.current.fixedStepAccumulator = 0;
       }
 
       if (time - gameState.current.lastRenderTime >= frameInterval) {
@@ -5090,7 +5555,10 @@ const Brikx = () => {
       let callback, vibratePattern, enableHold, holdCallback;
       switch(index) {
         case 0: // Pause
-          callback = () => setIsPaused(true);
+          callback = () => {
+            recordReplayInput('pause_toggle');
+            setIsPaused(true);
+          };
           vibratePattern = 20;
           break;
         case 1: // Rotate
@@ -5104,10 +5572,10 @@ const Brikx = () => {
           holdCallback = () => moveHorizontal(-1);
           break;
         case 3: // Down
-          callback = () => moveDown();
+          callback = () => moveDown('input');
           vibratePattern = 8;
           enableHold = true;
-          holdCallback = () => moveDown();
+          holdCallback = () => moveDown('input');
           break;
         case 4: // Right
           callback = () => moveHorizontal(1);
@@ -5147,7 +5615,7 @@ const Brikx = () => {
         button.removeEventListener('touchcancel', endListener);
       });
     };
-  }, [isMobile, gameStarted, gameOver, isPaused, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate]);
+  }, [isMobile, gameStarted, gameOver, isPaused, rotate, moveHorizontal, moveDown, holdCurrentPiece, hardDrop, vibrate, recordReplayInput]);
 
   // Swipe gesture detection on canvas
   useEffect(() => {
