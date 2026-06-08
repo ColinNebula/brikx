@@ -1062,6 +1062,7 @@ const Brikx = () => {
   // Sound System using Web Audio API
   const audioContext = useRef(null);
   const sfxAudioCacheRef = useRef(new Map());
+  const activeSfxPlayersRef = useRef(new Set());
   
   // MP3 Music Player System
   const musicPlayerRef = useRef(null);
@@ -1122,13 +1123,37 @@ const Brikx = () => {
 
       const audio = baseAudio.cloneNode(true);
       audio.volume = Math.min(1, Math.max(0, sfxVolume * volumeMultiplier));
+
+      const unregisterAudio = () => {
+        activeSfxPlayersRef.current.delete(audio);
+        audio.removeEventListener('ended', unregisterAudio);
+        audio.removeEventListener('error', unregisterAudio);
+      };
+
+      activeSfxPlayersRef.current.add(audio);
+      audio.addEventListener('ended', unregisterAudio);
+      audio.addEventListener('error', unregisterAudio);
+
       audio.play().catch(err => {
+        unregisterAudio();
         console.warn(`${label} blocked:`, err.message);
       });
     } catch (err) {
       console.error(`Error playing ${label.toLowerCase()}:`, err);
     }
   }, [soundEnabled, sfxVolume, ensureAudioContextActive]);
+
+  const stopActiveSfx = useCallback(() => {
+    activeSfxPlayersRef.current.forEach((audio) => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (err) {
+        // Ignore individual media teardown errors so one bad node doesn't block cleanup.
+      }
+    });
+    activeSfxPlayersRef.current.clear();
+  }, []);
 
   useEffect(() => {
     gameStartedRef.current = gameStarted;
@@ -5857,7 +5882,21 @@ const Brikx = () => {
       if (musicPlayerRef.current) {
         musicPlayerRef.current.pause();
       }
+      // Mobile should fully silence in-flight game SFX on pause.
+      if (isMobile) {
+        stopActiveSfx();
+        if (audioContext.current && audioContext.current.state === 'running') {
+          audioContext.current.suspend().catch((err) => {
+            console.warn('Audio context suspend failed:', err?.message || err);
+          });
+        }
+      }
     } else if (musicEnabled) {
+      if (isMobile && audioContext.current && audioContext.current.state === 'suspended') {
+        audioContext.current.resume().catch((err) => {
+          console.warn('Audio context resume after pause failed:', err?.message || err);
+        });
+      }
       // Resume or start music
       if (musicPlayerRef.current && musicPlayerRef.current.paused) {
         // Resume existing track
@@ -5870,7 +5909,7 @@ const Brikx = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPaused, gameStarted, gameOver, musicEnabled]);
+  }, [isPaused, gameStarted, gameOver, musicEnabled, isMobile, stopActiveSfx]);
 
   // Auto-pause when tab loses focus (desktop only)
   useEffect(() => {
