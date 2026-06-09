@@ -609,6 +609,30 @@ const formatModeLabel = (mode) => {
   }
 };
 
+const PROFILE_FRAME_OPTIONS = {
+  core: { label: 'Core Ring', icon: '◉', unlocked: true },
+  neon: { label: 'Neon Halo', icon: '◎', unlocked: true },
+  pulse: { label: 'Pulse Crown', icon: '✦', achievement: 'combo5' },
+  titan: { label: 'Titan Frame', icon: '⬢', achievement: 'piecesPlacer' },
+  apex: { label: 'Apex Crest', icon: '✪', achievement: 'scorer10000' }
+};
+
+const PROFILE_TITLE_OPTIONS = {
+  rookie: { label: 'Rookie Driver', unlocked: true },
+  lineScout: { label: 'Line Scout', achievement: 'lines10' },
+  comboPilot: { label: 'Combo Pilot', achievement: 'combo5' },
+  marathonMind: { label: 'Marathon Mind', achievement: 'marathoner' },
+  legend: { label: 'Arena Legend', achievement: 'scorer10000' }
+};
+
+const PROFILE_BADGE_OPTIONS = {
+  starter: { label: 'Starter', icon: '🌱', unlocked: true },
+  century: { label: 'Century', icon: '💯', achievement: 'scorer100' },
+  architect: { label: 'Architect', icon: '🧱', achievement: 'piecesPlacer' },
+  lightning: { label: 'Lightning', icon: '⚡', achievement: 'speedster' },
+  crown: { label: 'Crown', icon: '👑', achievement: 'scorer10000' }
+};
+
 const Brikx = () => {
   // Safe localStorage operations with validation
   const safeGetItem = (key, defaultValue = '') => {
@@ -676,6 +700,18 @@ const Brikx = () => {
   });
   const [playerAvatar, setPlayerAvatar] = useState(() => {
     return safeGetItem('brickxPlayerAvatar', '🎮');
+  });
+  const [playerProfileFrame, setPlayerProfileFrame] = useState(() => {
+    const saved = safeGetItem('brickxPlayerFrame', 'core');
+    return PROFILE_FRAME_OPTIONS[saved] ? saved : 'core';
+  });
+  const [playerProfileTitle, setPlayerProfileTitle] = useState(() => {
+    const saved = safeGetItem('brickxPlayerTitle', 'rookie');
+    return PROFILE_TITLE_OPTIONS[saved] ? saved : 'rookie';
+  });
+  const [playerProfileBadge, setPlayerProfileBadge] = useState(() => {
+    const saved = safeGetItem('brickxPlayerBadge', 'starter');
+    return PROFILE_BADGE_OPTIONS[saved] ? saved : 'starter';
   });
   const [leaderboardEntries, setLeaderboardEntries] = useState(() => {
     const stored = safeGetItem(LEADERBOARD_STORAGE_KEY, '[]');
@@ -1002,6 +1038,44 @@ const Brikx = () => {
   }, [achievements]);
   
   const unlockedAvatars = getUnlockedAvatars();
+
+  const getUnlockedProfileCosmetics = useCallback((catalog) => {
+    return Object.keys(catalog).filter((itemKey) => {
+      const config = catalog[itemKey];
+      if (config.unlocked) return true;
+      if (config.achievement && achievements[config.achievement]?.unlocked) return true;
+      return false;
+    });
+  }, [achievements]);
+
+  const unlockedProfileFrames = getUnlockedProfileCosmetics(PROFILE_FRAME_OPTIONS);
+  const unlockedProfileTitles = getUnlockedProfileCosmetics(PROFILE_TITLE_OPTIONS);
+  const unlockedProfileBadges = getUnlockedProfileCosmetics(PROFILE_BADGE_OPTIONS);
+
+  const selectedProfileFrameConfig = PROFILE_FRAME_OPTIONS[playerProfileFrame] || PROFILE_FRAME_OPTIONS.core;
+  const selectedProfileTitleConfig = PROFILE_TITLE_OPTIONS[playerProfileTitle] || PROFILE_TITLE_OPTIONS.rookie;
+  const selectedProfileBadgeConfig = PROFILE_BADGE_OPTIONS[playerProfileBadge] || PROFILE_BADGE_OPTIONS.starter;
+
+  useEffect(() => {
+    if (!unlockedProfileFrames.includes(playerProfileFrame)) {
+      setPlayerProfileFrame('core');
+      safeSetItem('brickxPlayerFrame', 'core');
+    }
+  }, [playerProfileFrame, unlockedProfileFrames]);
+
+  useEffect(() => {
+    if (!unlockedProfileTitles.includes(playerProfileTitle)) {
+      setPlayerProfileTitle('rookie');
+      safeSetItem('brickxPlayerTitle', 'rookie');
+    }
+  }, [playerProfileTitle, unlockedProfileTitles]);
+
+  useEffect(() => {
+    if (!unlockedProfileBadges.includes(playerProfileBadge)) {
+      setPlayerProfileBadge('starter');
+      safeSetItem('brickxPlayerBadge', 'starter');
+    }
+  }, [playerProfileBadge, unlockedProfileBadges]);
 
   // Particle Pooling System for Performance
   const particlePool = useRef([]);
@@ -1765,16 +1839,230 @@ const Brikx = () => {
   }, [lowPowerMode, prefersReducedMotion]);
 
   // Save profile changes
-  const saveProfile = useCallback((name, avatar) => {
+  const saveProfile = useCallback((name, avatar, loadout = {}) => {
     const sanitizedName = name.trim() || 'Player';
     // Only allow unlocked avatars
     const unlocked = getUnlockedAvatars();
     const sanitizedAvatar = unlocked.includes(avatar) ? avatar : '🎮';
+    const requestedFrame = loadout.frame ?? playerProfileFrame;
+    const requestedTitle = loadout.title ?? playerProfileTitle;
+    const requestedBadge = loadout.badge ?? playerProfileBadge;
+    const sanitizedFrame = unlockedProfileFrames.includes(requestedFrame) ? requestedFrame : 'core';
+    const sanitizedTitle = unlockedProfileTitles.includes(requestedTitle) ? requestedTitle : 'rookie';
+    const sanitizedBadge = unlockedProfileBadges.includes(requestedBadge) ? requestedBadge : 'starter';
+
     setPlayerName(sanitizedName);
     setPlayerAvatar(sanitizedAvatar);
+    setPlayerProfileFrame(sanitizedFrame);
+    setPlayerProfileTitle(sanitizedTitle);
+    setPlayerProfileBadge(sanitizedBadge);
+
     safeSetItem('brickxPlayerName', sanitizedName);
     safeSetItem('brickxPlayerAvatar', sanitizedAvatar);
-  }, [getUnlockedAvatars]);
+    safeSetItem('brickxPlayerFrame', sanitizedFrame);
+    safeSetItem('brickxPlayerTitle', sanitizedTitle);
+    safeSetItem('brickxPlayerBadge', sanitizedBadge);
+  }, [getUnlockedAvatars, playerProfileFrame, playerProfileTitle, playerProfileBadge, unlockedProfileFrames, unlockedProfileTitles, unlockedProfileBadges]);
+
+  const downloadProfileCard = useCallback(async () => {
+    try {
+      const width = 1080;
+      const height = 1350;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Background gradient
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, '#08122b');
+      bg.addColorStop(0.5, '#11264a');
+      bg.addColorStop(1, '#1a1038');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Decorative glow orbs
+      const orbA = ctx.createRadialGradient(width * 0.18, height * 0.16, 10, width * 0.18, height * 0.16, 280);
+      orbA.addColorStop(0, 'rgba(0, 240, 240, 0.35)');
+      orbA.addColorStop(1, 'rgba(0, 240, 240, 0)');
+      ctx.fillStyle = orbA;
+      ctx.fillRect(0, 0, width, height);
+
+      const orbB = ctx.createRadialGradient(width * 0.82, height * 0.2, 20, width * 0.82, height * 0.2, 240);
+      orbB.addColorStop(0, 'rgba(255, 0, 220, 0.24)');
+      orbB.addColorStop(1, 'rgba(255, 0, 220, 0)');
+      ctx.fillStyle = orbB;
+      ctx.fillRect(0, 0, width, height);
+
+      // Card container
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.strokeStyle = 'rgba(0, 240, 240, 0.45)';
+      ctx.lineWidth = 4;
+      const cardX = 84;
+      const cardY = 88;
+      const cardW = width - 168;
+      const cardH = height - 176;
+      ctx.beginPath();
+      ctx.roundRect(cardX, cardY, cardW, cardH, 28);
+      ctx.fill();
+      ctx.stroke();
+
+      // Header
+      ctx.fillStyle = '#8ef6ff';
+      ctx.font = '700 48px Exo 2, Arial, sans-serif';
+      ctx.fillText('BRIKX PLAYER CARD', cardX + 48, cardY + 78);
+
+      // Avatar badge area
+      const avatarCenterX = cardX + 170;
+      const avatarCenterY = cardY + 258;
+      const ringColorMap = {
+        core: 'rgba(0, 240, 240, 0.95)',
+        neon: 'rgba(255, 105, 180, 0.95)',
+        pulse: 'rgba(255, 180, 70, 0.95)',
+        titan: 'rgba(130, 215, 255, 0.95)',
+        apex: 'rgba(255, 220, 120, 0.95)'
+      };
+      const ringColor = ringColorMap[playerProfileFrame] || ringColorMap.core;
+
+      ctx.fillStyle = 'rgba(8, 8, 20, 0.92)';
+      ctx.beginPath();
+      ctx.arc(avatarCenterX, avatarCenterY, 88, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(avatarCenterX, avatarCenterY, 92, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '72px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(playerAvatar || '🎮', avatarCenterX, avatarCenterY + 4);
+
+      // Player identity block
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 56px Exo 2, Arial, sans-serif';
+      ctx.fillText((playerName || 'Player').slice(0, 15), cardX + 290, cardY + 236);
+
+      ctx.fillStyle = '#a8f8ff';
+      ctx.font = '500 34px Exo 2, Arial, sans-serif';
+      ctx.fillText(selectedProfileTitleConfig.label, cardX + 290, cardY + 286);
+
+      ctx.fillStyle = '#ffe8aa';
+      ctx.font = '500 30px Exo 2, Arial, sans-serif';
+      ctx.fillText(`${selectedProfileBadgeConfig.icon} ${selectedProfileBadgeConfig.label}`, cardX + 290, cardY + 332);
+
+      // Stats panel
+      const statStartY = cardY + 410;
+      ctx.strokeStyle = 'rgba(0, 240, 240, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cardX + 48, statStartY - 24);
+      ctx.lineTo(cardX + cardW - 48, statStartY - 24);
+      ctx.stroke();
+
+      const achievementCount = Object.values(achievements || {}).filter((a) => a && a.unlocked).length;
+      const statsRows = [
+        ['High Score', (highScore || 0).toLocaleString()],
+        ['Total Games', (statistics?.totalGames || 0).toLocaleString()],
+        ['Total Lines', (statistics?.totalLines || 0).toLocaleString()],
+        ['Best Combo', `${statistics?.bestCombo || 0}x`],
+        ['Achievements', `${achievementCount}/${Object.keys(achievementsList).length}`],
+        ['Frame', selectedProfileFrameConfig.label]
+      ];
+
+      ctx.font = '500 30px Exo 2, Arial, sans-serif';
+      statsRows.forEach((row, index) => {
+        const y = statStartY + (index * 90);
+        ctx.fillStyle = '#8cc6d6';
+        ctx.fillText(row[0].toUpperCase(), cardX + 56, y);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 40px Exo 2, Arial, sans-serif';
+        ctx.fillText(row[1], cardX + 420, y + 2);
+        ctx.font = '500 30px Exo 2, Arial, sans-serif';
+      });
+
+      // Footer
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.font = '500 24px Exo 2, Arial, sans-serif';
+      ctx.fillText(`Generated ${new Date().toLocaleDateString()}`, cardX + 56, cardY + cardH - 42);
+
+      const safeName = (playerName || 'player').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'player';
+      const fileName = `brikx-profile-${safeName}.png`;
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/png');
+      });
+
+      if (!blob) {
+        throw new Error('Could not encode profile card image.');
+      }
+
+      const triggerDownload = () => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+
+      const canAttemptNativeShare =
+        isMobile &&
+        typeof navigator !== 'undefined' &&
+        typeof navigator.share === 'function' &&
+        typeof File !== 'undefined';
+
+      if (canAttemptNativeShare) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        const sharePayload = {
+          title: 'BRIKX Player Card',
+          text: `${playerName || 'Player'}'s BRIKX profile card`,
+          files: [file]
+        };
+
+        const canShareFiles = typeof navigator.canShare !== 'function' || navigator.canShare({ files: [file] });
+
+        if (canShareFiles) {
+          try {
+            await navigator.share(sharePayload);
+            playSound('menuClick', 700, 0.12, 0.14);
+            return;
+          } catch (shareError) {
+            if (shareError?.name === 'AbortError') {
+              return;
+            }
+            console.warn('Native share failed, falling back to download:', shareError?.message || shareError);
+          }
+        }
+      }
+
+      triggerDownload();
+
+      playSound('menuClick', 700, 0.12, 0.14);
+    } catch (error) {
+      console.error('Unable to generate profile card image:', error);
+    }
+  }, [
+    achievements,
+    achievementsList,
+    highScore,
+    playerAvatar,
+    playerName,
+    playerProfileFrame,
+    isMobile,
+    playSound,
+    selectedProfileBadgeConfig,
+    selectedProfileFrameConfig,
+    selectedProfileTitleConfig,
+    statistics
+  ]);
 
   const buildCloudProfileSnapshot = useCallback(() => {
     return {
@@ -1782,6 +2070,9 @@ const Brikx = () => {
       updatedAt: new Date().toISOString(),
       playerName,
       playerAvatar,
+      playerProfileFrame,
+      playerProfileTitle,
+      playerProfileBadge,
       highScore,
       leaderboardEntries: normalizeLeaderboardEntries(leaderboardEntries),
       statistics,
@@ -1801,6 +2092,9 @@ const Brikx = () => {
   }, [
     playerName,
     playerAvatar,
+    playerProfileFrame,
+    playerProfileTitle,
+    playerProfileBadge,
     highScore,
     leaderboardEntries,
     statistics,
@@ -1830,11 +2124,20 @@ const Brikx = () => {
     const normalizedAvatar = typeof snapshot.playerAvatar === 'string' && snapshot.playerAvatar.trim()
       ? snapshot.playerAvatar.trim().slice(0, 8)
       : '🎮';
+    const normalizedProfileFrame = PROFILE_FRAME_OPTIONS[snapshot.playerProfileFrame] ? snapshot.playerProfileFrame : 'core';
+    const normalizedProfileTitle = PROFILE_TITLE_OPTIONS[snapshot.playerProfileTitle] ? snapshot.playerProfileTitle : 'rookie';
+    const normalizedProfileBadge = PROFILE_BADGE_OPTIONS[snapshot.playerProfileBadge] ? snapshot.playerProfileBadge : 'starter';
 
     setPlayerName(normalizedName);
     setPlayerAvatar(normalizedAvatar);
+    setPlayerProfileFrame(normalizedProfileFrame);
+    setPlayerProfileTitle(normalizedProfileTitle);
+    setPlayerProfileBadge(normalizedProfileBadge);
     safeSetItem('brickxPlayerName', normalizedName);
     safeSetItem('brickxPlayerAvatar', normalizedAvatar);
+    safeSetItem('brickxPlayerFrame', normalizedProfileFrame);
+    safeSetItem('brickxPlayerTitle', normalizedProfileTitle);
+    safeSetItem('brickxPlayerBadge', normalizedProfileBadge);
 
     if (Number.isFinite(snapshot.highScore)) {
       const normalizedHighScore = Math.max(0, Number.parseInt(snapshot.highScore, 10) || 0);
@@ -7090,8 +7393,12 @@ const Brikx = () => {
                     </div>
                     
                     <div className="immersive-player-info">
-                      <span className="player-avatar-small">{playerAvatar}</span>
+                      <span className={`player-avatar-small profile-frame-chip frame-${playerProfileFrame}`}>{playerAvatar}</span>
                       <span className="player-name-small">{playerName}</span>
+                      <div className="player-meta-small">
+                        <span className="player-title-small">{selectedProfileTitleConfig.label}</span>
+                        <span className="player-badge-small">{selectedProfileBadgeConfig.icon} {selectedProfileBadgeConfig.label}</span>
+                      </div>
                     </div>
                     
                     <button className="immersive-play-btn" onClick={() => { setShowModeSelect(true); queueMenuClickSound(); }}>
@@ -7498,11 +7805,28 @@ const Brikx = () => {
                   type="text"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value.slice(0, 15))}
-                  onBlur={() => saveProfile(playerName, playerAvatar)}
+                  onBlur={() => saveProfile(playerName, playerAvatar, {
+                    frame: playerProfileFrame,
+                    title: playerProfileTitle,
+                    badge: playerProfileBadge
+                  })}
                   className="profile-input"
                   maxLength={15}
                   placeholder="Enter your name"
                 />
+              </div>
+
+              <div className="profile-section">
+                <h3 className="settings-heading">Loadout Preview</h3>
+                <div className="profile-loadout-preview">
+                  <div className={`profile-avatar-large frame-${playerProfileFrame}`}>{playerAvatar}</div>
+                  <div className="profile-meta-preview">
+                    <div className="profile-preview-name">{playerName}</div>
+                    <div className="profile-preview-title">{selectedProfileTitleConfig.label}</div>
+                    <div className="profile-preview-badge">{selectedProfileBadgeConfig.icon} {selectedProfileBadgeConfig.label}</div>
+                    <div className="profile-preview-frame">Frame: {selectedProfileFrameConfig.label}</div>
+                  </div>
+                </div>
               </div>
               
               <div className="profile-section">
@@ -7519,8 +7843,11 @@ const Brikx = () => {
                         className={`avatar-option ${playerAvatar === avatar ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`}
                         onClick={() => {
                           if (isUnlocked) {
-                            setPlayerAvatar(avatar);
-                            saveProfile(playerName, avatar);
+                            saveProfile(playerName, avatar, {
+                              frame: playerProfileFrame,
+                              title: playerProfileTitle,
+                              badge: playerProfileBadge
+                            });
                             playSound('menuClick', 600, 0.1);
                           }
                         }}
@@ -7534,17 +7861,125 @@ const Brikx = () => {
                   })}
                 </div>
               </div>
+
+              <div className="profile-section">
+                <h3 className="settings-heading">Avatar Frame ({unlockedProfileFrames.length}/{Object.keys(PROFILE_FRAME_OPTIONS).length} Unlocked)</h3>
+                <div className="profile-loadout-grid">
+                  {Object.keys(PROFILE_FRAME_OPTIONS).map((frameKey) => {
+                    const frame = PROFILE_FRAME_OPTIONS[frameKey];
+                    const isUnlocked = unlockedProfileFrames.includes(frameKey);
+                    const achievementName = frame.achievement ? achievementsList[frame.achievement]?.name : null;
+
+                    return (
+                      <button
+                        key={frameKey}
+                        className={`profile-loadout-option ${playerProfileFrame === frameKey ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`}
+                        onClick={() => {
+                          if (!isUnlocked) return;
+                          saveProfile(playerName, playerAvatar, {
+                            frame: frameKey,
+                            title: playerProfileTitle,
+                            badge: playerProfileBadge
+                          });
+                          playSound('menuClick', 600, 0.1);
+                        }}
+                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        disabled={!isUnlocked}
+                      >
+                        <span className="profile-loadout-icon">{frame.icon}</span>
+                        <span className="profile-loadout-name">{frame.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h3 className="settings-heading">Player Title ({unlockedProfileTitles.length}/{Object.keys(PROFILE_TITLE_OPTIONS).length} Unlocked)</h3>
+                <div className="profile-loadout-grid">
+                  {Object.keys(PROFILE_TITLE_OPTIONS).map((titleKey) => {
+                    const title = PROFILE_TITLE_OPTIONS[titleKey];
+                    const isUnlocked = unlockedProfileTitles.includes(titleKey);
+                    const achievementName = title.achievement ? achievementsList[title.achievement]?.name : null;
+
+                    return (
+                      <button
+                        key={titleKey}
+                        className={`profile-loadout-option ${playerProfileTitle === titleKey ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`}
+                        onClick={() => {
+                          if (!isUnlocked) return;
+                          saveProfile(playerName, playerAvatar, {
+                            frame: playerProfileFrame,
+                            title: titleKey,
+                            badge: playerProfileBadge
+                          });
+                          playSound('menuClick', 600, 0.1);
+                        }}
+                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        disabled={!isUnlocked}
+                      >
+                        <span className="profile-loadout-name">{title.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h3 className="settings-heading">Profile Badge ({unlockedProfileBadges.length}/{Object.keys(PROFILE_BADGE_OPTIONS).length} Unlocked)</h3>
+                <div className="profile-loadout-grid">
+                  {Object.keys(PROFILE_BADGE_OPTIONS).map((badgeKey) => {
+                    const badge = PROFILE_BADGE_OPTIONS[badgeKey];
+                    const isUnlocked = unlockedProfileBadges.includes(badgeKey);
+                    const achievementName = badge.achievement ? achievementsList[badge.achievement]?.name : null;
+
+                    return (
+                      <button
+                        key={badgeKey}
+                        className={`profile-loadout-option ${playerProfileBadge === badgeKey ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`}
+                        onClick={() => {
+                          if (!isUnlocked) return;
+                          saveProfile(playerName, playerAvatar, {
+                            frame: playerProfileFrame,
+                            title: playerProfileTitle,
+                            badge: badgeKey
+                          });
+                          playSound('menuClick', 600, 0.1);
+                        }}
+                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        disabled={!isUnlocked}
+                      >
+                        <span className="profile-loadout-icon">{badge.icon}</span>
+                        <span className="profile-loadout-name">{badge.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="profile-loadout-note">Tip: cosmetics unlock automatically when their achievement unlocks.</div>
+              </div>
               
-              <button 
-                className="save-profile-btn"
-                onClick={() => {
-                  saveProfile(playerName, playerAvatar);
-                  setShowProfile(false);
-                  playSound('menuClick', 600, 0.1);
-                }}
-              >
-                💾 Save Profile
-              </button>
+              <div className="profile-action-row">
+                <button
+                  className="save-profile-btn profile-share-btn"
+                  onClick={downloadProfileCard}
+                >
+                  {isMobile ? '📤 Share Card' : '🖼️ Download Card'}
+                </button>
+                <button 
+                  className="save-profile-btn"
+                  onClick={() => {
+                    saveProfile(playerName, playerAvatar, {
+                      frame: playerProfileFrame,
+                      title: playerProfileTitle,
+                      badge: playerProfileBadge
+                    });
+                    setShowProfile(false);
+                    playSound('menuClick', 600, 0.1);
+                  }}
+                >
+                  💾 Save Profile
+                </button>
+              </div>
             </div>
           </div>
         )}

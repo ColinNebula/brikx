@@ -2398,6 +2398,53 @@
   text-shadow: 0 0 10px rgba(0, 240, 240, 0.5);
 }
 
+.player-meta-small {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.player-title-small,
+.player-badge-small {
+  font-size: 0.8rem;
+  color: #d8fcff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(0, 240, 240, 0.2);
+}
+
+.profile-frame-chip {
+  border-width: 2px;
+}
+
+.frame-core {
+  border-color: rgba(0, 240, 240, 0.45);
+  box-shadow: 0 0 12px rgba(0, 240, 240, 0.22);
+}
+
+.frame-neon {
+  border-color: rgba(255, 105, 180, 0.6);
+  box-shadow: 0 0 14px rgba(255, 105, 180, 0.26), 0 0 20px rgba(0, 240, 240, 0.22);
+}
+
+.frame-pulse {
+  border-color: rgba(255, 180, 70, 0.68);
+  box-shadow: 0 0 12px rgba(255, 180, 70, 0.28), inset 0 0 12px rgba(255, 180, 70, 0.12);
+}
+
+.frame-titan {
+  border-color: rgba(130, 215, 255, 0.72);
+  box-shadow: 0 0 12px rgba(130, 215, 255, 0.28), inset 0 0 10px rgba(130, 215, 255, 0.15);
+}
+
+.frame-apex {
+  border-color: rgba(255, 220, 120, 0.8);
+  box-shadow: 0 0 16px rgba(255, 220, 120, 0.36), 0 0 22px rgba(255, 120, 120, 0.2);
+}
+
 /* Immersive Play Button */
 .immersive-play-btn {
   position: relative;
@@ -3177,6 +3224,116 @@
   box-shadow: 0 8px 30px rgba(0, 240, 240, 0.3);
 }
 
+.profile-section {
+  margin-bottom: 24px;
+}
+
+.profile-loadout-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(0, 240, 240, 0.2);
+}
+
+.profile-meta-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-preview-name {
+  font-size: 1.1rem;
+  color: #00f0f0;
+  font-weight: 700;
+}
+
+.profile-preview-title {
+  font-size: 0.9rem;
+  color: #d0f8ff;
+}
+
+.profile-preview-badge {
+  font-size: 0.82rem;
+  color: #fff;
+}
+
+.profile-preview-frame {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.profile-loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.profile-loadout-option {
+  min-height: 58px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.profile-loadout-option:hover {
+  border-color: rgba(0, 240, 240, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.profile-loadout-option.selected {
+  border-color: rgba(0, 240, 240, 0.85);
+  background: linear-gradient(135deg, rgba(255, 0, 255, 0.24), rgba(0, 255, 255, 0.24));
+  box-shadow: 0 0 16px rgba(0, 240, 240, 0.32);
+}
+
+.profile-loadout-option.locked {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.profile-loadout-option.locked:hover {
+  border-color: rgba(255, 90, 90, 0.32);
+}
+
+.profile-loadout-icon {
+  font-size: 1rem;
+}
+
+.profile-loadout-name {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.profile-loadout-note {
+  margin-top: 10px;
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.profile-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-share-btn {
+  background: linear-gradient(135deg, #4b7bff, #31c8ff);
+}
+
 .profile-input-group {
   width: 100%;
 }
@@ -3265,6 +3422,7 @@
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
 }
 
+.save-profile-btn,
 .profile-save-btn {
   width: 100%;
   padding: 12px;
@@ -3279,11 +3437,13 @@
   box-shadow: 0 6px 20px rgba(0, 240, 240, 0.4);
 }
 
+.save-profile-btn:hover,
 .profile-save-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 32px rgba(0, 240, 240, 0.6);
 }
 
+.save-profile-btn:active,
 .profile-save-btn:active {
   transform: translateY(0);
 }
@@ -4715,6 +4875,23 @@
     width: 80px;
     height: 80px;
     font-size: 3.5rem;
+  }
+
+  .profile-loadout-preview {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-loadout-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .player-meta-small {
+    max-width: 240px;
   }
 
   .avatar-grid {
