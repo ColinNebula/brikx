@@ -633,6 +633,9 @@ const PROFILE_BADGE_OPTIONS = {
   crown: { label: 'Crown', icon: '👑', achievement: 'scorer10000' }
 };
 
+const AVATAR_MASTERY_LEVEL_THRESHOLDS = [0, 8, 20, 40, 70, 110, 160, 220, 300, 400];
+const AVATAR_VARIANT_UNLOCK_LEVELS = [3, 5, 7];
+
 const Brikx = () => {
   // Safe localStorage operations with validation
   const safeGetItem = (key, defaultValue = '') => {
@@ -700,6 +703,24 @@ const Brikx = () => {
   });
   const [playerAvatar, setPlayerAvatar] = useState(() => {
     return safeGetItem('brickxPlayerAvatar', '🎮');
+  });
+  const [avatarMastery, setAvatarMastery] = useState(() => {
+    const stored = safeGetItem('brickxAvatarMastery', '{}');
+    try {
+      const parsed = JSON.parse(stored);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  });
+  const [avatarVariantSelections, setAvatarVariantSelections] = useState(() => {
+    const stored = safeGetItem('brickxAvatarVariantSelections', '{}');
+    try {
+      const parsed = JSON.parse(stored);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
   });
   const [playerProfileFrame, setPlayerProfileFrame] = useState(() => {
     const saved = safeGetItem('brickxPlayerFrame', 'core');
@@ -1039,6 +1060,53 @@ const Brikx = () => {
   
   const unlockedAvatars = getUnlockedAvatars();
 
+  const getAvatarMasteryLevel = useCallback((piecesPlaced = 0) => {
+    let level = 1;
+    for (let i = AVATAR_MASTERY_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (piecesPlaced >= AVATAR_MASTERY_LEVEL_THRESHOLDS[i]) {
+        level = i + 1;
+        break;
+      }
+    }
+    return level;
+  }, []);
+
+  const getUnlockedVariantCountForLevel = useCallback((level = 1) => {
+    return AVATAR_VARIANT_UNLOCK_LEVELS.reduce((count, unlockLevel) => {
+      return level >= unlockLevel ? count + 1 : count;
+    }, 0);
+  }, []);
+
+  const getAvatarMasteryRecord = useCallback((avatar) => {
+    const entry = avatarMastery[avatar];
+    const piecesPlaced = Math.max(0, Number.parseInt(entry?.piecesPlaced, 10) || 0);
+    const level = getAvatarMasteryLevel(piecesPlaced);
+    const nextLevelThreshold = AVATAR_MASTERY_LEVEL_THRESHOLDS[level] ?? null;
+    const previousLevelThreshold = AVATAR_MASTERY_LEVEL_THRESHOLDS[Math.max(0, level - 1)] ?? 0;
+    const progressRange = nextLevelThreshold !== null
+      ? Math.max(1, nextLevelThreshold - previousLevelThreshold)
+      : 1;
+    const progressIntoLevel = nextLevelThreshold !== null
+      ? Math.max(0, piecesPlaced - previousLevelThreshold)
+      : progressRange;
+    const progressRatio = nextLevelThreshold !== null
+      ? Math.min(1, progressIntoLevel / progressRange)
+      : 1;
+
+    return {
+      piecesPlaced,
+      level,
+      nextLevelThreshold,
+      previousLevelThreshold,
+      progressRatio
+    };
+  }, [avatarMastery, getAvatarMasteryLevel]);
+
+  const selectedAvatarVariant = Math.max(0, Math.min(3, Number.parseInt(avatarVariantSelections[playerAvatar], 10) || 0));
+  const selectedAvatarMastery = getAvatarMasteryRecord(playerAvatar);
+  const selectedAvatarUnlockedVariants = getUnlockedVariantCountForLevel(selectedAvatarMastery.level);
+  const selectedAvatarNextVariantLevel = AVATAR_VARIANT_UNLOCK_LEVELS.find((unlockLevel) => selectedAvatarMastery.level < unlockLevel) || null;
+
   const getUnlockedProfileCosmetics = useCallback((catalog) => {
     return Object.keys(catalog).filter((itemKey) => {
       const config = catalog[itemKey];
@@ -1055,6 +1123,24 @@ const Brikx = () => {
   const selectedProfileFrameConfig = PROFILE_FRAME_OPTIONS[playerProfileFrame] || PROFILE_FRAME_OPTIONS.core;
   const selectedProfileTitleConfig = PROFILE_TITLE_OPTIONS[playerProfileTitle] || PROFILE_TITLE_OPTIONS.rookie;
   const selectedProfileBadgeConfig = PROFILE_BADGE_OPTIONS[playerProfileBadge] || PROFILE_BADGE_OPTIONS.starter;
+
+  useEffect(() => {
+    const unlockedForCurrentAvatar = getUnlockedVariantCountForLevel(selectedAvatarMastery.level);
+    if (selectedAvatarVariant > unlockedForCurrentAvatar) {
+      const nextSelections = {
+        ...avatarVariantSelections,
+        [playerAvatar]: unlockedForCurrentAvatar
+      };
+      setAvatarVariantSelections(nextSelections);
+      safeSetItem('brickxAvatarVariantSelections', JSON.stringify(nextSelections));
+    }
+  }, [
+    avatarVariantSelections,
+    getUnlockedVariantCountForLevel,
+    playerAvatar,
+    selectedAvatarMastery.level,
+    selectedAvatarVariant
+  ]);
 
   useEffect(() => {
     if (!unlockedProfileFrames.includes(playerProfileFrame)) {
@@ -1847,22 +1933,67 @@ const Brikx = () => {
     const requestedFrame = loadout.frame ?? playerProfileFrame;
     const requestedTitle = loadout.title ?? playerProfileTitle;
     const requestedBadge = loadout.badge ?? playerProfileBadge;
+    const requestedVariant = Number.parseInt(
+      loadout.avatarVariant ?? avatarVariantSelections[sanitizedAvatar] ?? 0,
+      10
+    );
     const sanitizedFrame = unlockedProfileFrames.includes(requestedFrame) ? requestedFrame : 'core';
     const sanitizedTitle = unlockedProfileTitles.includes(requestedTitle) ? requestedTitle : 'rookie';
     const sanitizedBadge = unlockedProfileBadges.includes(requestedBadge) ? requestedBadge : 'starter';
+    const masteryForAvatar = getAvatarMasteryRecord(sanitizedAvatar);
+    const unlockedVariantCount = getUnlockedVariantCountForLevel(masteryForAvatar.level);
+    const sanitizedVariant = Math.max(0, Math.min(unlockedVariantCount, Number.isFinite(requestedVariant) ? requestedVariant : 0));
+
+    const nextVariantSelections = {
+      ...avatarVariantSelections,
+      [sanitizedAvatar]: sanitizedVariant
+    };
 
     setPlayerName(sanitizedName);
     setPlayerAvatar(sanitizedAvatar);
     setPlayerProfileFrame(sanitizedFrame);
     setPlayerProfileTitle(sanitizedTitle);
     setPlayerProfileBadge(sanitizedBadge);
+    setAvatarVariantSelections(nextVariantSelections);
 
     safeSetItem('brickxPlayerName', sanitizedName);
     safeSetItem('brickxPlayerAvatar', sanitizedAvatar);
     safeSetItem('brickxPlayerFrame', sanitizedFrame);
     safeSetItem('brickxPlayerTitle', sanitizedTitle);
     safeSetItem('brickxPlayerBadge', sanitizedBadge);
-  }, [getUnlockedAvatars, playerProfileFrame, playerProfileTitle, playerProfileBadge, unlockedProfileFrames, unlockedProfileTitles, unlockedProfileBadges]);
+    safeSetItem('brickxAvatarVariantSelections', JSON.stringify(nextVariantSelections));
+  }, [
+    avatarVariantSelections,
+    getAvatarMasteryRecord,
+    getUnlockedAvatars,
+    getUnlockedVariantCountForLevel,
+    playerProfileFrame,
+    playerProfileTitle,
+    playerProfileBadge,
+    unlockedProfileFrames,
+    unlockedProfileTitles,
+    unlockedProfileBadges
+  ]);
+
+  const awardAvatarMasteryProgress = useCallback((avatar, piecesAwarded = 1) => {
+    if (!avatar || piecesAwarded <= 0) return;
+
+    setAvatarMastery((prev) => {
+      const currentEntry = prev[avatar] || { piecesPlaced: 0 };
+      const currentPieces = Math.max(0, Number.parseInt(currentEntry.piecesPlaced, 10) || 0);
+      const nextPieces = currentPieces + piecesAwarded;
+      const nextLevel = getAvatarMasteryLevel(nextPieces);
+      const updated = {
+        ...prev,
+        [avatar]: {
+          piecesPlaced: nextPieces,
+          level: nextLevel
+        }
+      };
+      safeSetItem('brickxAvatarMastery', JSON.stringify(updated));
+      return updated;
+    });
+  }, [getAvatarMasteryLevel]);
 
   const downloadProfileCard = useCallback(async () => {
     try {
@@ -1972,7 +2103,7 @@ const Brikx = () => {
         ['Total Games', (statistics?.totalGames || 0).toLocaleString()],
         ['Total Lines', (statistics?.totalLines || 0).toLocaleString()],
         ['Best Combo', `${statistics?.bestCombo || 0}x`],
-        ['Achievements', `${achievementCount}/${Object.keys(achievementsList).length}`],
+        ['Achievements', `${achievementCount} unlocked`],
         ['Frame', selectedProfileFrameConfig.label]
       ];
 
@@ -2051,7 +2182,6 @@ const Brikx = () => {
     }
   }, [
     achievements,
-    achievementsList,
     highScore,
     playerAvatar,
     playerName,
@@ -2070,6 +2200,8 @@ const Brikx = () => {
       updatedAt: new Date().toISOString(),
       playerName,
       playerAvatar,
+      avatarMastery,
+      avatarVariantSelections,
       playerProfileFrame,
       playerProfileTitle,
       playerProfileBadge,
@@ -2092,6 +2224,8 @@ const Brikx = () => {
   }, [
     playerName,
     playerAvatar,
+    avatarMastery,
+    avatarVariantSelections,
     playerProfileFrame,
     playerProfileTitle,
     playerProfileBadge,
@@ -2124,17 +2258,27 @@ const Brikx = () => {
     const normalizedAvatar = typeof snapshot.playerAvatar === 'string' && snapshot.playerAvatar.trim()
       ? snapshot.playerAvatar.trim().slice(0, 8)
       : '🎮';
+    const normalizedAvatarMastery = snapshot.avatarMastery && typeof snapshot.avatarMastery === 'object' && !Array.isArray(snapshot.avatarMastery)
+      ? snapshot.avatarMastery
+      : {};
+    const normalizedAvatarVariantSelections = snapshot.avatarVariantSelections && typeof snapshot.avatarVariantSelections === 'object' && !Array.isArray(snapshot.avatarVariantSelections)
+      ? snapshot.avatarVariantSelections
+      : {};
     const normalizedProfileFrame = PROFILE_FRAME_OPTIONS[snapshot.playerProfileFrame] ? snapshot.playerProfileFrame : 'core';
     const normalizedProfileTitle = PROFILE_TITLE_OPTIONS[snapshot.playerProfileTitle] ? snapshot.playerProfileTitle : 'rookie';
     const normalizedProfileBadge = PROFILE_BADGE_OPTIONS[snapshot.playerProfileBadge] ? snapshot.playerProfileBadge : 'starter';
 
     setPlayerName(normalizedName);
     setPlayerAvatar(normalizedAvatar);
+    setAvatarMastery(normalizedAvatarMastery);
+    setAvatarVariantSelections(normalizedAvatarVariantSelections);
     setPlayerProfileFrame(normalizedProfileFrame);
     setPlayerProfileTitle(normalizedProfileTitle);
     setPlayerProfileBadge(normalizedProfileBadge);
     safeSetItem('brickxPlayerName', normalizedName);
     safeSetItem('brickxPlayerAvatar', normalizedAvatar);
+    safeSetItem('brickxAvatarMastery', JSON.stringify(normalizedAvatarMastery));
+    safeSetItem('brickxAvatarVariantSelections', JSON.stringify(normalizedAvatarVariantSelections));
     safeSetItem('brickxPlayerFrame', normalizedProfileFrame);
     safeSetItem('brickxPlayerTitle', normalizedProfileTitle);
     safeSetItem('brickxPlayerBadge', normalizedProfileBadge);
@@ -3335,6 +3479,7 @@ const Brikx = () => {
     
     // Update statistics
     updateStatistics({ totalPieces: statistics.totalPieces + 1 });
+    awardAvatarMasteryProgress(playerAvatar, 1);
     
     if (checkCollision(board, gameState.current.currentPiece, gameState.current.currentX, gameState.current.currentY)) {
       try {
@@ -3371,7 +3516,7 @@ const Brikx = () => {
         setGameStarted(false);
       }
     }
-  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound, finalizeReplayRecording, modeTuningProfile.lockDelayMs, modeTuningProfile.maxLockResets]);
+  }, [getNextPiece, checkCollision, COLS, playSound, updateStatistics, statistics.totalPieces, statistics.totalScore, statistics.longestMarathon, statistics.scoreHistory, gameMode, score, level, lines, vibrate, stopMusic, playGameOverSound, finalizeReplayRecording, modeTuningProfile.lockDelayMs, modeTuningProfile.maxLockResets, awardAvatarMasteryProgress, playerAvatar]);
 
   const resetLockDelayIfGrounded = useCallback(() => {
     const { board, currentPiece, currentX, currentY } = gameState.current;
@@ -7393,7 +7538,7 @@ const Brikx = () => {
                     </div>
                     
                     <div className="immersive-player-info">
-                      <span className={`player-avatar-small profile-frame-chip frame-${playerProfileFrame}`}>{playerAvatar}</span>
+                      <span className={`player-avatar-small profile-frame-chip frame-${playerProfileFrame} avatar-variant-${selectedAvatarVariant}`}>{playerAvatar}</span>
                       <span className="player-name-small">{playerName}</span>
                       <div className="player-meta-small">
                         <span className="player-title-small">{selectedProfileTitleConfig.label}</span>
@@ -7819,12 +7964,13 @@ const Brikx = () => {
               <div className="profile-section">
                 <h3 className="settings-heading">Loadout Preview</h3>
                 <div className="profile-loadout-preview">
-                  <div className={`profile-avatar-large frame-${playerProfileFrame}`}>{playerAvatar}</div>
+                  <div className={`profile-avatar-large frame-${playerProfileFrame} avatar-variant-${selectedAvatarVariant}`}>{playerAvatar}</div>
                   <div className="profile-meta-preview">
                     <div className="profile-preview-name">{playerName}</div>
                     <div className="profile-preview-title">{selectedProfileTitleConfig.label}</div>
                     <div className="profile-preview-badge">{selectedProfileBadgeConfig.icon} {selectedProfileBadgeConfig.label}</div>
                     <div className="profile-preview-frame">Frame: {selectedProfileFrameConfig.label}</div>
+                    <div className="profile-preview-frame">Mastery: Lv {selectedAvatarMastery.level} • Variant {selectedAvatarVariant}</div>
                   </div>
                 </div>
               </div>
@@ -7836,6 +7982,8 @@ const Brikx = () => {
                     const config = avatarsList[avatar];
                     const isUnlocked = unlockedAvatars.includes(avatar);
                     const achievementName = config.achievement ? achievementsList[config.achievement]?.name : null;
+                    const mastery = getAvatarMasteryRecord(avatar);
+                    const variantUnlocks = getUnlockedVariantCountForLevel(mastery.level);
                     
                     return (
                       <button
@@ -7854,8 +8002,67 @@ const Brikx = () => {
                         title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
                         disabled={!isUnlocked}
                       >
-                        {avatar}
+                        <span className="avatar-option-glyph">{avatar}</span>
+                        <span className="avatar-level-chip">Lv {mastery.level}</span>
+                        <span className="avatar-variant-chip">V {variantUnlocks}/3</span>
                         {!isUnlocked && <div className="avatar-lock">🔒</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h3 className="settings-heading">Avatar Mastery</h3>
+                <div className="avatar-mastery-panel">
+                  <div className="avatar-mastery-title">{playerAvatar} Level {selectedAvatarMastery.level}</div>
+                  <div className="avatar-mastery-subtitle">
+                    {selectedAvatarMastery.nextLevelThreshold
+                      ? `${selectedAvatarMastery.piecesPlaced}/${selectedAvatarMastery.nextLevelThreshold} pieces to next level`
+                      : `${selectedAvatarMastery.piecesPlaced} pieces placed`}
+                  </div>
+                  <div className="avatar-mastery-progress-track">
+                    <div
+                      className="avatar-mastery-progress-fill"
+                      style={{ width: `${Math.round(selectedAvatarMastery.progressRatio * 100)}%` }}
+                    />
+                  </div>
+                  <div className="avatar-mastery-unlocks">
+                    Unlock variants at levels {AVATAR_VARIANT_UNLOCK_LEVELS.join(', ')}.
+                    {selectedAvatarNextVariantLevel
+                      ? ` Next variant at level ${selectedAvatarNextVariantLevel}.`
+                      : ' All variants unlocked for this avatar.'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h3 className="settings-heading">Avatar Variant ({selectedAvatarUnlockedVariants}/3 Unlocked)</h3>
+                <div className="profile-loadout-grid avatar-variant-grid">
+                  {[0, 1, 2, 3].map((variantIndex) => {
+                    const unlocked = variantIndex === 0 || variantIndex <= selectedAvatarUnlockedVariants;
+                    const variantLabel = variantIndex === 0 ? 'Base' : `Variant ${variantIndex}`;
+                    const requiredLevel = variantIndex > 0 ? AVATAR_VARIANT_UNLOCK_LEVELS[variantIndex - 1] : null;
+
+                    return (
+                      <button
+                        key={variantIndex}
+                        className={`profile-loadout-option ${selectedAvatarVariant === variantIndex ? 'selected' : ''} ${!unlocked ? 'locked' : ''}`}
+                        onClick={() => {
+                          if (!unlocked) return;
+                          saveProfile(playerName, playerAvatar, {
+                            frame: playerProfileFrame,
+                            title: playerProfileTitle,
+                            badge: playerProfileBadge,
+                            avatarVariant: variantIndex
+                          });
+                          playSound('menuClick', 600, 0.1);
+                        }}
+                        title={!unlocked && requiredLevel ? `Unlocks at avatar mastery level ${requiredLevel}` : ''}
+                        disabled={!unlocked}
+                      >
+                        <span className={`profile-loadout-icon avatar-variant-preview avatar-variant-${variantIndex}`}>{playerAvatar}</span>
+                        <span className="profile-loadout-name">{variantLabel}</span>
                       </button>
                     );
                   })}
@@ -7971,7 +8178,8 @@ const Brikx = () => {
                     saveProfile(playerName, playerAvatar, {
                       frame: playerProfileFrame,
                       title: playerProfileTitle,
-                      badge: playerProfileBadge
+                      badge: playerProfileBadge,
+                      avatarVariant: selectedAvatarVariant
                     });
                     setShowProfile(false);
                     playSound('menuClick', 600, 0.1);

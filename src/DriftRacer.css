@@ -3384,6 +3384,7 @@
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .avatar-option:hover {
@@ -3420,6 +3421,110 @@
   font-size: 1.2rem;
   filter: none;
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.avatar-option-glyph {
+  line-height: 1;
+}
+
+.avatar-level-chip,
+.avatar-variant-chip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.avatar-level-chip {
+  top: -7px;
+  color: #0b1020;
+  background: rgba(180, 255, 255, 0.95);
+}
+
+.avatar-variant-chip {
+  bottom: -7px;
+  color: #d9fbff;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(0, 240, 240, 0.45);
+}
+
+.avatar-mastery-panel {
+  border: 1px solid rgba(0, 240, 240, 0.28);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.avatar-mastery-title {
+  color: #a6f7ff;
+  font-size: 0.96rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.avatar-mastery-subtitle {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.78rem;
+  margin-bottom: 8px;
+}
+
+.avatar-mastery-progress-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.avatar-mastery-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22f4ff, #ffd879);
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+.avatar-mastery-unlocks {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.74rem;
+}
+
+.avatar-variant-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.avatar-variant-preview {
+  font-size: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.avatar-variant-0 {
+  filter: none;
+}
+
+.avatar-variant-1 {
+  filter: saturate(1.2) brightness(1.05);
+  text-shadow: 0 0 10px rgba(0, 240, 240, 0.45);
+}
+
+.avatar-variant-2 {
+  filter: saturate(1.38) brightness(1.12);
+  text-shadow: 0 0 14px rgba(255, 200, 80, 0.5);
+}
+
+.avatar-variant-3 {
+  filter: saturate(1.52) brightness(1.2);
+  text-shadow:
+    0 0 12px rgba(0, 240, 240, 0.5),
+    0 0 18px rgba(255, 125, 220, 0.42);
 }
 
 .save-profile-btn,
@@ -4886,6 +4991,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .avatar-variant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .profile-action-row {
     grid-template-columns: 1fr;
   }
@@ -4898,6 +5007,7 @@
     grid-template-columns: repeat(5, 1fr);
     gap: 6px;
     max-height: 220px;
+    padding-bottom: 10px;
   }
 
   .avatar-option {
