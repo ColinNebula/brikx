@@ -27,6 +27,7 @@ import {
   checkThemeUnlock,
   getUnlockedThemes,
   getActiveSeasonalThemes,
+  isSeasonActive,
   applyTheme,
   getSavedTheme,
   getThemeProgress
@@ -574,6 +575,11 @@ const normalizeLeaderboardEntries = (entries) => {
       lines: Math.max(0, Number.parseInt(entry?.lines, 10) || 0),
       level: Math.max(1, Number.parseInt(entry?.level, 10) || 1),
       mode: ['classic', 'sprint', 'marathon'].includes(entry?.mode) ? entry.mode : 'classic',
+      profileFrame: typeof entry?.profileFrame === 'string' ? entry.profileFrame.slice(0, 32) : '',
+      profileTitle: typeof entry?.profileTitle === 'string' ? entry.profileTitle.slice(0, 32) : '',
+      profileBadge: typeof entry?.profileBadge === 'string' ? entry.profileBadge.slice(0, 32) : '',
+      avatarVariant: Math.max(0, Math.min(3, Number.parseInt(entry?.avatarVariant, 10) || 0)),
+      avatarMasteryLevel: Math.max(1, Number.parseInt(entry?.avatarMasteryLevel, 10) || 1),
       date: entry?.date || new Date().toISOString()
     }))
     .filter((entry) => entry.score > 0)
@@ -609,12 +615,34 @@ const formatModeLabel = (mode) => {
   }
 };
 
+const SEASONAL_WINDOWS = {
+  winter: { startMonth: 12, startDay: 1, endMonth: 2, endDay: 20 },
+  spring: { startMonth: 3, startDay: 1, endMonth: 5, endDay: 31 },
+  summer: { startMonth: 6, startDay: 1, endMonth: 8, endDay: 31 },
+  autumn: { startMonth: 9, startDay: 1, endMonth: 11, endDay: 30 }
+};
+
+const SEASON_LABELS = {
+  winter: 'Winter Circuit',
+  spring: 'Spring Bloom',
+  summer: 'Summer Heatwave',
+  autumn: 'Autumn Eclipse'
+};
+
+const getSeasonLabel = (seasonKey) => {
+  return SEASON_LABELS[seasonKey] || 'Seasonal Event';
+};
+
 const PROFILE_FRAME_OPTIONS = {
   core: { label: 'Core Ring', icon: '◉', unlocked: true },
   neon: { label: 'Neon Halo', icon: '◎', unlocked: true },
   pulse: { label: 'Pulse Crown', icon: '✦', achievement: 'combo5' },
   titan: { label: 'Titan Frame', icon: '⬢', achievement: 'piecesPlacer' },
-  apex: { label: 'Apex Crest', icon: '✪', achievement: 'scorer10000' }
+  apex: { label: 'Apex Crest', icon: '✪', achievement: 'scorer10000' },
+  frostNova: { label: 'Frost Nova', icon: '❄️', seasonKey: 'winter', season: SEASONAL_WINDOWS.winter },
+  bloomRing: { label: 'Bloom Ring', icon: '🌸', seasonKey: 'spring', season: SEASONAL_WINDOWS.spring },
+  solarFlare: { label: 'Solar Flare', icon: '☀️', seasonKey: 'summer', season: SEASONAL_WINDOWS.summer },
+  amberVeil: { label: 'Amber Veil', icon: '🍂', seasonKey: 'autumn', season: SEASONAL_WINDOWS.autumn }
 };
 
 const PROFILE_TITLE_OPTIONS = {
@@ -622,7 +650,11 @@ const PROFILE_TITLE_OPTIONS = {
   lineScout: { label: 'Line Scout', achievement: 'lines10' },
   comboPilot: { label: 'Combo Pilot', achievement: 'combo5' },
   marathonMind: { label: 'Marathon Mind', achievement: 'marathoner' },
-  legend: { label: 'Arena Legend', achievement: 'scorer10000' }
+  legend: { label: 'Arena Legend', achievement: 'scorer10000' },
+  frostRunner: { label: 'Frost Runner', seasonKey: 'winter', season: SEASONAL_WINDOWS.winter },
+  petalStrategist: { label: 'Petal Strategist', seasonKey: 'spring', season: SEASONAL_WINDOWS.spring },
+  heatwaveAce: { label: 'Heatwave Ace', seasonKey: 'summer', season: SEASONAL_WINDOWS.summer },
+  duskCollector: { label: 'Dusk Collector', seasonKey: 'autumn', season: SEASONAL_WINDOWS.autumn }
 };
 
 const PROFILE_BADGE_OPTIONS = {
@@ -630,7 +662,11 @@ const PROFILE_BADGE_OPTIONS = {
   century: { label: 'Century', icon: '💯', achievement: 'scorer100' },
   architect: { label: 'Architect', icon: '🧱', achievement: 'piecesPlacer' },
   lightning: { label: 'Lightning', icon: '⚡', achievement: 'speedster' },
-  crown: { label: 'Crown', icon: '👑', achievement: 'scorer10000' }
+  crown: { label: 'Crown', icon: '👑', achievement: 'scorer10000' },
+  snowflake: { label: 'Snowflake', icon: '🧊', seasonKey: 'winter', season: SEASONAL_WINDOWS.winter },
+  blossom: { label: 'Blossom', icon: '🌺', seasonKey: 'spring', season: SEASONAL_WINDOWS.spring },
+  sunburst: { label: 'Sunburst', icon: '🏖️', seasonKey: 'summer', season: SEASONAL_WINDOWS.summer },
+  harvest: { label: 'Harvest', icon: '🎃', seasonKey: 'autumn', season: SEASONAL_WINDOWS.autumn }
 };
 
 const AVATAR_MASTERY_LEVEL_THRESHOLDS = [0, 8, 20, 40, 70, 110, 160, 220, 300, 400];
@@ -851,6 +887,7 @@ const Brikx = () => {
 
   // Statistics
   const [showStatistics, setShowStatistics] = useState(false);
+  const [showCollectionJournal, setShowCollectionJournal] = useState(false);
   const [statistics, setStatistics] = useState(() => {
     const stored = safeGetItem('brikxStatistics', '');
     return stored ? JSON.parse(stored) : {
@@ -867,6 +904,8 @@ const Brikx = () => {
 
   // Achievements
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showLeaderboardInspect, setShowLeaderboardInspect] = useState(false);
+  const [inspectedLeaderboardEntry, setInspectedLeaderboardEntry] = useState(null);
   const [achievements, setAchievements] = useState(() => {
     const stored = safeGetItem('brikxAchievements', '');
     return stored ? JSON.parse(stored) : {};
@@ -1107,14 +1146,43 @@ const Brikx = () => {
   const selectedAvatarUnlockedVariants = getUnlockedVariantCountForLevel(selectedAvatarMastery.level);
   const selectedAvatarNextVariantLevel = AVATAR_VARIANT_UNLOCK_LEVELS.find((unlockLevel) => selectedAvatarMastery.level < unlockLevel) || null;
 
+  const isCosmeticUnlocked = useCallback((config) => {
+    if (!config || typeof config !== 'object') return false;
+    if (config.unlocked) return true;
+    if (config.achievement && achievements[config.achievement]?.unlocked) return true;
+    if (config.season && isSeasonActive(config.season)) return true;
+    return false;
+  }, [achievements]);
+
+  const getCosmeticUnlockRequirement = useCallback((config) => {
+    if (!config || typeof config !== 'object') return '';
+
+    const needsSeason = Boolean(config.season);
+    const needsAchievement = Boolean(config.achievement);
+    const seasonActive = needsSeason ? isSeasonActive(config.season) : false;
+    const achievementUnlocked = needsAchievement ? Boolean(achievements[config.achievement]?.unlocked) : false;
+    const seasonLabel = needsSeason ? getSeasonLabel(config.seasonKey) : '';
+
+    if (needsSeason && !seasonActive) {
+      if (needsAchievement && !achievementUnlocked) {
+        return `Available in ${seasonLabel} after unlocking the required achievement`;
+      }
+      return `Available during ${seasonLabel}`;
+    }
+
+    if (needsAchievement && !achievementUnlocked) {
+      return 'Unlock through achievements';
+    }
+
+    return '';
+  }, [achievements]);
+
   const getUnlockedProfileCosmetics = useCallback((catalog) => {
     return Object.keys(catalog).filter((itemKey) => {
       const config = catalog[itemKey];
-      if (config.unlocked) return true;
-      if (config.achievement && achievements[config.achievement]?.unlocked) return true;
-      return false;
+      return isCosmeticUnlocked(config);
     });
-  }, [achievements]);
+  }, [isCosmeticUnlocked]);
 
   const unlockedProfileFrames = getUnlockedProfileCosmetics(PROFILE_FRAME_OPTIONS);
   const unlockedProfileTitles = getUnlockedProfileCosmetics(PROFILE_TITLE_OPTIONS);
@@ -1123,6 +1191,95 @@ const Brikx = () => {
   const selectedProfileFrameConfig = PROFILE_FRAME_OPTIONS[playerProfileFrame] || PROFILE_FRAME_OPTIONS.core;
   const selectedProfileTitleConfig = PROFILE_TITLE_OPTIONS[playerProfileTitle] || PROFILE_TITLE_OPTIONS.rookie;
   const selectedProfileBadgeConfig = PROFILE_BADGE_OPTIONS[playerProfileBadge] || PROFILE_BADGE_OPTIONS.starter;
+
+  const seasonalCollectionEntries = useMemo(() => {
+    const seasonalItems = [];
+    const catalogs = [
+      { type: 'Frame', options: PROFILE_FRAME_OPTIONS, unlockedKeys: unlockedProfileFrames },
+      { type: 'Title', options: PROFILE_TITLE_OPTIONS, unlockedKeys: unlockedProfileTitles },
+      { type: 'Badge', options: PROFILE_BADGE_OPTIONS, unlockedKeys: unlockedProfileBadges }
+    ];
+
+    catalogs.forEach(({ type, options, unlockedKeys }) => {
+      Object.entries(options).forEach(([itemKey, config]) => {
+        if (!config.season) return;
+        seasonalItems.push({
+          id: `${type.toLowerCase()}-${itemKey}`,
+          type,
+          label: config.label,
+          icon: config.icon || '✨',
+          seasonLabel: getSeasonLabel(config.seasonKey),
+          active: isSeasonActive(config.season),
+          unlocked: unlockedKeys.includes(itemKey)
+        });
+      });
+    });
+
+    return seasonalItems;
+  }, [unlockedProfileBadges, unlockedProfileFrames, unlockedProfileTitles]);
+
+  const collectionSections = useMemo(() => {
+    const avatarVariantTotals = allAvatars.length * AVATAR_VARIANT_UNLOCK_LEVELS.length;
+    const avatarVariantUnlocked = allAvatars.reduce((count, avatar) => {
+      const mastery = getAvatarMasteryRecord(avatar);
+      return count + getUnlockedVariantCountForLevel(mastery.level);
+    }, 0);
+    const seasonalUnlocked = seasonalCollectionEntries.filter((entry) => entry.unlocked).length;
+
+    return [
+      {
+        id: 'avatars',
+        label: 'Avatars',
+        unlocked: unlockedAvatars.length,
+        total: allAvatars.length,
+        detail: `${unlockedAvatars.length} unlocked avatars`
+      },
+      {
+        id: 'variants',
+        label: 'Avatar Variants',
+        unlocked: avatarVariantUnlocked,
+        total: avatarVariantTotals,
+        detail: `${avatarVariantUnlocked}/${avatarVariantTotals} variant tiers unlocked`
+      },
+      {
+        id: 'frames',
+        label: 'Profile Frames',
+        unlocked: unlockedProfileFrames.length,
+        total: Object.keys(PROFILE_FRAME_OPTIONS).length,
+        detail: `${unlockedProfileFrames.length} frame cosmetics`
+      },
+      {
+        id: 'titles',
+        label: 'Player Titles',
+        unlocked: unlockedProfileTitles.length,
+        total: Object.keys(PROFILE_TITLE_OPTIONS).length,
+        detail: `${unlockedProfileTitles.length} title cosmetics`
+      },
+      {
+        id: 'badges',
+        label: 'Profile Badges',
+        unlocked: unlockedProfileBadges.length,
+        total: Object.keys(PROFILE_BADGE_OPTIONS).length,
+        detail: `${unlockedProfileBadges.length} badge cosmetics`
+      },
+      {
+        id: 'seasonal',
+        label: 'Seasonal Cosmetics',
+        unlocked: seasonalUnlocked,
+        total: seasonalCollectionEntries.length,
+        detail: `${seasonalUnlocked}/${seasonalCollectionEntries.length} currently unlocked`
+      }
+    ];
+  }, [
+    allAvatars,
+    getAvatarMasteryRecord,
+    getUnlockedVariantCountForLevel,
+    seasonalCollectionEntries,
+    unlockedAvatars,
+    unlockedProfileBadges,
+    unlockedProfileFrames,
+    unlockedProfileTitles
+  ]);
 
   useEffect(() => {
     const unlockedForCurrentAvatar = getUnlockedVariantCountForLevel(selectedAvatarMastery.level);
@@ -1162,6 +1319,12 @@ const Brikx = () => {
       safeSetItem('brickxPlayerBadge', 'starter');
     }
   }, [playerProfileBadge, unlockedProfileBadges]);
+
+  const inspectLeaderboardEntry = useCallback((entry) => {
+    if (!entry) return;
+    setInspectedLeaderboardEntry(entry);
+    setShowLeaderboardInspect(true);
+  }, []);
 
   // Particle Pooling System for Performance
   const particlePool = useRef([]);
@@ -6928,6 +7091,11 @@ const Brikx = () => {
       lines: lines || 0,
       level: level || 1,
       mode: gameMode || 'classic',
+      profileFrame: playerProfileFrame,
+      profileTitle: playerProfileTitle,
+      profileBadge: playerProfileBadge,
+      avatarVariant: selectedAvatarVariant,
+      avatarMasteryLevel: selectedAvatarMastery.level,
       date: new Date().toISOString()
     };
 
@@ -6943,7 +7111,22 @@ const Brikx = () => {
     }
 
     setLeaderboardEntries(nextEntries);
-  }, [gameOver, score, lines, level, gameMode, startTime, playerName, playerAvatar, leaderboardEntries]);
+  }, [
+    gameOver,
+    score,
+    lines,
+    level,
+    gameMode,
+    startTime,
+    playerName,
+    playerAvatar,
+    leaderboardEntries,
+    playerProfileFrame,
+    playerProfileTitle,
+    playerProfileBadge,
+    selectedAvatarVariant,
+    selectedAvatarMastery.level
+  ]);
 
   // Submit score to global leaderboard when game ends
   useEffect(() => {
@@ -6994,6 +7177,8 @@ const Brikx = () => {
   const closeLeaderboardModal = useCallback(() => {
     setShowLeaderboard(false);
     setShowClearLeaderboardConfirm(false);
+    setShowLeaderboardInspect(false);
+    setInspectedLeaderboardEntry(null);
   }, []);
 
   const clearLeaderboard = useCallback(() => {
@@ -7596,6 +7781,13 @@ const Brikx = () => {
                       >
                         🏆 Achievements
                       </button>
+                      <button
+                        className="immersive-btn"
+                        onClick={() => { setShowCollectionJournal(true); queueMenuClickSound(); }}
+                        aria-label="View collection journal"
+                      >
+                        📚 Collection
+                      </button>
                       <button 
                         className="immersive-btn" 
                         onClick={() => { setShowTutorial(true); queueMenuClickSound(); }}
@@ -8075,7 +8267,7 @@ const Brikx = () => {
                   {Object.keys(PROFILE_FRAME_OPTIONS).map((frameKey) => {
                     const frame = PROFILE_FRAME_OPTIONS[frameKey];
                     const isUnlocked = unlockedProfileFrames.includes(frameKey);
-                    const achievementName = frame.achievement ? achievementsList[frame.achievement]?.name : null;
+                    const lockHint = getCosmeticUnlockRequirement(frame);
 
                     return (
                       <button
@@ -8090,11 +8282,12 @@ const Brikx = () => {
                           });
                           playSound('menuClick', 600, 0.1);
                         }}
-                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        title={!isUnlocked ? lockHint : ''}
                         disabled={!isUnlocked}
                       >
                         <span className="profile-loadout-icon">{frame.icon}</span>
                         <span className="profile-loadout-name">{frame.label}</span>
+                        {frame.season && <span className="profile-loadout-season">{getSeasonLabel(frame.seasonKey)}</span>}
                       </button>
                     );
                   })}
@@ -8107,7 +8300,7 @@ const Brikx = () => {
                   {Object.keys(PROFILE_TITLE_OPTIONS).map((titleKey) => {
                     const title = PROFILE_TITLE_OPTIONS[titleKey];
                     const isUnlocked = unlockedProfileTitles.includes(titleKey);
-                    const achievementName = title.achievement ? achievementsList[title.achievement]?.name : null;
+                    const lockHint = getCosmeticUnlockRequirement(title);
 
                     return (
                       <button
@@ -8122,10 +8315,11 @@ const Brikx = () => {
                           });
                           playSound('menuClick', 600, 0.1);
                         }}
-                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        title={!isUnlocked ? lockHint : ''}
                         disabled={!isUnlocked}
                       >
                         <span className="profile-loadout-name">{title.label}</span>
+                        {title.season && <span className="profile-loadout-season">{getSeasonLabel(title.seasonKey)}</span>}
                       </button>
                     );
                   })}
@@ -8138,7 +8332,7 @@ const Brikx = () => {
                   {Object.keys(PROFILE_BADGE_OPTIONS).map((badgeKey) => {
                     const badge = PROFILE_BADGE_OPTIONS[badgeKey];
                     const isUnlocked = unlockedProfileBadges.includes(badgeKey);
-                    const achievementName = badge.achievement ? achievementsList[badge.achievement]?.name : null;
+                    const lockHint = getCosmeticUnlockRequirement(badge);
 
                     return (
                       <button
@@ -8153,16 +8347,17 @@ const Brikx = () => {
                           });
                           playSound('menuClick', 600, 0.1);
                         }}
-                        title={!isUnlocked && achievementName ? `Unlock with: ${achievementName}` : ''}
+                        title={!isUnlocked ? lockHint : ''}
                         disabled={!isUnlocked}
                       >
                         <span className="profile-loadout-icon">{badge.icon}</span>
                         <span className="profile-loadout-name">{badge.label}</span>
+                        {badge.season && <span className="profile-loadout-season">{getSeasonLabel(badge.seasonKey)}</span>}
                       </button>
                     );
                   })}
                 </div>
-                <div className="profile-loadout-note">Tip: cosmetics unlock automatically when their achievement unlocks.</div>
+                <div className="profile-loadout-note">Tip: some cosmetics unlock from achievements, while seasonal cosmetics are only available during active seasonal windows.</div>
               </div>
               
               <div className="profile-action-row">
@@ -8914,8 +9109,20 @@ const Brikx = () => {
                   {visibleLeaderboardEntries.map((entry, index) => (
                     <div
                       key={`${entry.date}-${entry.score}-${index}`}
-                      className={`leaderboard-item ${entry.name === playerName ? 'is-current-player' : ''} ${rankJump && entry.name === playerName && index + 1 === rankJump.to ? 'rank-jump-highlight' : ''}`}
+                      className={`leaderboard-item inspectable ${entry.name === playerName ? 'is-current-player' : ''} ${rankJump && entry.name === playerName && index + 1 === rankJump.to ? 'rank-jump-highlight' : ''}`}
                       role="listitem"
+                      tabIndex={0}
+                      onClick={() => {
+                        inspectLeaderboardEntry(entry);
+                        queueMenuClickSound();
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          inspectLeaderboardEntry(entry);
+                          queueMenuClickSound();
+                        }
+                      }}
                     >
                       <div className="leaderboard-rank">#{index + 1}</div>
                       <div className="leaderboard-player">
@@ -8926,6 +9133,7 @@ const Brikx = () => {
                         <span>{formatModeLabel(entry.mode)}</span>
                         <span>Lv {entry.level}</span>
                         <span>{entry.lines} lines</span>
+                        <span className="leaderboard-inspect-pill">Inspect</span>
                       </div>
                       <div className="leaderboard-score">{entry.score.toLocaleString()}</div>
                     </div>
@@ -9025,6 +9233,88 @@ const Brikx = () => {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showCollectionJournal && (
+          <div className="modal-overlay" onClick={() => setShowCollectionJournal(false)}>
+            <div className="modal-content collection-journal-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowCollectionJournal(false)}>×</button>
+              <h2 className="modal-title">📚 Collection Journal</h2>
+
+              <div className="collection-journal-grid">
+                {collectionSections.map((section) => {
+                  const completion = section.total > 0 ? Math.round((section.unlocked / section.total) * 100) : 0;
+                  return (
+                    <div key={section.id} className="collection-journal-card">
+                      <div className="collection-journal-header">
+                        <h3>{section.label}</h3>
+                        <span>{section.unlocked}/{section.total}</span>
+                      </div>
+                      <div className="collection-journal-progress-track">
+                        <div className="collection-journal-progress-fill" style={{ width: `${completion}%` }} />
+                      </div>
+                      <p>{section.detail}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="collection-seasonal-list">
+                <h3>Seasonal Rotation</h3>
+                {seasonalCollectionEntries.length === 0 ? (
+                  <p className="collection-seasonal-empty">No seasonal cosmetics configured.</p>
+                ) : (
+                  seasonalCollectionEntries.map((entry) => (
+                    <div key={entry.id} className={`collection-seasonal-item ${entry.unlocked ? 'unlocked' : 'locked'}`}>
+                      <span className="collection-seasonal-icon">{entry.icon}</span>
+                      <div className="collection-seasonal-copy">
+                        <span className="collection-seasonal-label">{entry.label}</span>
+                        <span className="collection-seasonal-subtext">{entry.type} • {entry.seasonLabel}</span>
+                      </div>
+                      <span className={`collection-seasonal-status ${entry.active ? 'active' : 'inactive'}`}>
+                        {entry.unlocked ? 'Unlocked' : entry.active ? 'In Season' : 'Out of Season'}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showLeaderboardInspect && inspectedLeaderboardEntry && (
+          <div className="modal-overlay" onClick={() => { setShowLeaderboardInspect(false); setInspectedLeaderboardEntry(null); }}>
+            <div className="modal-content leaderboard-inspect-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => { setShowLeaderboardInspect(false); setInspectedLeaderboardEntry(null); }}>×</button>
+              <h2 className="modal-title">🔎 Player Inspect</h2>
+
+              <div className="leaderboard-inspect-identity">
+                <div className={`leaderboard-inspect-avatar frame-${PROFILE_FRAME_OPTIONS[inspectedLeaderboardEntry.profileFrame] ? inspectedLeaderboardEntry.profileFrame : 'core'} avatar-variant-${inspectedLeaderboardEntry.avatarVariant || 0}`}>
+                  {inspectedLeaderboardEntry.avatar || '🎮'}
+                </div>
+                <div className="leaderboard-inspect-name-block">
+                  <h3>{inspectedLeaderboardEntry.name || 'Player'}</h3>
+                  <div className="leaderboard-inspect-title">{PROFILE_TITLE_OPTIONS[inspectedLeaderboardEntry.profileTitle]?.label || 'Title not shared'}</div>
+                  <div className="leaderboard-inspect-badge">{PROFILE_BADGE_OPTIONS[inspectedLeaderboardEntry.profileBadge]?.icon || '🏅'} {PROFILE_BADGE_OPTIONS[inspectedLeaderboardEntry.profileBadge]?.label || 'Badge not shared'}</div>
+                </div>
+              </div>
+
+              <div className="leaderboard-inspect-stats">
+                <div><span>Score</span><strong>{(inspectedLeaderboardEntry.score || 0).toLocaleString()}</strong></div>
+                <div><span>Lines</span><strong>{inspectedLeaderboardEntry.lines || 0}</strong></div>
+                <div><span>Level</span><strong>{inspectedLeaderboardEntry.level || 1}</strong></div>
+                <div><span>Mode</span><strong>{formatModeLabel(inspectedLeaderboardEntry.mode)}</strong></div>
+                <div><span>Avatar Mastery</span><strong>Lv {inspectedLeaderboardEntry.avatarMasteryLevel || 1}</strong></div>
+                <div><span>Avatar Variant</span><strong>Variant {inspectedLeaderboardEntry.avatarVariant || 0}</strong></div>
+              </div>
+
+              {(PROFILE_FRAME_OPTIONS[inspectedLeaderboardEntry.profileFrame] || PROFILE_TITLE_OPTIONS[inspectedLeaderboardEntry.profileTitle] || PROFILE_BADGE_OPTIONS[inspectedLeaderboardEntry.profileBadge]) ? (
+                <div className="leaderboard-inspect-loadout-note">This entry includes profile cosmetics from the player loadout.</div>
+              ) : (
+                <div className="leaderboard-inspect-loadout-note">Global entries may not include full cosmetic data yet.</div>
+              )}
             </div>
           </div>
         )}

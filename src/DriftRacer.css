@@ -6009,6 +6009,19 @@
   padding: 14px 16px;
 }
 
+.leaderboard-item.inspectable {
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.leaderboard-item.inspectable:hover,
+.leaderboard-item.inspectable:focus-visible {
+  border-color: rgba(0, 240, 240, 0.66);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0, 240, 240, 0.18);
+  outline: none;
+}
+
 .leaderboard-item.is-current-player {
   border-color: rgba(0, 240, 240, 0.65);
   box-shadow: 0 0 22px rgba(0, 240, 240, 0.25);
@@ -6068,6 +6081,13 @@
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard-inspect-pill {
+  border-color: rgba(0, 240, 240, 0.42) !important;
+  color: rgba(0, 240, 240, 0.92);
+  background: rgba(0, 240, 240, 0.14) !important;
+  font-weight: 600;
 }
 
 .leaderboard-score {
@@ -6226,11 +6246,235 @@
   .leaderboard-confirm-btn {
     width: 100%;
   }
+
+  .leaderboard-inspect-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .collection-journal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .collection-seasonal-item {
+    align-items: flex-start;
+  }
 }
 
 /* Achievements */
 .achievements-modal {
   max-width: 900px;
+}
+
+.profile-loadout-season {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 240, 240, 0.35);
+  background: rgba(0, 240, 240, 0.1);
+  color: rgba(220, 255, 255, 0.9);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.collection-journal-modal {
+  max-width: 900px;
+}
+
+.collection-journal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.collection-journal-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 240, 240, 0.26);
+  background: linear-gradient(145deg, rgba(12, 28, 48, 0.75), rgba(8, 18, 36, 0.78));
+}
+
+.collection-journal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.collection-journal-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.collection-journal-header span {
+  color: rgba(0, 240, 240, 0.95);
+  font-weight: 700;
+}
+
+.collection-journal-progress-track {
+  margin: 10px 0 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.collection-journal-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #00c4ff, #00ffe7);
+}
+
+.collection-journal-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.84rem;
+}
+
+.collection-seasonal-list {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 240, 240, 0.2);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.collection-seasonal-list h3 {
+  margin: 0 0 10px;
+}
+
+.collection-seasonal-empty {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.collection-seasonal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.collection-seasonal-item:last-child {
+  border-bottom: none;
+}
+
+.collection-seasonal-item.unlocked {
+  color: rgba(220, 255, 245, 0.96);
+}
+
+.collection-seasonal-item.locked {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.collection-seasonal-icon {
+  font-size: 1.3rem;
+}
+
+.collection-seasonal-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.collection-seasonal-label {
+  font-weight: 600;
+}
+
+.collection-seasonal-subtext {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.collection-seasonal-status {
+  font-size: 0.78rem;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
+}
+
+.collection-seasonal-status.active {
+  border-color: rgba(0, 240, 240, 0.52);
+  background: rgba(0, 240, 240, 0.12);
+}
+
+.collection-seasonal-status.inactive {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.leaderboard-inspect-modal {
+  max-width: 620px;
+}
+
+.leaderboard-inspect-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.leaderboard-inspect-avatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.leaderboard-inspect-name-block h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.leaderboard-inspect-title,
+.leaderboard-inspect-badge {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.leaderboard-inspect-stats {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.leaderboard-inspect-stats > div {
+  border-radius: 10px;
+  border: 1px solid rgba(0, 240, 240, 0.22);
+  background: rgba(4, 20, 35, 0.6);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaderboard-inspect-stats span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.leaderboard-inspect-stats strong {
+  color: #ffffff;
+}
+
+.leaderboard-inspect-loadout-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.86rem;
 }
 
 .achievements-grid {
