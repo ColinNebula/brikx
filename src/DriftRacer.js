@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './DriftRacer.css';
+/* eslint-disable react-hooks/exhaustive-deps */
 import {
   initPWA,
   showInstallPrompt,
   isInstalled,
-  isInstallAvailable,
   requestNotificationPermission,
   subscribeToPush,
   unsubscribeFromPush,
@@ -24,7 +24,6 @@ import {
 } from './pwaUtils';
 import {
   THEME_DEFINITIONS,
-  checkThemeUnlock,
   getUnlockedThemes,
   getActiveSeasonalThemes,
   isSeasonActive,
@@ -979,13 +978,13 @@ const Brikx = () => {
   }, [isMobile]);
 
   // PWA Features
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [, setShowInstallBanner] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [dailyChallenge, setDailyChallenge] = useState(null);
   const [showDailyChallenge, setShowDailyChallenge] = useState(true);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [, setIsOfflineMode] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState(null);
@@ -7371,6 +7370,8 @@ const Brikx = () => {
     );
   };
 
+  const showCreditsPage = gameOver && gameMode === 'sprint' && sprintLinesRemaining === 0;
+
   return (
     <div className={shellClasses} role="main" aria-label="BRIKX Game">
       {shellVisual?.animated && (
@@ -7582,65 +7583,83 @@ const Brikx = () => {
           <div className={`start-overlay${!gameOver ? ' start-overlay-immersive' : ''}`}>
             {gameOver ? (
               <>
-                <div className="game-over-container">
-                  <h2 className="game-over-title">💀 GAME OVER 💀</h2>
-                  
-                  {score === highScore && score > 0 && (
-                    <div className="new-record-banner">
-                      <span className="record-icon">🎉</span>
-                      <span className="record-text">NEW HIGH SCORE!</span>
-                      <span className="record-icon">🎉</span>
-                    </div>
-                  )}
-                  
-                  <div className="final-score-display">
-                    <div className="score-label">FINAL SCORE</div>
-                    <div className="score-number">{(score || 0).toLocaleString()}</div>
-                  </div>
-
-                  {rankJump && (
-                    <div className="rank-jump-banner" role="status" aria-live="polite">
-                      <span className="rank-jump-title">🚀 New Personal Best Rank</span>
-                      <span className="rank-jump-detail">
-                        {rankJump.from ? `#${rankJump.from} → #${rankJump.to}` : `Entered leaderboard at #${rankJump.to}`} • {formatModeLabel(rankJump.mode)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <div className="game-over-stats">
-                    <div className="stat-item">
-                      <span className="stat-icon">🎯</span>
-                      <span className="stat-value">{level || 1}</span>
-                      <span className="stat-label">Level</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="stat-icon">📊</span>
-                      <span className="stat-value">{lines || 0}</span>
-                      <span className="stat-label">Lines</span>
-                    </div>
-                    <div className="stat-item">
-                      <span className="stat-icon">🏆</span>
-                      <span className="stat-value">{(highScore || 0).toLocaleString()}</span>
-                      <span className="stat-label">Best</span>
-                    </div>
-                  </div>
-
-                  {topLeaderboardEntries.length > 0 && (
-                    <div className="game-over-leaderboard-preview">
-                      <h3 className="mini-leaderboard-title">🥇 Leaderboard</h3>
-                      <div className="mini-leaderboard-list">
-                        {topLeaderboardEntries.slice(0, 3).map((entry, index) => (
-                          <div
-                            key={`${entry.date}-${entry.score}-${index}`}
-                            className={`mini-leaderboard-item ${entry.name === playerName ? 'is-current-player' : ''}`}
-                          >
-                            <span className="mini-rank">#{index + 1}</span>
-                            <span className="mini-player">{entry.avatar} {entry.name}</span>
-                            <span className="mini-score">{entry.score.toLocaleString()}</span>
-                          </div>
-                        ))}
+                <div className={`game-over-container${showCreditsPage ? ' credits-container' : ''}`}>
+                  {showCreditsPage ? (
+                    <>
+                      <h2 className="game-over-title credits-title">🏁 SPRINT COMPLETE</h2>
+                      <div className="credits-card">
+                        <p className="credits-highlight">Thank you for playing BRIKX.</p>
+                        <p>By Developer and Graphic Artist Colin Nebula.</p>
+                        <p>Special thanks to MixKit for sound effects and TeknoAxe for music.</p>
+                        <p>Thank you to our testers Dawn and Orion Nebula.</p>
                       </div>
-                    </div>
+                      <div className="final-score-display">
+                        <div className="score-label">FINAL SCORE</div>
+                        <div className="score-number">{(score || 0).toLocaleString()}</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="game-over-title">💀 GAME OVER 💀</h2>
+                      
+                      {score === highScore && score > 0 && (
+                        <div className="new-record-banner">
+                          <span className="record-icon">🎉</span>
+                          <span className="record-text">NEW HIGH SCORE!</span>
+                          <span className="record-icon">🎉</span>
+                        </div>
+                      )}
+                      
+                      <div className="final-score-display">
+                        <div className="score-label">FINAL SCORE</div>
+                        <div className="score-number">{(score || 0).toLocaleString()}</div>
+                      </div>
+
+                      {rankJump && (
+                        <div className="rank-jump-banner" role="status" aria-live="polite">
+                          <span className="rank-jump-title">🚀 New Personal Best Rank</span>
+                          <span className="rank-jump-detail">
+                            {rankJump.from ? `#${rankJump.from} → #${rankJump.to}` : `Entered leaderboard at #${rankJump.to}`} • {formatModeLabel(rankJump.mode)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="game-over-stats">
+                        <div className="stat-item">
+                          <span className="stat-icon">🎯</span>
+                          <span className="stat-value">{level || 1}</span>
+                          <span className="stat-label">Level</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="stat-icon">📊</span>
+                          <span className="stat-value">{lines || 0}</span>
+                          <span className="stat-label">Lines</span>
+                        </div>
+                        <div className="stat-item">
+                          <span className="stat-icon">🏆</span>
+                          <span className="stat-value">{(highScore || 0).toLocaleString()}</span>
+                          <span className="stat-label">Best</span>
+                        </div>
+                      </div>
+
+                      {topLeaderboardEntries.length > 0 && (
+                        <div className="game-over-leaderboard-preview">
+                          <h3 className="mini-leaderboard-title">🥇 Leaderboard</h3>
+                          <div className="mini-leaderboard-list">
+                            {topLeaderboardEntries.slice(0, 3).map((entry, index) => (
+                              <div
+                                key={`${entry.date}-${entry.score}-${index}`}
+                                className={`mini-leaderboard-item ${entry.name === playerName ? 'is-current-player' : ''}`}
+                              >
+                                <span className="mini-rank">#{index + 1}</span>
+                                <span className="mini-player">{entry.avatar} {entry.name}</span>
+                                <span className="mini-score">{entry.score.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                   
                   <div className="menu-buttons">
