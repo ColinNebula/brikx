@@ -1383,8 +1383,9 @@ const Brikx = () => {
 
   // Sound System using Web Audio API
   const audioContext = useRef(null);
-  const sfxAudioCacheRef = useRef(new Map());
-  const activeSfxPlayersRef = useRef(new Set());
+  const sfxBufferCacheRef = useRef(new Map());
+  const sfxFallbackPoolRef = useRef(new Map());
+  const activeSfxSourcesRef = useRef(new Set());
   
   // MP3 Music Player System
   const musicPlayerRef = useRef(null);
@@ -1398,7 +1399,11 @@ const Brikx = () => {
   
   useEffect(() => {
     if (!audioContext.current) {
-      audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+      try {
+        audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (err) {
+        console.warn('Audio context initialization failed:', err?.message || err);
+      }
     }
 
     // Cleanup on unmount
@@ -1428,53 +1433,167 @@ const Brikx = () => {
     };
   }, [ensureAudioContextActive]);
 
+  useEffect(() => {
+    const wakeAudio = () => {
+      if (document.visibilityState === 'visible') {
+        ensureAudioContextActive();
+      }
+    };
+
+    document.addEventListener('visibilitychange', wakeAudio, { passive: true });
+    window.addEventListener('pageshow', wakeAudio, { passive: true });
+
+    return () => {
+      document.removeEventListener('visibilitychange', wakeAudio);
+      window.removeEventListener('pageshow', wakeAudio);
+    };
+  }, [ensureAudioContextActive]);
+
+  const playSfxWithHtmlAudioFallback = useCallback((src, volume, label) => {
+    const MAX_POOL_SIZE_PER_FILE = 6;
+
+    let pool = sfxFallbackPoolRef.current.get(src);
+    if (!pool) {
+      pool = [];
+      sfxFallbackPoolRef.current.set(src, pool);
+    }
+
+    let audio = pool.find((node) => node.paused || node.ended);
+    if (!audio && pool.length < MAX_POOL_SIZE_PER_FILE) {
+      audio = new Audio(src);
+      audio.preload = 'auto';
+      pool.push(audio);
+    }
+    if (!audio && pool.length > 0) {
+      audio = pool[0];
+    }
+    if (!audio) return;
+
+    try {
+      audio.currentTime = 0;
+      audio.volume = volume;
+      audio.play().catch((err) => {
+        console.warn(`${label} blocked:`, err?.message || err);
+      });
+    } catch (err) {
+      console.warn(`Fallback ${label.toLowerCase()} failed:`, err?.message || err);
+    }
+  }, []);
+
+  const loadSfxBuffer = useCallback(async (src) => {
+    const existing = sfxBufferCacheRef.current.get(src);
+    if (existing) return existing;
+
+    const pendingLoad = fetch(src)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${src}: ${response.status}`);
+        }
+        return response.arrayBuffer();
+      })
+      .then((arrayBuffer) => {
+        if (!audioContext.current) {
+          throw new Error('Audio context unavailable');
+        }
+        return audioContext.current.decodeAudioData(arrayBuffer.slice(0));
+      })
+      .catch((err) => {
+        console.warn('SFX decode failed, using fallback audio playback:', err?.message || err);
+        return null;
+      });
+
+    sfxBufferCacheRef.current.set(src, pendingLoad);
+    return pendingLoad;
+  }, []);
+
   const playSfxFile = useCallback((fileName, volumeMultiplier = 1, label = 'SFX') => {
     if (!soundEnabled || sfxVolume <= 0) return;
 
     ensureAudioContextActive();
 
-    try {
-      const src = `${process.env.PUBLIC_URL}/${fileName}`;
-      let baseAudio = sfxAudioCacheRef.current.get(src);
+    const src = `${process.env.PUBLIC_URL}/${fileName}`;
+    const finalVolume = Math.min(1, Math.max(0, sfxVolume * volumeMultiplier));
 
-      if (!baseAudio) {
-        baseAudio = new Audio(src);
-        baseAudio.preload = 'auto';
-        sfxAudioCacheRef.current.set(src, baseAudio);
-      }
-
-      const audio = baseAudio.cloneNode(true);
-      audio.volume = Math.min(1, Math.max(0, sfxVolume * volumeMultiplier));
-
-      const unregisterAudio = () => {
-        activeSfxPlayersRef.current.delete(audio);
-        audio.removeEventListener('ended', unregisterAudio);
-        audio.removeEventListener('error', unregisterAudio);
-      };
-
-      activeSfxPlayersRef.current.add(audio);
-      audio.addEventListener('ended', unregisterAudio);
-      audio.addEventListener('error', unregisterAudio);
-
-      audio.play().catch(err => {
-        unregisterAudio();
-        console.warn(`${label} blocked:`, err.message);
-      });
-    } catch (err) {
-      console.error(`Error playing ${label.toLowerCase()}:`, err);
+    if (!audioContext.current) {
+      playSfxWithHtmlAudioFallback(src, finalVolume, label);
+      return;
     }
-  }, [soundEnabled, sfxVolume, ensureAudioContextActive]);
+
+    loadSfxBuffer(src)
+      .then((audioBuffer) => {
+        if (!audioBuffer || !audioContext.current || !soundEnabled) {
+          playSfxWithHtmlAudioFallback(src, finalVolume, label);
+          return;
+        }
+
+        const ctx = audioContext.current;
+        const source = ctx.createBufferSource();
+        const gainNode = ctx.createGain();
+
+        source.buffer = audioBuffer;
+        gainNode.gain.value = finalVolume;
+
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        const unregisterSource = () => {
+          activeSfxSourcesRef.current.delete(source);
+          source.onended = null;
+        };
+
+        source.onended = unregisterSource;
+        activeSfxSourcesRef.current.add(source);
+
+        try {
+          source.start(0);
+        } catch (err) {
+          unregisterSource();
+          playSfxWithHtmlAudioFallback(src, finalVolume, label);
+        }
+      })
+      .catch((err) => {
+        console.warn(`Error preparing ${label.toLowerCase()}:`, err?.message || err);
+        playSfxWithHtmlAudioFallback(src, finalVolume, label);
+      });
+  }, [soundEnabled, sfxVolume, ensureAudioContextActive, loadSfxBuffer, playSfxWithHtmlAudioFallback]);
+
+  useEffect(() => {
+    if (!soundEnabled || sfxVolume <= 0) return;
+
+    const preloadFiles = [
+      'mixkit-sci-fi-click-900.wav',
+      'mixkit-quick-positive-video-game-notification-interface-265.wav',
+      'mixkit-pixel-chiptune-explosion-1692.wav',
+      'mixkit-sci-fi-positive-notification-266.wav'
+    ];
+
+    preloadFiles.forEach((fileName) => {
+      const src = `${process.env.PUBLIC_URL}/${fileName}`;
+      loadSfxBuffer(src).catch(() => {});
+    });
+  }, [soundEnabled, sfxVolume, loadSfxBuffer]);
 
   const stopActiveSfx = useCallback(() => {
-    activeSfxPlayersRef.current.forEach((audio) => {
+    activeSfxSourcesRef.current.forEach((source) => {
       try {
-        audio.pause();
-        audio.currentTime = 0;
+        source.stop(0);
       } catch (err) {
         // Ignore individual media teardown errors so one bad node doesn't block cleanup.
       }
     });
-    activeSfxPlayersRef.current.clear();
+
+    activeSfxSourcesRef.current.clear();
+
+    sfxFallbackPoolRef.current.forEach((pool) => {
+      pool.forEach((audio) => {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (err) {
+          // Ignore individual media teardown errors so one bad node doesn't block cleanup.
+        }
+      });
+    });
   }, []);
 
   useEffect(() => {
