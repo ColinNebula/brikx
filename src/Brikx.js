@@ -967,7 +967,7 @@ const Brikx = () => {
       if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
       menuFooterTimerRef.current = setTimeout(() => {
         setShowMenuFooterHints(false);
-      }, 4200);
+      }, 2200);
     };
 
     const revealFooterNearBottom = (event) => {
@@ -9661,7 +9661,15 @@ SOFTWARE.</pre>
         </div>
       )}
 
-      <div className={`controls-info ${!gameStarted && !gameOver ? 'menu-controls-footer' : ''}${!gameStarted && !gameOver && isMenuIdle ? ' idle' : ''}${!gameStarted && !gameOver && !isMobile && !showMenuFooterHints ? ' hidden' : ''}`}>
+      <div
+        className={`controls-info ${!gameStarted && !gameOver ? 'menu-controls-footer' : ''}${!gameStarted && !gameOver && isMenuIdle ? ' idle' : ''}${!gameStarted && !gameOver && !isMobile && !showMenuFooterHints ? ' hidden' : ''}`}
+        onMouseEnter={() => {
+          if (!gameStarted && !gameOver && !isMobile) {
+            setShowMenuFooterHints(false);
+            if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
+          }
+        }}
+      >
         <p className="controls-primary-line">
           {gamepadConnected ? '🎮 Gamepad Ready • ' : ''}
           {isMobile ? '📱 Swipe to play • Two-finger tap to pause' : 'Use Arrow Keys to control • SPACE for hard drop • P or ESC to pause'}
