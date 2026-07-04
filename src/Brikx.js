@@ -916,6 +916,8 @@ const Brikx = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [showPostLogoCinematic, setShowPostLogoCinematic] = useState(false);
   const [introCinematicCanSkip, setIntroCinematicCanSkip] = useState(false);
+  const [introCinematicAudioEnabled, setIntroCinematicAudioEnabled] = useState(false);
+  const introCinematicVideoRef = useRef(null);
 
   // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
   const [isMenuIdle, setIsMenuIdle] = useState(false);
@@ -924,10 +926,11 @@ const Brikx = () => {
   const cinematicTimeoutRef = useRef(null);
   const menuFooterTimerRef = useRef(null);
 
-  const dismissSplashAndStartIntro = useCallback(() => {
+  const dismissSplashAndStartIntro = useCallback((enableAudio = false) => {
     setShowSplash(false);
     if (!prefersReducedMotion) {
       setIntroCinematicCanSkip(false);
+      setIntroCinematicAudioEnabled(enableAudio);
       setShowPostLogoCinematic(true);
     }
   }, [prefersReducedMotion]);
@@ -956,6 +959,25 @@ const Brikx = () => {
       clearTimeout(timer);
     };
   }, [showPostLogoCinematic, gameStarted, gameOver]);
+
+  useEffect(() => {
+    if (!showPostLogoCinematic) return;
+    const video = introCinematicVideoRef.current;
+    if (!video) return;
+
+    if (introCinematicAudioEnabled) {
+      video.muted = false;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {
+          setIntroCinematicAudioEnabled(false);
+          video.muted = true;
+        });
+      }
+    } else {
+      video.muted = true;
+    }
+  }, [showPostLogoCinematic, introCinematicAudioEnabled]);
 
   // Menu idle detection: reset on interaction, trigger cinematic after 8s
   useEffect(() => {
@@ -7184,7 +7206,7 @@ const Brikx = () => {
     }
 
     const timer = setTimeout(() => {
-      dismissSplashAndStartIntro();
+      dismissSplashAndStartIntro(false);
     }, 3000); // Show splash for 3 seconds
     
     return () => clearTimeout(timer);
@@ -7595,10 +7617,10 @@ const Brikx = () => {
       {showSplash && (
         <div 
           className="splash-screen" 
-          onClick={dismissSplashAndStartIntro}
+          onClick={() => dismissSplashAndStartIntro(true)}
           role="button"
           tabIndex={0}
-          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') dismissSplashAndStartIntro(); }}
+          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') dismissSplashAndStartIntro(true); }}
           aria-label="Click to skip splash screen"
         >
           <div className="splash-content">
@@ -7619,9 +7641,10 @@ const Brikx = () => {
         >
           <div className="intro-cinematic-video-wrapper visible" aria-hidden="true">
             <video
+              ref={introCinematicVideoRef}
               className="intro-cinematic-video"
               autoPlay
-              muted
+              muted={!introCinematicAudioEnabled}
               playsInline
               preload="metadata"
               onEnded={() => setShowPostLogoCinematic(false)}
