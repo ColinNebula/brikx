@@ -4529,6 +4529,7 @@
     justify-content: center;
     gap: 14px;
     flex-wrap: wrap;
+    pointer-events: none;
     transition: opacity 0.28s ease, transform 0.28s ease, background 0.28s ease;
   }
 
@@ -4554,7 +4555,6 @@
   .controls-info.menu-controls-footer.hidden {
     opacity: 0;
     transform: translateX(-50%) translateY(14px);
-    pointer-events: none;
   }
 
   .controls-info.menu-controls-footer:hover,
