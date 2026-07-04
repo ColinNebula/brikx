@@ -9729,8 +9729,16 @@ SOFTWARE.</pre>
         className={`controls-info ${!gameStarted && !gameOver ? 'menu-controls-footer' : ''}${!gameStarted && !gameOver && isMenuIdle ? ' idle' : ''}${!gameStarted && !gameOver && !isMobile && !showMenuFooterHints ? ' hidden' : ''}`}
         onMouseEnter={() => {
           if (!gameStarted && !gameOver && !isMobile) {
-            setShowMenuFooterHints(false);
             if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
+          }
+        }}
+        onMouseLeave={() => {
+          if (!gameStarted && !gameOver && !isMobile) {
+            setShowMenuFooterHints(true);
+            if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
+            menuFooterTimerRef.current = setTimeout(() => {
+              setShowMenuFooterHints(false);
+            }, 2200);
           }
         }}
       >

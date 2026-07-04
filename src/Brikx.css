@@ -4633,7 +4633,11 @@
     pointer-events: none;
   }
 
-  .controls-info.menu-controls-footer:hover,
+  .controls-info.menu-controls-footer:hover {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px);
+  }
+
   .controls-info.menu-controls-footer:focus-within {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
