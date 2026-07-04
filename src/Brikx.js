@@ -912,6 +912,9 @@ const Brikx = () => {
   });
   const [newAchievement, setNewAchievement] = useState(null);
 
+  // Splash Screen
+  const [showSplash, setShowSplash] = useState(true);
+
   // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
   const [isMenuIdle, setIsMenuIdle] = useState(false);
   const [showMenuCinematicVideo, setShowMenuCinematicVideo] = useState(false);
@@ -1077,9 +1080,6 @@ const Brikx = () => {
       </div>
     );
   };
-
-  // Splash Screen
-  const [showSplash, setShowSplash] = useState(true);
 
   // Confirmation Dialog
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
