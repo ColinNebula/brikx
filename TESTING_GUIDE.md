@@ -24,7 +24,7 @@ npm start
 **Check Manifest:**
 1. Open DevTools → Application tab
 2. Click "Manifest" in left sidebar
-3. ✅ You should see "BrickX - Modern Tetris Game"
+3. ✅ You should see "BrickX - Modern Block Puzzle Game"
 
 **Test Touch Controls:**
 - Click the touch buttons in device mode

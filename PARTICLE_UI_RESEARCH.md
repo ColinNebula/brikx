@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-This document outlines research findings from analyzing modern Tetris-style games (TETR.IO, Jstris) and canvas animation best practices, with specific recommendations to enhance Brikx's particle system and UI.
+This document outlines research findings from analyzing modern falling-block puzzle games (TETR.IO, Jstris) and canvas animation best practices, with specific recommendations to enhance Brikx's particle system and UI.
 
 ---
 
@@ -154,7 +154,7 @@ if (p.y > CANVAS_HEIGHT) {
 
 #### 3. **New Particle Types**
 
-**A. Confetti** (for tetris/perfect clear):
+**A. Confetti** (for quad clear/perfect clear):
 ```javascript
 case 'confetti':
   ctx.translate(p.x, p.y);
@@ -468,7 +468,7 @@ if (prefersReducedMotion) {
 - **Neon**: Bright glowing effects with bloom
 
 ### UI Layout Inspirations
-- **Classic Tetris**: Simple, high contrast
+- **Classic Falling-Block**: Simple, high contrast
 - **Modern Minimalist**: Flat design, clean typography
 - **Cyberpunk**: Neon accents, glitch effects
 - **Neumorphism**: Soft shadows, depth

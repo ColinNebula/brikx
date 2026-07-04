@@ -5,7 +5,7 @@
 ### Desktop View (> 768px)
 ```
 ┌────────────────────────────────────────────────────┐
-│                    NEBULA TETRIS                   │
+│                 NEBULA BLOCK PUZZLE                │
 ├────────────────────────────────────────────────────┤
 │  🏆 SCORE   📊 LEVEL   📏 LINES   🔥 COMBO   ⭐ HS │
 ├────────────────────────────────────────────────────┤
@@ -28,7 +28,7 @@
 ### Tablet View (481px - 768px)
 ```
 ┌──────────────────────────┐
-│     NEBULA TETRIS        │
+│  NEBULA BLOCK PUZZLE     │
 ├──────────────────────────┤
 │ 🏆   📊   📏   🔥   ⭐   │
 ├──────────────────────────┤
@@ -305,7 +305,7 @@ height: 300px
 │                         │
 │ ┌─────────────────────┐ │
 │ │  [🎮] BrickX        │ │
-│ │  Modern Tetris Game │ │
+│ │ Modern Block Puzzle │ │
 │ │                     │ │
 │ │      [Add]          │ │
 │ └─────────────────────┘ │
@@ -316,7 +316,7 @@ height: 300px
 ```
 ┌─────────────────────────┐
 │ 📱 Install BrickX       │
-│ Modern Tetris Game      │
+│ Modern Block Puzzle     │
 │                         │
 │  [Install]  [Cancel]    │
 └─────────────────────────┘

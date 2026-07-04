@@ -221,9 +221,9 @@ const CHALLENGE_TYPES = [
   { 
     id: 'perfect_start', 
     name: 'Perfect Start', 
-    description: 'Clear 4 lines with your first piece (Tetris)',
+    description: 'Clear 4 lines with your first piece (Quad Clear)',
     icon: '✨',
-    check: (gameData) => gameData.firstMoveTetris === true,
+    check: (gameData) => gameData.firstMoveQuadClear === true,
     reward: 1000
   },
   { 

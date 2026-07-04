@@ -172,4 +172,4 @@ Edit `public/service-worker.js` urlsToCache array.
 
 ## 🎉 Enjoy BrickX on Any Device!
 
-Your Tetris game is now a modern PWA that works seamlessly across all platforms!
+Your block puzzle game is now a modern PWA that works seamlessly across all platforms!

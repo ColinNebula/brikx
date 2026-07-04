@@ -2314,7 +2314,7 @@
   }
 }
 
-/* Falling Tetris Blocks Background */
+/* Falling block background */
 .falling-blocks-container {
   position: absolute;
   top: 0;
@@ -2337,7 +2337,7 @@
   filter: blur(0.5px);
 }
 
-.tetris-shape {
+.block-shape {
   font-family: monospace;
   font-weight: bold;
   white-space: pre;

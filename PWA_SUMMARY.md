@@ -2,14 +2,14 @@
 
 ## ✅ Completed Enhancements
 
-Your BrickX Tetris game has been successfully transformed into a **Progressive Web App (PWA)** optimized for mobile devices!
+Your BrickX block puzzle game has been successfully transformed into a **Progressive Web App (PWA)** optimized for mobile devices!
 
 ---
 
 ## 📋 Changes Made
 
 ### 1. **PWA Manifest** ([manifest.json](public/manifest.json))
-- Updated app name to "BrickX - Modern Tetris Game"
+- Updated app name to "BrickX - Modern Block Puzzle Game"
 - Added proper description and categories
 - Configured theme colors matching game design (#1a0a2e)
 - Set display mode to "standalone" for app-like experience

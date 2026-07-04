@@ -201,7 +201,7 @@ Your BRIKX game is now configured with three powerful Microsoft tools:
 ### App Store Success
 - **Screenshots matter!** Capture exciting gameplay moments
 - **Description**: Highlight PWA features (works offline, no install via stores)
-- **Keywords**: puzzle game, tetris, block game, arcade
+- **Keywords**: puzzle game, block game, falling blocks, arcade
 - **Update regularly** to maintain store ranking
 
 ---

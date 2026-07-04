@@ -52,7 +52,7 @@ Three industry-standard particle effect types added:
 - **Multi-line Support**: Each cleared row triggers independent scanline
 
 ### 5. **Chromatic Aberration Post-Process** 🌈
-- **Trigger**: Tetris (4-line clear) or Perfect Clear events
+- **Trigger**: Quad clear (4-line clear) or Perfect Clear events
 - **Intensity**: Scales with event magnitude (12-20 frames)
 - **Technique**: RGB channel splitting
   - Red channel: Left offset (−4px)
@@ -173,7 +173,7 @@ Three industry-standard particle effect types added:
 | **Prism Shards** | Line clear | Rainbow crystal splinter | Medium-High (many particles) |
 | **Debris Chunks** | Line clear | Block fragment scatter | High (4/cell) |
 | **Scanline Flash** | Line clear | Horizontal light sweep | Low (GPU accelerated) |
-| **Chromatic Aberration** | Tetris/Perfect | RGB channel distortion | Medium (post-process) |
+| **Chromatic Aberration** | Quad Clear/Perfect | RGB channel distortion | Medium (post-process) |
 | **Ambient Particles** | Menu/Gameplay | Star-field depth layer | Low (parallax-based) |
 | **Menu Particles** | Menu screen | Varied multi-motion orbs | Low (CSS-driven) |
 | **Glow Bloom** | Particles present | Additive light accumulation | Medium-High (filtered) |

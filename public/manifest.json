@@ -1,7 +1,7 @@
 {
   "short_name": "BrickX",
-  "name": "BrickX - Modern Tetris Game",
-  "description": "A modern, colorful Tetris game with amazing effects and smooth gameplay",
+  "name": "BrickX - Modern Block Puzzle Game",
+  "description": "A modern, colorful block puzzle game with amazing effects and smooth gameplay",
   "icons": [
     {
       "src": "brikx192.png",

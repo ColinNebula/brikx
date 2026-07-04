@@ -1670,7 +1670,7 @@ const Brikx = () => {
           oscillator.type = 'sine';
           oscillator.frequency.linearRampToValueAtTime(850, ctx.currentTime + 0.15);
           break;
-        case 'tetris':
+        case 'quadClear':
           oscillator.frequency.value = 800;
           gainMultiplier = 0.25;
           oscillator.type = 'square';
@@ -1753,11 +1753,11 @@ const Brikx = () => {
       setTimeout(() => playExplosionSound(), 80);
       setTimeout(() => playExplosionSound(), 160);
     } else if (linesCleared === 4) {
-      // Tetris sound - special fanfare with multiple explosions
-      playSound('tetris', 800, 0.2);
-      setTimeout(() => playSound('tetris', 900, 0.15), 100);
-      setTimeout(() => playSound('tetris', 1000, 0.15), 200);
-      setTimeout(() => playSound('tetris', 1200, 0.3), 300);
+      // Quad clear sound - special fanfare with multiple explosions
+      playSound('quadClear', 800, 0.2);
+      setTimeout(() => playSound('quadClear', 900, 0.15), 100);
+      setTimeout(() => playSound('quadClear', 1000, 0.15), 200);
+      setTimeout(() => playSound('quadClear', 1200, 0.3), 300);
       setTimeout(() => playExplosionSound(), 100);
       setTimeout(() => playExplosionSound(), 200);
       setTimeout(() => playExplosionSound(), 300);
@@ -2730,6 +2730,8 @@ const Brikx = () => {
     nextPieces: [],
     holdPiece: null,
     canHold: true,
+    piecesLockedThisGame: 0,
+    firstMoveQuadClear: false,
     dropCounter: 0,
     dropInterval: 1000,
     lockDelayMs: MODE_TUNING_PROFILES.classic.lockDelayMs,
@@ -3156,6 +3158,9 @@ const Brikx = () => {
         }
       });
     });
+
+    // Track locked-piece count for first-move challenge checks.
+    gameState.current.piecesLockedThisGame += 1;
   }, [ROWS, COLS]);
 
   // Add score popup
@@ -3269,7 +3274,7 @@ const Brikx = () => {
         }
       }
       
-      // Add confetti for TETRIS or Perfect Clear
+      // Add confetti for quad clear or perfect clear
       if (isPerfect || (isCombo && comboCount >= 4)) {
         const confettiCount = Math.floor((isPerfect ? 25 : 15) * motionMultiplier);
         const comboColors = getComboColor(comboCount);
@@ -3491,6 +3496,11 @@ const Brikx = () => {
     
     if (linesToClear.length > 0) {
       const comboChain = lastClearWasCombo ? combo + 1 : 1;
+
+      if (linesToClear.length === 4 && gameState.current.piecesLockedThisGame === 1) {
+        gameState.current.firstMoveQuadClear = true;
+      }
+
       // Check for perfect clear
       let isPerfectClear = true;
       for (let y = 0; y < ROWS && isPerfectClear; y++) {
@@ -3508,7 +3518,7 @@ const Brikx = () => {
       if (isPerfectClear) {
         vibrate([30, 30, 30, 30, 50]); // Triple pulse + strong
       } else if (linesToClear.length === 4) {
-        vibrate([20, 20, 20, 20, 30]); // Tetris - strong pattern
+        vibrate([20, 20, 20, 20, 30]); // Quad clear - strong pattern
       } else if (isCombo && combo > 1) {
         vibrate([15, 10, 15]); // Combo - double pulse
       } else {
@@ -3550,7 +3560,7 @@ const Brikx = () => {
             maxLife: isMobile ? 22 : 20
           }));
         });
-        // Chromatic aberration on Tetris or Perfect Clear
+        // Chromatic aberration on quad clear or perfect clear
         if (linesToClear.length >= 4 || isPerfectClear) {
           gameState.current.chromaticAberration = isPerfectClear ? 20 : 12;
         }
@@ -3678,8 +3688,8 @@ const Brikx = () => {
         gameState.current.screenShake = isMobile ? 24 : 20;
         gameState.current.comboFlash = isMobile ? 20 : 16; // Super combo shake for 5x+
       } else if (linesCleared >= 4) {
-        gameState.current.screenShake = 16; // TETRIS gets intense shake!
-        gameState.current.flashEffect = 15; // White flash for Tetris
+        gameState.current.screenShake = 16; // Quad clear gets intense shake.
+        gameState.current.flashEffect = 15; // White flash for quad clear
       } else if (isCombo || linesCleared >= 3) {
         gameState.current.screenShake = 12;
         gameState.current.flashEffect = 12; // Flash for triple
@@ -4116,6 +4126,8 @@ const Brikx = () => {
     gameState.current.nextPieces = [];
     gameState.current.holdPiece = null;
     gameState.current.canHold = true;
+    gameState.current.piecesLockedThisGame = 0;
+    gameState.current.firstMoveQuadClear = false;
     gameState.current.dropCounter = 0;
     gameState.current.dropInterval = gameMode === 'marathon' ? 800 : 1000;
     gameState.current.lockDelayMs = modeTuningProfile.lockDelayMs;
@@ -7145,7 +7157,8 @@ const Brikx = () => {
           lines: lines || 0,
           maxCombo: combo || 0,
           time: startTime ? Date.now() - startTime : 0,
-          piecesPlaced: statistics.totalPieces || 0
+          piecesPlaced: statistics.totalPieces || 0,
+          firstMoveQuadClear: gameState.current.firstMoveQuadClear === true
         };
         
         const result = checkDailyChallenge(gameData);
@@ -7825,7 +7838,7 @@ const Brikx = () => {
                   ))}
                 </div>
 
-                {/* Animated Falling Tetris Blocks Background */}
+                {/* Animated falling block background */}
                 <div className="falling-blocks-container">
                   {menuFallingBlocks.map((block) => {
                     return (
@@ -7839,7 +7852,7 @@ const Brikx = () => {
                           opacity: block.opacity
                         }}
                       >
-                        <div className="tetris-shape" style={{ color: block.color }}>
+                        <div className="block-shape" style={{ color: block.color }}>
                           {block.shape === 'I' && '█\n█\n█\n█'}
                           {block.shape === 'O' && '██\n██'}
                           {block.shape === 'T' && '███\n █'}
@@ -9042,7 +9055,7 @@ const Brikx = () => {
                   >
                     <div className="mode-icon">🎮</div>
                     <h3>Classic</h3>
-                    <p>Traditional Tetris gameplay. Clear lines and survive as level increases.</p>
+                    <p>Traditional falling-block puzzle gameplay. Clear lines and survive as level increases.</p>
                   </div>
                   
                   <div 

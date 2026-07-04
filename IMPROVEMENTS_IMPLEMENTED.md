@@ -30,8 +30,8 @@
 
 #### A. **Confetti** 🎊
 - Rectangular particles that flutter and fall
-- Triggered on TETRIS clears (4+ lines) and Perfect Clears
-- 25 confetti for perfect clears, 15 for tetris
+- Triggered on quad clears (4+ lines) and Perfect Clears
+- 25 confetti for perfect clears, 15 for quad clears
 - Adds celebratory feeling to major achievements
 - **Features**: Bouncing, flutter effect, gravity
 
@@ -207,7 +207,7 @@ Used throughout:
 
 ### Visual Testing
 - ✅ Test normal line clears (1-3 lines)
-- ✅ Test TETRIS (4 lines)
+- ✅ Test quad clear (4 lines)
 - ✅ Test Perfect Clear
 - ✅ Test combos (2x, 5x, 10x, 15x)
 - ✅ Test danger zone activation
