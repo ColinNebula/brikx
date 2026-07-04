@@ -48,7 +48,7 @@
       <ol>
         <li>Click the generate buttons below to create icons</li>
         <li>Right-click each canvas and "Save image as..."</li>
-        <li>Save as logo192.png and logo512.png in the public folder</li>
+        <li>Save as brikx192.png and brikx512.png in the public folder</li>
         <li>Replace the existing placeholder images</li>
       </ol>
     </div>
@@ -142,7 +142,7 @@
     function downloadIcon(size) {
       const canvas = document.getElementById(`canvas${size}`);
       const link = document.createElement('a');
-      link.download = `logo${size}.png`;
+      link.download = `brikx${size}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
