@@ -1,5 +1,5 @@
 import './App.css';
-import Brikx from './DriftRacer';
+import Brikx from './Brikx';
 
 function App() {
   return (

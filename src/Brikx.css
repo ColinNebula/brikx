@@ -7329,6 +7329,30 @@
   margin: 8px 0;
 }
 
+.legal-modal {
+  max-width: min(920px, 92vw);
+}
+
+.legal-copy {
+  margin-bottom: 12px;
+}
+
+.license-text-block {
+  margin: 0;
+  max-height: min(46vh, 360px);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(0, 240, 240, 0.25);
+  border-radius: 10px;
+  padding: 14px;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Courier New', monospace;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .support-section-copy {
   margin-bottom: 14px;
 }

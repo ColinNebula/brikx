@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import './DriftRacer.css';
+import './Brikx.css';
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
   initPWA,
@@ -720,6 +720,7 @@ const Brikx = () => {
   const [combo, setCombo] = useState(0);
   const [lastClearWasCombo, setLastClearWasCombo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showPauseHint, setShowPauseHint] = useState(false);
   const [levelFlash, setLevelFlash] = useState(null);
@@ -8211,6 +8212,26 @@ const Brikx = () => {
                   </div>
                 </div>
               </div>
+
+              <div className="settings-section">
+                <h3 className="settings-heading">⚖️ Legal</h3>
+                <div className="setting-item">
+                  <div className="setting-label">
+                    MIT License
+                    <span className="setting-description">View license text and third-party notices.</span>
+                  </div>
+                  <button
+                    className="install-settings-btn"
+                    onClick={() => {
+                      setShowLegalModal(true);
+                      playSound('menuClick', 600, 0.1);
+                    }}
+                    aria-label="Open legal and licensing information"
+                  >
+                    View Legal
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -8779,6 +8800,72 @@ const Brikx = () => {
                     <span className="support-link-title">PayPal</span>
                     <span className="support-link-subtitle">@ColinNebula</span>
                   </a>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3 className="settings-heading">Legal & Licensing</h3>
+                <div className="setting-item">
+                  <div className="setting-label">
+                    MIT License
+                    <span className="setting-description">BRIKX is MIT licensed. Open full text and notices.</span>
+                  </div>
+                  <button
+                    className="install-settings-btn"
+                    onClick={() => {
+                      setShowLegalModal(true);
+                      playSound('menuClick', 600, 0.1);
+                    }}
+                    aria-label="Open legal and licensing information"
+                  >
+                    View Legal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showLegalModal && (
+          <div className="modal-overlay" onClick={() => setShowLegalModal(false)}>
+            <div className="modal-content legal-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close" onClick={() => setShowLegalModal(false)} aria-label="Close legal modal">×</button>
+              <h2 className="modal-title">⚖️ Legal & Licensing</h2>
+
+              <div className="settings-section">
+                <h3 className="settings-heading">MIT License</h3>
+                <div className="setting-info legal-copy">
+                  <p>Copyright (c) 2026 Colin Nebula.</p>
+                  <p>BRIKX is provided under the MIT License. You can use, modify, and redistribute the software under the license terms below.</p>
+                </div>
+                <pre className="license-text-block">MIT License
+
+Copyright (c) 2026 Colin Nebula
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre>
+              </div>
+
+              <div className="settings-section">
+                <h3 className="settings-heading">Third-Party Notices</h3>
+                <div className="setting-info legal-copy">
+                  <p>Third-party component and asset notices are tracked in THIRD_PARTY_NOTICES.md.</p>
+                  <p>Review and update that file before each public release and Steam build.</p>
                 </div>
               </div>
             </div>
