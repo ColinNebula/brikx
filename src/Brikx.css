@@ -673,7 +673,6 @@
   z-index: 10000;
   background: #020613;
   overflow: hidden;
-  cursor: pointer;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -684,7 +683,7 @@
 }
 
 .intro-cinematic-screen.can-skip {
-  cursor: pointer;
+  cursor: default;
 }
 
 .intro-cinematic-video-wrapper {
@@ -732,10 +731,16 @@
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
 }
 
 .intro-cinematic-skip.locked {
   opacity: 0.68;
+  cursor: default;
+}
+
+.intro-cinematic-skip:disabled {
+  pointer-events: none;
 }
 
 .game-header {

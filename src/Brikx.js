@@ -7615,11 +7615,7 @@ const Brikx = () => {
       {showPostLogoCinematic && !gameStarted && !gameOver && (
         <div
           className={`intro-cinematic-screen ${introCinematicCanSkip ? 'can-skip' : 'locked'}`}
-          onClick={dismissPostLogoCinematic}
-          role="button"
-          tabIndex={introCinematicCanSkip ? 0 : -1}
-          onKeyPress={(e) => { if ((e.key === 'Enter' || e.key === ' ') && introCinematicCanSkip) dismissPostLogoCinematic(); }}
-          aria-label={introCinematicCanSkip ? 'Intro cinematic, click to skip' : 'Intro cinematic playing'}
+          aria-label="Intro cinematic playing"
         >
           <div className="intro-cinematic-video-wrapper visible" aria-hidden="true">
             <video
@@ -7633,9 +7629,15 @@ const Brikx = () => {
               <source src={`${process.env.PUBLIC_URL}/brikX-Cin .mp4`} type="video/mp4" />
             </video>
           </div>
-          <div className={`intro-cinematic-skip ${introCinematicCanSkip ? '' : 'locked'}`}>
-            {introCinematicCanSkip ? 'Click to skip' : 'Intro playing...'}
-          </div>
+          <button
+            type="button"
+            className={`intro-cinematic-skip ${introCinematicCanSkip ? '' : 'locked'}`}
+            onClick={dismissPostLogoCinematic}
+            disabled={!introCinematicCanSkip}
+            aria-label={introCinematicCanSkip ? 'Skip intro cinematic' : 'Intro playing'}
+          >
+            {introCinematicCanSkip ? 'Skip intro' : 'Intro playing...'}
+          </button>
         </div>
       )}
 
