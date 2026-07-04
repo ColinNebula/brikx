@@ -667,6 +667,77 @@
   }
 }
 
+.intro-cinematic-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #020613;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.intro-cinematic-screen.locked {
+  cursor: default;
+}
+
+.intro-cinematic-screen.can-skip {
+  cursor: pointer;
+}
+
+.intro-cinematic-video-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.035);
+  transition: opacity 1.15s ease, transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.intro-cinematic-video-wrapper.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.intro-cinematic-video-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.45) 68%),
+    linear-gradient(180deg, rgba(3, 7, 18, 0.32), rgba(3, 7, 18, 0.58));
+}
+
+.intro-cinematic-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+  filter: saturate(1.05) contrast(1.04) brightness(0.82);
+}
+
+.intro-cinematic-skip {
+  position: relative;
+  z-index: 1;
+  margin-bottom: max(26px, env(safe-area-inset-bottom));
+  color: rgba(255, 255, 255, 0.86);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.intro-cinematic-skip.locked {
+  opacity: 0.68;
+}
+
 .game-header {
   text-align: center;
   margin-bottom: 20px; /* Reduced from 30px to save vertical space */
@@ -1921,39 +1992,6 @@
   overflow: hidden;
   position: relative;
   background: linear-gradient(135deg, #0a0a2e 0%, #16213e 50%, #0f3460 100%);
-}
-
-.menu-cinematic-video-wrapper {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(1.035);
-  transition: opacity 1.15s ease, transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.menu-cinematic-video-wrapper.visible {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.menu-cinematic-video-wrapper::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 38%, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.45) 68%),
-    linear-gradient(180deg, rgba(3, 7, 18, 0.32), rgba(3, 7, 18, 0.58));
-}
-
-.menu-cinematic-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.78;
-  filter: saturate(1.05) contrast(1.04) brightness(0.78);
 }
 
 /* ========================================================

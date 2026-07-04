@@ -914,27 +914,47 @@ const Brikx = () => {
 
   // Splash Screen
   const [showSplash, setShowSplash] = useState(true);
+  const [showPostLogoCinematic, setShowPostLogoCinematic] = useState(false);
+  const [introCinematicCanSkip, setIntroCinematicCanSkip] = useState(false);
 
   // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
   const [isMenuIdle, setIsMenuIdle] = useState(false);
-  const [showMenuCinematicVideo, setShowMenuCinematicVideo] = useState(false);
   const [showMenuFooterHints, setShowMenuFooterHints] = useState(true);
   const idleTimerRef = useRef(null);
   const cinematicTimeoutRef = useRef(null);
   const menuFooterTimerRef = useRef(null);
 
-  useEffect(() => {
-    if (showSplash || gameStarted || gameOver) {
-      setShowMenuCinematicVideo(false);
-      return undefined;
+  const dismissSplashAndStartIntro = useCallback(() => {
+    setShowSplash(false);
+    if (!prefersReducedMotion) {
+      setIntroCinematicCanSkip(false);
+      setShowPostLogoCinematic(true);
     }
+  }, [prefersReducedMotion]);
+
+  const dismissPostLogoCinematic = useCallback(() => {
+    if (!introCinematicCanSkip) return;
+    setShowPostLogoCinematic(false);
+  }, [introCinematicCanSkip]);
+
+  useEffect(() => {
+    if (!showPostLogoCinematic || gameStarted || gameOver) return undefined;
+
+    setIntroCinematicCanSkip(false);
+
+    const unlockSkipTimer = setTimeout(() => {
+      setIntroCinematicCanSkip(true);
+    }, 1500);
 
     const timer = setTimeout(() => {
-      setShowMenuCinematicVideo(true);
-    }, 1550);
+      setShowPostLogoCinematic(false);
+    }, 6200);
 
-    return () => clearTimeout(timer);
-  }, [showSplash, gameStarted, gameOver]);
+    return () => {
+      clearTimeout(unlockSkipTimer);
+      clearTimeout(timer);
+    };
+  }, [showPostLogoCinematic, gameStarted, gameOver]);
 
   // Menu idle detection: reset on interaction, trigger cinematic after 8s
   useEffect(() => {
@@ -7163,11 +7183,11 @@ const Brikx = () => {
     }
 
     const timer = setTimeout(() => {
-      setShowSplash(false);
+      dismissSplashAndStartIntro();
     }, 3000); // Show splash for 3 seconds
     
     return () => clearTimeout(timer);
-  }, [soundEnabled, sfxVolume]);
+  }, [soundEnabled, sfxVolume, dismissSplashAndStartIntro]);
 
   // Activate service worker update
   const activateUpdate = () => {
@@ -7574,10 +7594,10 @@ const Brikx = () => {
       {showSplash && (
         <div 
           className="splash-screen" 
-          onClick={() => setShowSplash(false)}
+          onClick={dismissSplashAndStartIntro}
           role="button"
           tabIndex={0}
-          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowSplash(false); }}
+          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') dismissSplashAndStartIntro(); }}
           aria-label="Click to skip splash screen"
         >
           <div className="splash-content">
@@ -7587,6 +7607,33 @@ const Brikx = () => {
               className="splash-logo"
             />
             <div className="splash-text">Click to continue</div>
+          </div>
+        </div>
+      )}
+
+      {showPostLogoCinematic && !gameStarted && !gameOver && (
+        <div
+          className={`intro-cinematic-screen ${introCinematicCanSkip ? 'can-skip' : 'locked'}`}
+          onClick={dismissPostLogoCinematic}
+          role="button"
+          tabIndex={introCinematicCanSkip ? 0 : -1}
+          onKeyPress={(e) => { if ((e.key === 'Enter' || e.key === ' ') && introCinematicCanSkip) dismissPostLogoCinematic(); }}
+          aria-label={introCinematicCanSkip ? 'Intro cinematic, click to skip' : 'Intro cinematic playing'}
+        >
+          <div className="intro-cinematic-video-wrapper visible" aria-hidden="true">
+            <video
+              className="intro-cinematic-video"
+              autoPlay
+              muted
+              playsInline
+              preload="metadata"
+              onEnded={() => setShowPostLogoCinematic(false)}
+            >
+              <source src={`${process.env.PUBLIC_URL}/brikX-Cin .mp4`} type="video/mp4" />
+            </video>
+          </div>
+          <div className={`intro-cinematic-skip ${introCinematicCanSkip ? '' : 'locked'}`}>
+            {introCinematicCanSkip ? 'Click to skip' : 'Intro playing...'}
           </div>
         </div>
       )}
@@ -7861,19 +7908,6 @@ const Brikx = () => {
               </>
             ) : (
               <div className={`main-menu immersive ${isMenuIdle ? 'cinematic-idle' : ''}`} ref={menuContainerRef} style={{ '--mx': '50%', '--my': '40%' }}>
-                <div className={`menu-cinematic-video-wrapper ${showMenuCinematicVideo ? 'visible' : ''}`} aria-hidden="true">
-                  <video
-                    className="menu-cinematic-video"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                  >
-                    <source src={`${process.env.PUBLIC_URL}/brikX-Cin .mp4`} type="video/mp4" />
-                  </video>
-                </div>
-
                 {/* Industry-Quality Animated Particles Background */}
                 <div className="menu-background-particles">
                   {menuParticles.map((particle) => {

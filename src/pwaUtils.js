@@ -480,9 +480,10 @@ export async function saveCloudProfileSnapshot(snapshot) {
       })
     });
 
-    const data = await response.json();
-    if (!data.success) {
-      return { success: false, error: data.error || 'Failed to save profile.' };
+    const data = await parseApiResponse(response);
+    if (!response.ok || !data?.success) {
+      const fallbackError = data?.error || `Failed to save profile (${response.status})`;
+      return { success: false, error: fallbackError };
     }
 
     return {
@@ -508,9 +509,10 @@ export async function loadCloudProfileSnapshot() {
       body: JSON.stringify({ profileKey })
     });
 
-    const data = await response.json();
-    if (!data.success) {
-      return { success: false, error: data.error || 'No cloud profile found.' };
+    const data = await parseApiResponse(response);
+    if (!response.ok || !data?.success) {
+      const fallbackError = data?.error || `No cloud profile found (${response.status})`;
+      return { success: false, error: fallbackError };
     }
 
     return {
@@ -577,9 +579,10 @@ export async function createLeaderboardSession(mode = 'classic') {
       body: JSON.stringify(payload)
     });
 
-    const data = await response.json();
-    if (!data.success || !data.sessionToken) {
-      return { success: false, error: data.error || 'Unable to create leaderboard session.' };
+    const data = await parseApiResponse(response);
+    if (!response.ok || !data?.success || !data?.sessionToken) {
+      const fallbackError = data?.error || `Unable to create leaderboard session (${response.status})`;
+      return { success: false, error: fallbackError };
     }
 
     return {
@@ -654,9 +657,9 @@ export async function submitScoreToLeaderboard(scoreData) {
       body: JSON.stringify(payload)
     });
     
-    const data = await response.json();
+    const data = await parseApiResponse(response);
     
-    if (data.success) {
+    if (response.ok && data?.success) {
       console.log('Score submitted successfully. Rank:', data.rank);
       return { 
         success: true, 
@@ -665,8 +668,9 @@ export async function submitScoreToLeaderboard(scoreData) {
         message: data.message
       };
     } else {
-      console.error('Score submission failed:', data.error);
-      return { success: false, error: data.error };
+      const fallbackError = data?.error || `Score submission failed (${response.status})`;
+      console.error('Score submission failed:', fallbackError);
+      return { success: false, error: fallbackError };
     }
   } catch (error) {
     console.error('Error submitting score to leaderboard:', error);
