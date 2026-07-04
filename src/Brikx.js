@@ -946,9 +946,10 @@ const Brikx = () => {
       setIntroCinematicCanSkip(true);
     }, 1500);
 
+    // Keep a long fallback timeout in case video end events fail on some mobile browsers.
     const timer = setTimeout(() => {
       setShowPostLogoCinematic(false);
-    }, 6200);
+    }, 30000);
 
     return () => {
       clearTimeout(unlockSkipTimer);
