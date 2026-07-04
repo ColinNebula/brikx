@@ -2090,7 +2090,14 @@ const Brikx = () => {
 
   // Start menu music when at main menu
   useEffect(() => {
-    if (!gameStarted && !gameOver && musicEnabled && !showSplash) {
+    if (showPostLogoCinematic) {
+      if (currentTrackRef.current === MUSIC_PLAYLIST.menu) {
+        stopMusic();
+      }
+      return;
+    }
+
+    if (!gameStarted && !gameOver && musicEnabled && !showSplash && !showPostLogoCinematic) {
       // Small delay to ensure clean transition
       const timer = setTimeout(() => {
         // Only start menu music if not already playing it
@@ -2104,7 +2111,7 @@ const Brikx = () => {
       return;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameStarted, gameOver, musicEnabled, showSplash]);
+  }, [gameStarted, gameOver, musicEnabled, showSplash, showPostLogoCinematic, stopMusic]);
 
   // Enhanced sound effects with more variations
   const playPieceSound = useCallback((pieceType) => {
