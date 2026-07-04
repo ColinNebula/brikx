@@ -914,8 +914,10 @@ const Brikx = () => {
 
   // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
   const [isMenuIdle, setIsMenuIdle] = useState(false);
+  const [showMenuFooterHints, setShowMenuFooterHints] = useState(true);
   const idleTimerRef = useRef(null);
   const cinematicTimeoutRef = useRef(null);
+  const menuFooterTimerRef = useRef(null);
 
   // Menu idle detection: reset on interaction, trigger cinematic after 8s
   useEffect(() => {
@@ -952,6 +954,41 @@ const Brikx = () => {
       gameState.current.saturationBoost = 1.8;
     }
   }, [isMenuIdle]);
+
+  useEffect(() => {
+    if (gameStarted || gameOver || isMobile) {
+      setShowMenuFooterHints(true);
+      if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
+      return;
+    }
+
+    const revealFooter = () => {
+      setShowMenuFooterHints(true);
+      if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
+      menuFooterTimerRef.current = setTimeout(() => {
+        setShowMenuFooterHints(false);
+      }, 4200);
+    };
+
+    const revealFooterNearBottom = (event) => {
+      if (typeof event?.clientY !== 'number') return;
+      const revealZoneHeight = Math.max(120, Math.min(220, Math.round(window.innerHeight * 0.18)));
+      if (event.clientY >= window.innerHeight - revealZoneHeight) {
+        revealFooter();
+      }
+    };
+
+    const generalEvents = ['keydown', 'focusin'];
+    window.addEventListener('mousemove', revealFooterNearBottom, { passive: true });
+    generalEvents.forEach((evt) => window.addEventListener(evt, revealFooter, { passive: true }));
+    revealFooter();
+
+    return () => {
+      window.removeEventListener('mousemove', revealFooterNearBottom);
+      generalEvents.forEach((evt) => window.removeEventListener(evt, revealFooter));
+      if (menuFooterTimerRef.current) clearTimeout(menuFooterTimerRef.current);
+    };
+  }, [gameStarted, gameOver, isMobile]);
 
   // Touch swipe detection
   const touchStart = useRef({ x: 0, y: 0, time: 0 });
@@ -9624,12 +9661,12 @@ SOFTWARE.</pre>
         </div>
       )}
 
-      <div className="controls-info">
-        <p>
+      <div className={`controls-info ${!gameStarted && !gameOver ? 'menu-controls-footer' : ''}${!gameStarted && !gameOver && isMenuIdle ? ' idle' : ''}${!gameStarted && !gameOver && !isMobile && !showMenuFooterHints ? ' hidden' : ''}`}>
+        <p className="controls-primary-line">
           {gamepadConnected ? '🎮 Gamepad Ready • ' : ''}
           {isMobile ? '📱 Swipe to play • Two-finger tap to pause' : 'Use Arrow Keys to control • SPACE for hard drop • P or ESC to pause'}
         </p>
-        <p style={{color: '#f0a000', fontWeight: 'bold', marginTop: '5px'}}>
+        <p className="controls-highlight-line">
           ⭐ Color Matching: 3+ blocks = 50pts each • Full line = +500pts bonus!
         </p>
       </div>
