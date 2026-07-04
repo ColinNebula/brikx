@@ -940,6 +940,25 @@ const Brikx = () => {
     setShowPostLogoCinematic(false);
   }, [introCinematicCanSkip]);
 
+  const enableIntroCinematicAudio = useCallback(() => {
+    const video = introCinematicVideoRef.current;
+    if (video) {
+      video.muted = false;
+      video.volume = 1;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise
+          .then(() => setIntroCinematicAudioEnabled(true))
+          .catch(() => {
+            video.muted = true;
+            setIntroCinematicAudioEnabled(false);
+          });
+        return;
+      }
+    }
+    setIntroCinematicAudioEnabled(true);
+  }, []);
+
   useEffect(() => {
     if (!showPostLogoCinematic || gameStarted || gameOver) return undefined;
 
@@ -965,8 +984,11 @@ const Brikx = () => {
     const video = introCinematicVideoRef.current;
     if (!video) return;
 
+    let mutedCheckTimer = null;
+
     if (introCinematicAudioEnabled) {
       video.muted = false;
+      video.volume = 1;
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === 'function') {
         playPromise.catch(() => {
@@ -974,9 +996,20 @@ const Brikx = () => {
           video.muted = true;
         });
       }
+
+      // Some browsers silently force autoplaying video to muted even when play() succeeds.
+      mutedCheckTimer = setTimeout(() => {
+        if (video.muted) {
+          setIntroCinematicAudioEnabled(false);
+        }
+      }, 260);
     } else {
       video.muted = true;
     }
+
+    return () => {
+      if (mutedCheckTimer) clearTimeout(mutedCheckTimer);
+    };
   }, [showPostLogoCinematic, introCinematicAudioEnabled]);
 
   // Menu idle detection: reset on interaction, trigger cinematic after 8s
@@ -7652,6 +7685,16 @@ const Brikx = () => {
               <source src={`${process.env.PUBLIC_URL}/brikX-Cin .mp4`} type="video/mp4" />
             </video>
           </div>
+          {!introCinematicAudioEnabled && (
+            <button
+              type="button"
+              className="intro-cinematic-audio-toggle"
+              onClick={enableIntroCinematicAudio}
+              aria-label="Enable intro cinematic audio"
+            >
+              🔊 Enable audio
+            </button>
+          )}
           <button
             type="button"
             className={`intro-cinematic-skip ${introCinematicCanSkip ? '' : 'locked'}`}
