@@ -914,10 +914,24 @@ const Brikx = () => {
 
   // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
   const [isMenuIdle, setIsMenuIdle] = useState(false);
+  const [showMenuCinematicVideo, setShowMenuCinematicVideo] = useState(false);
   const [showMenuFooterHints, setShowMenuFooterHints] = useState(true);
   const idleTimerRef = useRef(null);
   const cinematicTimeoutRef = useRef(null);
   const menuFooterTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (showSplash || gameStarted || gameOver) {
+      setShowMenuCinematicVideo(false);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setShowMenuCinematicVideo(true);
+    }, 1550);
+
+    return () => clearTimeout(timer);
+  }, [showSplash, gameStarted, gameOver]);
 
   // Menu idle detection: reset on interaction, trigger cinematic after 8s
   useEffect(() => {
@@ -7847,6 +7861,19 @@ const Brikx = () => {
               </>
             ) : (
               <div className={`main-menu immersive ${isMenuIdle ? 'cinematic-idle' : ''}`} ref={menuContainerRef} style={{ '--mx': '50%', '--my': '40%' }}>
+                <div className={`menu-cinematic-video-wrapper ${showMenuCinematicVideo ? 'visible' : ''}`} aria-hidden="true">
+                  <video
+                    className="menu-cinematic-video"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                  >
+                    <source src={`${process.env.PUBLIC_URL}/brikX-Cin .mp4`} type="video/mp4" />
+                  </video>
+                </div>
+
                 {/* Industry-Quality Animated Particles Background */}
                 <div className="menu-background-particles">
                   {menuParticles.map((particle) => {
