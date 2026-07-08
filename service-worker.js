@@ -44,6 +44,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   const requestUrl = new URL(event.request.url);
+  const isHttpRequest = requestUrl.protocol === 'http:' || requestUrl.protocol === 'https:';
+  if (!isHttpRequest) {
+    return;
+  }
+
   const isSameOrigin = requestUrl.origin === self.location.origin;
   const isNavigationRequest = event.request.mode === 'navigate';
   const isStaticAsset = isSameOrigin && (
