@@ -32,6 +32,12 @@ import {
   getThemeProgress
 } from './themes';
 
+const INTRO_CINEMATIC_VIDEO_PATHS = [
+  `${process.env.PUBLIC_URL}/brikX-Cin.mp4`,
+  `${process.env.PUBLIC_URL}/brikX-Cin%20.mp4`,
+  `${process.env.PUBLIC_URL}/brikX-Cin%20.mp4?v=2`
+];
+
 const hexToRgbArray = (hex, fallback = [0, 240, 240]) => {
   if (!hex || typeof hex !== 'string') return fallback;
   const sanitized = hex.replace('#', '').trim();
@@ -917,6 +923,7 @@ const Brikx = () => {
   const [showPostLogoCinematic, setShowPostLogoCinematic] = useState(false);
   const [introCinematicCanSkip, setIntroCinematicCanSkip] = useState(false);
   const [introCinematicAudioEnabled, setIntroCinematicAudioEnabled] = useState(false);
+  const [introCinematicSourceIndex, setIntroCinematicSourceIndex] = useState(0);
   const introCinematicVideoRef = useRef(null);
 
   // Cinematic idle sequence (8s idle triggers subtle camera push-in + logo glow + particle boost)
@@ -928,12 +935,23 @@ const Brikx = () => {
 
   const dismissSplashAndStartIntro = useCallback((enableAudio = false) => {
     setShowSplash(false);
-    if (!prefersReducedMotion) {
-      setIntroCinematicCanSkip(false);
-      setIntroCinematicAudioEnabled(enableAudio);
-      setShowPostLogoCinematic(true);
-    }
-  }, [prefersReducedMotion]);
+    setIntroCinematicCanSkip(false);
+    setIntroCinematicAudioEnabled(enableAudio);
+    setIntroCinematicSourceIndex(0);
+    setShowPostLogoCinematic(true);
+  }, []);
+
+  const handleIntroCinematicVideoError = useCallback(() => {
+    setIntroCinematicSourceIndex((prevIndex) => {
+      const nextIndex = prevIndex + 1;
+      if (nextIndex < INTRO_CINEMATIC_VIDEO_PATHS.length) {
+        return nextIndex;
+      }
+
+      setShowPostLogoCinematic(false);
+      return prevIndex;
+    });
+  }, []);
 
   const dismissPostLogoCinematic = useCallback(() => {
     if (!introCinematicCanSkip) return;
@@ -952,6 +970,12 @@ const Brikx = () => {
           .catch(() => {
             video.muted = true;
             setIntroCinematicAudioEnabled(false);
+            const retryPlay = video.play();
+            if (retryPlay && typeof retryPlay.catch === 'function') {
+              retryPlay.catch(() => {
+                // Ignore retry failure; user can still skip intro.
+              });
+            }
           });
         return;
       }
@@ -966,7 +990,7 @@ const Brikx = () => {
 
     const unlockSkipTimer = setTimeout(() => {
       setIntroCinematicCanSkip(true);
-    }, 1500);
+    }, prefersReducedMotion ? 0 : 1500);
 
     // Keep a long fallback timeout in case video end events fail on some mobile browsers.
     const timer = setTimeout(() => {
@@ -977,7 +1001,7 @@ const Brikx = () => {
       clearTimeout(unlockSkipTimer);
       clearTimeout(timer);
     };
-  }, [showPostLogoCinematic, gameStarted, gameOver]);
+  }, [showPostLogoCinematic, gameStarted, gameOver, prefersReducedMotion]);
 
   useEffect(() => {
     if (!showPostLogoCinematic) return;
@@ -994,6 +1018,12 @@ const Brikx = () => {
         playPromise.catch(() => {
           setIntroCinematicAudioEnabled(false);
           video.muted = true;
+          const retryPlay = video.play();
+          if (retryPlay && typeof retryPlay.catch === 'function') {
+            retryPlay.catch(() => {
+              // Keep silent if autoplay remains blocked.
+            });
+          }
         });
       }
 
@@ -1005,6 +1035,12 @@ const Brikx = () => {
       }, 260);
     } else {
       video.muted = true;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {
+          // Some browsers can still block muted autoplay until media metadata is ready.
+        });
+      }
     }
 
     return () => {
@@ -7657,10 +7693,10 @@ const Brikx = () => {
       {showSplash && (
         <div 
           className="splash-screen" 
-          onClick={() => dismissSplashAndStartIntro(true)}
+          onClick={() => dismissSplashAndStartIntro(false)}
           role="button"
           tabIndex={0}
-          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') dismissSplashAndStartIntro(true); }}
+          onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') dismissSplashAndStartIntro(false); }}
           aria-label="Click to skip splash screen"
         >
           <div className="splash-content">
@@ -7681,15 +7717,17 @@ const Brikx = () => {
         >
           <div className="intro-cinematic-video-wrapper visible" aria-hidden="true">
             <video
+              key={INTRO_CINEMATIC_VIDEO_PATHS[introCinematicSourceIndex]}
               ref={introCinematicVideoRef}
               className="intro-cinematic-video"
               autoPlay
               muted={!introCinematicAudioEnabled}
               playsInline
               preload="metadata"
+              onError={handleIntroCinematicVideoError}
               onEnded={() => setShowPostLogoCinematic(false)}
             >
-              <source src={`${process.env.PUBLIC_URL}/brikX-Cin .mp4`} type="video/mp4" />
+              <source src={INTRO_CINEMATIC_VIDEO_PATHS[introCinematicSourceIndex]} type="video/mp4" />
             </video>
           </div>
           {!introCinematicAudioEnabled && (
