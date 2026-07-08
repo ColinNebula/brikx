@@ -743,6 +743,134 @@
   pointer-events: none;
 }
 
+.intro-cinematic-audio-toggle {
+  position: absolute;
+  left: 50%;
+  bottom: max(74px, calc(74px + env(safe-area-inset-bottom)));
+  transform: translateX(-50%);
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background: rgba(3, 12, 24, 0.55);
+  cursor: pointer;
+}
+
+.intro-cinematic-audio-toggle:hover {
+  background: rgba(6, 20, 38, 0.75);
+}
+
+/* Prevent intro cinematic crop on tall mobile portrait screens (iPhone 13 Pro range). */
+@media (max-width: 430px) and (orientation: portrait) {
+  .intro-cinematic-screen {
+    height: 100dvh;
+    min-height: 100svh;
+    align-items: center;
+    justify-content: center;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .intro-cinematic-video-wrapper {
+    transform: none;
+  }
+
+  .intro-cinematic-video {
+    object-fit: contain;
+    object-position: center center;
+    background: #020613;
+  }
+
+  .intro-cinematic-audio-toggle {
+    bottom: max(64px, calc(64px + env(safe-area-inset-bottom)));
+    font-size: 0.72rem;
+    padding: 7px 12px;
+  }
+
+  .intro-cinematic-skip {
+    margin-bottom: max(16px, env(safe-area-inset-bottom));
+    font-size: 0.75rem;
+    padding: 7px 12px;
+  }
+}
+
+/* iPhone 13/13 Pro portrait fine-tuning (390x844 class). */
+@media (max-width: 393px) and (min-height: 800px) and (orientation: portrait) {
+  .intro-cinematic-screen {
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .intro-cinematic-video {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .intro-cinematic-video-wrapper::after {
+    background:
+      radial-gradient(circle at 50% 38%, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.14) 68%),
+      linear-gradient(180deg, rgba(3, 7, 18, 0.05), rgba(3, 7, 18, 0.18));
+  }
+
+  .intro-cinematic-audio-toggle {
+    bottom: max(58px, calc(58px + env(safe-area-inset-bottom)));
+  }
+
+  .intro-cinematic-skip {
+    margin-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* iPhone 13 mini portrait fine-tuning (375x812 class). */
+@media (max-width: 376px) and (min-height: 780px) and (orientation: portrait) {
+  .intro-cinematic-screen {
+    padding-top: max(4px, env(safe-area-inset-top));
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+  }
+
+  .intro-cinematic-video {
+    object-fit: contain;
+    object-position: center 46%;
+  }
+
+  .intro-cinematic-audio-toggle {
+    bottom: max(54px, calc(54px + env(safe-area-inset-bottom)));
+    font-size: 0.7rem;
+    padding: 6px 11px;
+  }
+
+  .intro-cinematic-skip {
+    margin-bottom: max(10px, env(safe-area-inset-bottom));
+    font-size: 0.72rem;
+    padding: 6px 11px;
+  }
+}
+
+/* Generic fallback for tall portrait phones (future iPhone/Android ratios). */
+@media (orientation: portrait) and (max-width: 480px) and (min-aspect-ratio: 9/18) {
+  .intro-cinematic-screen {
+    height: 100dvh;
+    min-height: 100svh;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .intro-cinematic-video-wrapper {
+    transform: none;
+  }
+
+  .intro-cinematic-video {
+    object-fit: contain;
+    object-position: center center;
+  }
+}
+
 .game-header {
   text-align: center;
   margin-bottom: 20px; /* Reduced from 30px to save vertical space */
